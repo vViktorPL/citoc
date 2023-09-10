@@ -1,0 +1,27 @@
+{
+  "name": "citoc",
+  "version": "1.0.0",
+  "description": "",
+  "source": "src/index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "parcel build",
+    "dev": "parcel"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vViktorPL/citoc.git"
+  },
+  "keywords": [],
+  "author": "Wiktor Toporek <wtoporek@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vViktorPL/citoc/issues"
+  },
+  "homepage": "https://github.com/vViktorPL/citoc#readme",
+  "devDependencies": {
+    "@parcel/transformer-elm": "^2.9.3",
+    "elm": "^0.19.1-5",
+    "parcel": "^2.9.3"
+  }
+}
