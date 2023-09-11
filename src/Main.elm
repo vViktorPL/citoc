@@ -15,6 +15,9 @@ import Scene3d.Material
 import Block3d
 import Browser.Events
 import Json.Decode as Decode
+import Player exposing (Player)
+import Level exposing (Level, Orientation(..), TriggerCondition(..), TriggerEffect(..))
+import Level.Index as LevelIndex
 
 -- MAIN
 
@@ -43,14 +46,8 @@ type MapCoordinates = MapCoordinates
 -- MODEL
 
 type alias Model =
-    { position: Point3d.Point3d Length.Meters WorldCoordinates
-    , angle: Angle.Angle
-    , control: PlayerControlState
-    }
-
-type alias PlayerControlState =
-    { turn: TurnControl
-    , move: MoveControl
+    { player: Player
+    , level: Level
     }
 
 type TurnControl = NoTurn | TurnLeft | TurnRight
@@ -59,16 +56,12 @@ type MoveControl = Stand | Forward | Backward
 
 initialModel : Model
 initialModel =
-    { position = Point3d.meters 5 10 0.5
-    , angle = Angle.degrees 180
-    , control = { turn = NoTurn, move = Stand }
+    let
+        level = LevelIndex.firstLevel
+    in
+    { player = Player.initOnLevel level
+    , level = level
     }
-
-
-pointOnMap : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
-pointOnMap x y z =
-    Point3d.meters -x y z
-
 
 -- UPDATE
 
@@ -82,111 +75,96 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         AnimationTick delta ->
-            ( model |> updatePlayerAngle delta |> updatePlayerPosition delta, Cmd.none )
+            let
+                newPlayer = Player.update delta model.player
+                newSector =  (Player.getSector (Player.update (delta * 5) model.player) ) --Debug.log "pos"
+            in
+                if Level.collisionOnSector model.level newSector then
+                    (model, Cmd.none)
+                else
+                    (handleTriggers model newPlayer, Cmd.none )
 
         KeyDown key ->
             case key of
-                "ArrowRight" -> (updatePlayerTurning model TurnRight, Cmd.none)
-                "ArrowLeft" -> (updatePlayerTurning model TurnLeft, Cmd.none)
-                "ArrowUp" -> (updatePlayerMovement model Forward, Cmd.none)
-                "ArrowDown" -> (updatePlayerMovement model Backward, Cmd.none)
+                "ArrowRight" -> ({ model | player = Player.turnRight model.player }, Cmd.none)
+                "ArrowLeft" -> ({ model | player = Player.turnLeft model.player }, Cmd.none)
+                "ArrowUp" -> ({ model | player = Player.walkForward model.player }, Cmd.none)
+                "ArrowDown" -> ({ model | player = Player.walkBackward model.player }, Cmd.none)
                 _ -> (model, Cmd.none)
 
         KeyUp key ->
             case key of
-                "ArrowRight" -> (updatePlayerTurning model NoTurn, Cmd.none)
-                "ArrowLeft" -> (updatePlayerTurning model NoTurn, Cmd.none)
-                "ArrowUp" -> (updatePlayerMovement model Stand, Cmd.none)
-                "ArrowDown" -> (updatePlayerMovement model Stand, Cmd.none)
+                "ArrowRight" -> ({ model | player = Player.stopTurning model.player }, Cmd.none)
+                "ArrowLeft" -> ({ model | player = Player.stopTurning model.player }, Cmd.none)
+                "ArrowUp" -> ({ model | player = Player.standStill model.player }, Cmd.none)
+                "ArrowDown" -> ({ model | player = Player.standStill model.player }, Cmd.none)
                 _ -> (model, Cmd.none)
 
-updatePlayerTurning : Model -> TurnControl -> Model
-updatePlayerTurning model turning =
-    let
-        control = model.control
-    in
-        { model | control = { control | turn = turning } }
-
-updatePlayerMovement : Model -> MoveControl -> Model
-updatePlayerMovement model movement =
-    let
-        control = model.control
-    in
-        { model | control = { control | move = movement } }
 
 
-playerRotationSpeed = 0.05
-playerMovementSpeed = 0.02
-
-updatePlayerAngle : Float -> Model -> Model
-updatePlayerAngle delta model =
-    case model.control.turn of
-        TurnRight ->
-            { model |
-                angle = Angle.degrees ((Angle.inDegrees model.angle) + delta * playerRotationSpeed)
-            }
-        TurnLeft ->
-            { model |
-                angle = Angle.degrees ((Angle.inDegrees model.angle) - delta * playerRotationSpeed)
-            }
-
-        NoTurn -> model
-
-
-
-updatePlayerPosition : Float -> Model -> Model
-updatePlayerPosition delta model =
-    let
-           direction = Direction3d.yx model.angle
-           velocity = delta * playerMovementSpeed
-    in
-    case model.control.move of
-        Forward -> { model | position = Point3d.translateIn direction (Length.meters velocity) model.position }
-        Backward -> { model | position = Point3d.translateIn direction (Length.meters -velocity) model.position }
-        Stand -> model
 
 keyDecoder : Decode.Decoder String
 keyDecoder =
     Decode.field "key" Decode.string
 
-playerViewpoint : Model -> (Viewpoint3d.Viewpoint3d Length.Meters WorldCoordinates)
-playerViewpoint model =
+
+handleTriggers : Model -> Player -> Model
+handleTriggers model newPlayer =
     let
-       direction = Direction3d.yx model.angle
+        (prevX, prevY) = Player.getSector model.player
+        (newX, newY) = Player.getSector newPlayer
+        (dX, dY) =  (prevX - newX, prevY - newY)
+        maybeMovingOrientation =
+            --Debug.log "movingOrientation"
+            (if (dX == 0 && dY < 0) then Just North
+            else if dX > 0 && dY == 0 then Just East
+            else if dX == 0 && dY > 0 then Just South
+            else if dX < 0 && dY == 0 then Just West
+            else Nothing
+            )
+
+        lookingAt = (Player.getHorizontalOrientation newPlayer) --Debug.log "lookingAt"
     in
-    Viewpoint3d.lookAt
-        { eyePoint = model.position
-        , focalPoint = Point3d.translateIn direction Length.meter model.position
-        , upDirection = Direction3d.positiveZ
-        }
+        Level.getTriggersAt model.level (newX, newY)
+              |> List.filter
+                  (\trigger -> List.all
+                      (\condition -> case condition of
+                          EnteredFrom orientation ->
+                              maybeMovingOrientation
+                                |> Maybe.map ((==) orientation)
+                                |> Maybe.withDefault False
+
+                          LookAngle orientation ->
+                              orientation == lookingAt
+                      )
+                      trigger.conditions
+                  )
+              |> List.concatMap (.effects)
+              |> List.foldl
+                (\effect modelAcc ->
+                    case Debug.log "Effect" effect of
+                        Teleport targetSector ->
+                            { modelAcc | player = Player.teleport modelAcc.player targetSector }
+                )
+                { model | player = newPlayer }
 
 
 
-
+sign : Int -> Int
+sign number =
+    if number > 0 then 1
+    else if number < 0 then -1
+    else 0
 
 -- VIEW
 
 view : Model -> Html Msg
 view model =
-    Scene3d.sunny
-        { entities = [ Scene3d.block (Scene3d.Material.matte Color.darkRed)
-                (Block3d.with
-                { x1 = Length.meters 0
-                , x2 = Length.meters 10
-                , y1 = Length.meters 0
-                , y2 = Length.meters 1
-                , z1 = Length.meters 0
-                , z2 = Length.meters 2
-                })  ]
-        , camera =
-              Camera3d.perspective
-                  { viewpoint = playerViewpoint model
-                  , verticalFieldOfView = Angle.degrees 45
-                  }
+    Scene3d.cloudy
+        { entities = [ Level.view model.level ]
+        , camera = Player.view model.player
         , upDirection = Direction3d.z
-        , sunlightDirection = Direction3d.xz (Angle.degrees -120)
         , background = Scene3d.backgroundColor Color.white
         , clipDepth = Length.centimeters 1
-        , shadows = True
         , dimensions = ( Pixels.int 800, Pixels.int 600 )
         }

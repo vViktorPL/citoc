@@ -1,0 +1,27 @@
+#############################X#
+#.............#.............#.#
+#.............#.............#.#
+#12345#.......#QWERT###.....#.#
+#.............#######.......#.#
+#.............#6............#.#
+#.............###############.#
+#................#    #Y......#
+################.#    #########
+         #>......#
+         #########
+
+---
+1 Floor [EnteredFrom South, LookAngle North] [Teleport @Q]
+2 Floor [EnteredFrom South, LookAngle North] [Teleport @W]
+3 Floor [EnteredFrom South, LookAngle North] [Teleport @E]
+4 Floor [EnteredFrom South, LookAngle North] [Teleport @R]
+5 Floor [EnteredFrom South, LookAngle North] [Teleport @T]
+
+Q Floor [EnteredFrom North, LookAngle North] [Teleport @1]
+W Floor [EnteredFrom North, LookAngle North] [Teleport @2]
+E Floor [EnteredFrom North, LookAngle North] [Teleport @3]
+R Floor [EnteredFrom North, LookAngle North] [Teleport @4]
+T Floor [EnteredFrom North, LookAngle North] [Teleport @5]
+
+6 Floor [LookAngle West] [Teleport @Y]
+Y Floor
