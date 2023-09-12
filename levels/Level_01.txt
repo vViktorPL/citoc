@@ -1,16 +1,17 @@
-#############################X#
+###############################
+#.............#.............#7#
 #.............#.............#.#
-#.............#.............#.#
-#12345#.......#QWERT###.....#.#
+#12345B.......#QWERTB##.....#.#
 #.............#######.......#.#
 #.............#6............#.#
 #.............###############.#
-#................#    #Y......#
-################.#    #########
+#................#        #Y..#
+################.#        #####
          #>......#
          #########
 
 ---
+B BlueWall
 1 Floor [EnteredFrom South, LookAngle North] [Teleport @Q]
 2 Floor [EnteredFrom South, LookAngle North] [Teleport @W]
 3 Floor [EnteredFrom South, LookAngle North] [Teleport @E]
@@ -25,3 +26,5 @@ T Floor [EnteredFrom North, LookAngle North] [Teleport @5]
 
 6 Floor [LookAngle West] [Teleport @Y]
 Y Floor
+
+7 Floor [EnteredFrom South, LookAngle North] [Teleport @>]

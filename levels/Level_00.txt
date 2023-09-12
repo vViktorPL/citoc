@@ -1,0 +1,15 @@
+###    #################
+#v#    #.......1..#.Q..#   ###
+#.######.......#..#.#..#   #3#
+#.#...............#.#..#   #.#
+#.#.#################..# ###.#
+#...#            #2....# #W..#
+#####            #############
+
+---
+B BlueWall
+1 Floor [EnteredFrom West, LookAngle East] [Teleport @Q]
+Q Floor [EnteredFrom East, LookAngle East] [Teleport @1]
+2 Floor [EnteredFrom East, LookAngle West] [Teleport @W]
+3 Floor [EnteredFrom South, LookAngle North] [Teleport @v]
+W Floor

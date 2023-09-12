@@ -68,6 +68,10 @@ teleport (Player playerData) (x, y) =
         { playerData | position = pointOnLevel ((toFloat x) + offsetX) ((toFloat y) + offsetY) 0.5
         }
 
+--getHorizontalAngle : Player -> Float
+--getHorizontalAngle (Player playerData) =
+
+
 getHorizontalOrientation : Player -> Orientation
 getHorizontalOrientation (Player playerData) =
     let

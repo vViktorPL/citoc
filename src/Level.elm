@@ -8,6 +8,8 @@ import Block3d
 import Scene3d.Material
 import Color
 --import Player exposing (Player)
+import Textures exposing (Textures)
+import Quantity exposing (Quantity)
 
 type Level
     = Level
@@ -28,6 +30,7 @@ type WorldCoordinates = WorldCoordinates
 type LevelTile
     = Floor
     | Wall
+    | BlueWall
     | Empty
 
 type alias Trigger =
@@ -104,10 +107,42 @@ tileCollides : LevelTile -> Bool
 tileCollides levelTile =
     case levelTile of
         Wall -> True
+        BlueWall -> True
         _ -> False
 
-view : Level -> Scene3d.Entity WorldCoordinates
-view (Level levelData) =
+
+--createTexturedBlock : Scene3d.Material.Material coordinates { normals : (), uvs : () } -> { x1 : Quantity Float Length.Meters, x2 : Quantity Float Length.Meters, y1 : Quantity Float Length.Meters, y2 : Quantity Float Length.Meters, z1 : Quantity Float Length.Meters, z2 : Quantity Float Length.Meters } -> Scene3d.Scene Msg
+createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
+    let
+        -- Create quads for each wall using your custom `quad` function
+        leftQuad = Scene3d.quad material
+            (Point3d.xyz x1 y1 z1)
+            (Point3d.xyz x1 y2 z1)
+            (Point3d.xyz x1 y2 z2)
+            (Point3d.xyz x1 y1 z2)
+
+        frontQuad = Scene3d.quad material
+            (Point3d.xyz x1 y2 z1)
+            (Point3d.xyz x2 y2 z1)
+            (Point3d.xyz x2 y2 z2)
+            (Point3d.xyz x1 y2 z2)
+
+        behindQuad = Scene3d.quad material
+            (Point3d.xyz x1 y1 z1)
+            (Point3d.xyz x2 y1 z1)
+            (Point3d.xyz x2 y1 z2)
+            (Point3d.xyz x1 y1 z2)
+
+        rightQuad = Scene3d.quad material
+            (Point3d.xyz x2 y2 z1)
+            (Point3d.xyz x2 y1 z1)
+            (Point3d.xyz x2 y1 z2)
+            (Point3d.xyz x2 y2 z2)
+    in
+        Scene3d.group [leftQuad, frontQuad, behindQuad, rightQuad]
+
+view : Textures -> Level -> Scene3d.Entity WorldCoordinates
+view textures (Level levelData) =
     levelData.tiles
         |> Array.indexedMap
             (\y row ->
@@ -115,16 +150,33 @@ view (Level levelData) =
                     (\x tile ->
                         case tile of
                             Wall ->
-                                Scene3d.block
-                                    (Scene3d.Material.matte Color.darkRed)
-                                    (Block3d.with
-                                    { x1 = Length.meters (toFloat -x)
-                                    , x2 = Length.meters (toFloat -(x + 1) )
-                                    , y1 = Length.meters (toFloat y)
-                                    , y2 = Length.meters (toFloat (y + 1))
-                                    , z1 = Length.meters 0
-                                    , z2 = Length.meters 1
-                                    })
+                                Textures.getTexture textures "BricksTexture.jpg"
+                                    |> Maybe.map
+                                        (\texture ->
+                                            (createTexturedBlock
+                                                (Scene3d.Material.texturedMatte texture)
+                                                { x1 = Length.meters (toFloat -x)
+                                                , x2 = Length.meters (toFloat -(x + 1) )
+                                                , y1 = Length.meters (toFloat y)
+                                                , y2 = Length.meters (toFloat (y + 1))
+                                                , z1 = Length.meters 0
+                                                , z2 = Length.meters 1
+                                                }
+                                            )
+                                        )
+                                    |> Maybe.withDefault Scene3d.nothing
+
+                            BlueWall ->
+                                    Scene3d.block
+                                        (Scene3d.Material.matte Color.darkBlue)
+                                        (Block3d.with
+                                        { x1 = Length.meters (toFloat -x)
+                                        , x2 = Length.meters (toFloat -(x + 1) )
+                                        , y1 = Length.meters (toFloat y)
+                                        , y2 = Length.meters (toFloat (y + 1))
+                                        , z1 = Length.meters 0
+                                        , z2 = Length.meters 1
+                                        })
                             Floor ->
                                 Scene3d.group
                                     [ Scene3d.block

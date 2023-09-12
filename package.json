@@ -5,8 +5,10 @@
   "source": "src/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build",
-    "dev": "node tools/map-compiler.js && parcel"
+    "build": "npm run build:levels && parcel build && npm run build:assets",
+    "build:levels": "node tools/map-compiler.js",
+    "build:assets": "ncp assets dist/assets",
+    "dev": "npm run build:levels && parcel && npm run build:assets"
   },
   "repository": {
     "type": "git",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@parcel/transformer-elm": "^2.9.3",
     "elm": "^0.19.1-5",
+    "ncp": "^2.0.0",
     "parcel": "^2.9.3"
   }
 }
