@@ -142,7 +142,7 @@ handleTriggers model newPlayer =
               |> List.concatMap (.effects)
               |> List.foldl
                 (\effect modelAcc ->
-                    case Debug.log "Effect" effect of
+                    case effect of
                         Teleport targetSector ->
                             { modelAcc | player = Player.teleport modelAcc.player targetSector }
                 )

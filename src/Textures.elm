@@ -14,7 +14,7 @@ getTexture textures fileName =
 
 --loadTexture : String -> Cmd Msg
 loadTexture fileName =
-   Material.loadWith Material.trilinearFiltering ("/assets/" ++ fileName)
+   Material.loadWith Material.trilinearFiltering ("assets/" ++ fileName)
 
 --loadTextures : List String -> Task
 loadTextures fileNames =

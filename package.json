@@ -5,7 +5,7 @@
   "source": "src/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm run build:levels && parcel build && npm run build:assets",
+    "build": "npm run build:levels && parcel build --no-source-maps --public-url ./ && npm run build:assets && bestzip build.zip dist",
     "build:levels": "node tools/map-compiler.js",
     "build:assets": "ncp assets dist/assets",
     "dev": "npm run build:levels && parcel && npm run build:assets"
@@ -23,6 +23,7 @@
   "homepage": "https://github.com/vViktorPL/citoc#readme",
   "devDependencies": {
     "@parcel/transformer-elm": "^2.9.3",
+    "bestzip": "^2.2.1",
     "elm": "^0.19.1-5",
     "ncp": "^2.0.0",
     "parcel": "^2.9.3"
