@@ -36,6 +36,14 @@ type MoveControl = Stand | Forward | Backward
 texturesToLoad : List String
 texturesToLoad =
     [ "BricksTexture.jpg"
+    , "Sign1.png"
+    , "Sign2.png"
+    , "Sign3.png"
+    , "Sign4.png"
+    , "Sign5.png"
+    , "Sign6.png"
+    , "Sign7.png"
+    , "Sign8.png"
     ]
 
 init : (Model, Cmd Msg)

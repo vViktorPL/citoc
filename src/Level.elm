@@ -30,6 +30,7 @@ type WorldCoordinates = WorldCoordinates
 type LevelTile
     = Floor
     | Wall
+    | Sign String Orientation
     | BlueWall
     | Empty
 
@@ -107,6 +108,7 @@ tileCollides : LevelTile -> Bool
 tileCollides levelTile =
     case levelTile of
         Wall -> True
+        Sign _ _ -> True
         BlueWall -> True
         _ -> False
 
@@ -141,6 +143,147 @@ createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
     in
         Scene3d.group [leftQuad, frontQuad, behindQuad, rightQuad]
 
+viewBlock textures (x, y) =
+    Textures.getTexture textures "BricksTexture.jpg"
+        |> Maybe.map
+            (\texture ->
+                (createTexturedBlock
+                    (Scene3d.Material.texturedMatte texture)
+                    { x1 = Length.meters (toFloat -x)
+                    , x2 = Length.meters (toFloat -(x + 1) )
+                    , y1 = Length.meters (toFloat y)
+                    , y2 = Length.meters (toFloat (y + 1))
+                    , z1 = Length.meters 0
+                    , z2 = Length.meters 1
+                    }
+                )
+            )
+        |> Maybe.withDefault Scene3d.nothing
+
+viewSign : Textures -> String -> Orientation -> (Int, Int) -> Scene3d.Entity WorldCoordinates
+viewSign textures texture orientation (x, y) =
+    Textures.getTexture textures texture
+          |> Maybe.map
+              (\signTexture ->
+                    let
+                        material = Scene3d.Material.texturedMatte signTexture
+                        x1 = Length.meters (toFloat -x)
+                        x2 = Length.meters (toFloat -(x + 1) )
+                        y1 = Length.meters (toFloat y)
+                        y2 = Length.meters (toFloat (y + 1))
+                        z1 = Length.meters 0
+                        z2 = Length.meters 1
+
+                        xMargin = 0.2
+                        topMargin = 0.2
+                        bottomMargin = 0.5
+                        bumpMargin = 0.01
+                    in
+                    case orientation of
+                        North ->
+                            (Scene3d.quad material
+                               (Point3d.xyz
+                                  (Length.meters ((toFloat -(x + 1) ) + xMargin))
+                                  (Length.meters ((toFloat y) - bumpMargin))
+                                  (Length.meters bottomMargin)
+                               )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -x) - xMargin))
+                                    (Length.meters ((toFloat y) - bumpMargin))
+                                    (Length.meters bottomMargin)
+                                )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -x) - xMargin))
+                                    (Length.meters ((toFloat y) - bumpMargin))
+                                    (Length.meters (1 - topMargin))
+                                )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -(x + 1) ) + xMargin))
+                                    (Length.meters ((toFloat y) - bumpMargin))
+                                    (Length.meters (1 - topMargin))
+                                )
+                            )
+                        South ->
+                           (Scene3d.quad material
+                               (Point3d.xyz
+                                  (Length.meters ((toFloat -x) - xMargin))
+                                  (Length.meters ((toFloat (y + 1)) + bumpMargin))
+                                  (Length.meters bottomMargin)
+                               )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -(x + 1) ) + xMargin))
+                                    (Length.meters ((toFloat (y + 1)) + bumpMargin))
+                                    (Length.meters bottomMargin)
+                                )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -(x + 1) ) + xMargin))
+                                    (Length.meters ((toFloat (y + 1)) + bumpMargin))
+                                    (Length.meters (1 - topMargin))
+                                )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -x) - xMargin))
+                                    (Length.meters ((toFloat (y + 1)) + bumpMargin))
+                                    (Length.meters (1 - topMargin))
+                                )
+                           )
+                        East ->
+                               --(Point3d.xyz x1 y1 z1)
+                               --         (Point3d.xyz x1 y2 z1)
+                               --         (Point3d.xyz x1 y2 z2)
+                               --         (Point3d.xyz x1 y1 z2)
+                            (Scene3d.quad material
+                               (Point3d.xyz
+                                  (Length.meters ((toFloat -(x + 1) ) - bumpMargin))
+                                  (Length.meters ((toFloat (y + 1)) - xMargin))
+                                  (Length.meters bottomMargin)
+                               )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -(x + 1) ) - bumpMargin))
+                                    (Length.meters ((toFloat y) + xMargin))
+                                    (Length.meters bottomMargin)
+                               )
+                               (Point3d.xyz
+                                     (Length.meters ((toFloat -(x + 1) ) - bumpMargin))
+                                     (Length.meters ((toFloat y) + xMargin))
+                                     (Length.meters (1 - topMargin))
+                               )
+                               (Point3d.xyz
+                                     (Length.meters ((toFloat -(x + 1) ) - bumpMargin))
+                                     (Length.meters ((toFloat (y + 1)) - xMargin))
+                                     (Length.meters (1 - topMargin))
+                               )
+                            )
+                        West ->
+                               --(Point3d.xyz x1 y1 z1)
+                               --         (Point3d.xyz x1 y2 z1)
+                               --         (Point3d.xyz x1 y2 z2)
+                               --         (Point3d.xyz x1 y1 z2)
+                            (Scene3d.quad material
+                               (Point3d.xyz
+                                  (Length.meters ((toFloat -x) + bumpMargin))
+                                  (Length.meters ((toFloat y) + xMargin))
+                                  (Length.meters bottomMargin)
+                               )
+                               (Point3d.xyz
+                                    (Length.meters ((toFloat -x) + bumpMargin))
+                                    (Length.meters ((toFloat (y + 1)) - xMargin))
+                                    (Length.meters bottomMargin)
+                               )
+                               (Point3d.xyz
+                                     (Length.meters ((toFloat -x) + bumpMargin))
+                                     (Length.meters ((toFloat (y + 1)) - xMargin))
+                                     (Length.meters (1 - topMargin))
+                               )
+                               (Point3d.xyz
+                                     (Length.meters ((toFloat -x) + bumpMargin))
+                                     (Length.meters ((toFloat y) + xMargin))
+                                     (Length.meters (1 - topMargin))
+                               )
+                            )
+              )
+          |> Maybe.withDefault Scene3d.nothing
+
+
 view : Textures -> Level -> Scene3d.Entity WorldCoordinates
 view textures (Level levelData) =
     levelData.tiles
@@ -150,21 +293,13 @@ view textures (Level levelData) =
                     (\x tile ->
                         case tile of
                             Wall ->
-                                Textures.getTexture textures "BricksTexture.jpg"
-                                    |> Maybe.map
-                                        (\texture ->
-                                            (createTexturedBlock
-                                                (Scene3d.Material.texturedMatte texture)
-                                                { x1 = Length.meters (toFloat -x)
-                                                , x2 = Length.meters (toFloat -(x + 1) )
-                                                , y1 = Length.meters (toFloat y)
-                                                , y2 = Length.meters (toFloat (y + 1))
-                                                , z1 = Length.meters 0
-                                                , z2 = Length.meters 1
-                                                }
-                                            )
-                                        )
-                                    |> Maybe.withDefault Scene3d.nothing
+                                viewBlock textures (x, y)
+
+                            Sign texture orientation ->
+                                Scene3d.group
+                                    [ viewBlock textures (x, y)
+                                    , viewSign textures texture orientation (x, y)
+                                    ]
 
                             BlueWall ->
                                     Scene3d.block

@@ -32,7 +32,7 @@ fs.readdir(path.join(__dirname, '../levels')).then(
               const legendData = line.substring(2).replace(/@(.)/g, match => uniqueTilePositions[match[1]]);
 
               const legendTile = line.substring(0, 1);
-              const levelTile = legendData.split(' ')[0];
+              const levelTile = /^\(([^)]+)\)/.exec(legendData)?.[0] ?? legendData.split(' ')[0];
               const triggerData = legendData.substring(levelTile.length + 1);
 
               if (triggerData) {
