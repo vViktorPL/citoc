@@ -45,11 +45,14 @@ type alias Model =
     { textures: Textures
     , player: Player
     , level: Level
+    , controlKeysHistory: List ControlKey
     }
 
 type TurnControl = NoTurn | TurnLeft | TurnRight
 
 type MoveControl = Stand | Forward | Backward
+
+maxControlKeysHistory = 5
 
 init : Textures -> Model
 init textures =
@@ -59,6 +62,7 @@ init textures =
     { textures = textures
     , player = Player.initOnLevel level
     , level = level
+    , controlKeysHistory = []
     }
 
 -- UPDATE
@@ -75,7 +79,7 @@ update msg model =
         AnimationTick delta ->
             let
                 newPlayer = Player.update delta model.player
-                newSector =  (Player.getSector (Player.update (delta * 5) model.player) ) --Debug.log "pos"
+                newSector = (Player.getSector (Player.update (delta * 5) model.player) ) --Debug.log "pos"
             in
                 if Level.collisionOnSector model.level newSector then
                     (model, Cmd.none)
@@ -83,14 +87,10 @@ update msg model =
                     (handleTriggers model newPlayer, Cmd.none )
 
         KeyDown key ->
-            case key of
-                ControlTurnRight -> ({ model | player = Player.turnRight model.player }, Cmd.none)
-                ControlTurnLeft -> ({ model | player = Player.turnLeft model.player }, Cmd.none)
-                ControlForward -> ({ model | player = Player.walkForward model.player }, Cmd.none)
-                ControlBackward -> ({ model | player = Player.walkBackward model.player }, Cmd.none)
-                ControlStrafeLeft -> ({ model | player = Player.strafeLeft model.player }, Cmd.none)
-                ControlStrafeRight -> ({ model | player = Player.strafeRight model.player }, Cmd.none)
-                _ -> (model, Cmd.none)
+            ({ model
+                | player = controlKeyToPlayerAction key model.player
+                , controlKeysHistory = key :: model.controlKeysHistory
+            }, Cmd.none )
 
         KeyUp key ->
             case key of
@@ -101,6 +101,19 @@ update msg model =
                 ControlStrafeLeft -> ({ model | player = Player.stopStrafingLeft model.player }, Cmd.none)
                 ControlStrafeRight -> ({ model | player = Player.stopStrafingRight model.player }, Cmd.none)
                 _ -> (model, Cmd.none)
+
+
+
+controlKeyToPlayerAction : ControlKey -> (Player -> Player)
+controlKeyToPlayerAction key =
+    case key of
+        ControlTurnLeft -> Player.turnLeft
+        ControlTurnRight -> Player.turnRight
+        ControlForward -> Player.walkForward
+        ControlBackward -> Player.walkBackward
+        ControlStrafeLeft -> Player.strafeLeft
+        ControlStrafeRight -> Player.strafeRight
+        Unknown -> identity
 
 
 type ControlKey
@@ -164,6 +177,13 @@ handleTriggers model newPlayer =
 
                           LookAngle orientation ->
                               orientation == lookingAt
+
+                          NegativeHeadshake ->
+                              let
+                                  last3Controls = List.take 3 model.controlKeysHistory
+                              in
+                                  last3Controls == [ControlTurnLeft, ControlTurnRight, ControlTurnLeft] ||
+                                  last3Controls == [ControlTurnRight, ControlTurnLeft, ControlTurnRight]
                       )
                       trigger.conditions
                   )
@@ -174,7 +194,14 @@ handleTriggers model newPlayer =
                         Teleport targetSector ->
                             { modelAcc | player = Player.teleport modelAcc.player targetSector }
                 )
-                { model | player = newPlayer }
+                { model
+                    | player = newPlayer
+                    , controlKeysHistory =
+                        if newX /= prevX || newY /= prevY then
+                            []
+                        else
+                            model.controlKeysHistory
+                }
 
 
 

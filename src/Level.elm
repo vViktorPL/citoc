@@ -43,6 +43,7 @@ type alias Trigger =
 type TriggerCondition
     = EnteredFrom Orientation
     | LookAngle Orientation
+    | NegativeHeadshake
 
 type TriggerEffect
     = Teleport (Int, Int)
@@ -56,26 +57,6 @@ getTriggersAt : Level -> (Int, Int) -> List Trigger
 getTriggersAt (Level levelData) sector =
     levelData.triggers
         |> List.filter (\trigger -> trigger.sector == sector)
-
---checkTrigger : Level -> Orientation -> Orientation -> Maybe TriggerEffect
---checkTrigger (Level levelData) goingTowards lookingAt =
---    let
---        (prevX, prevY) = Player.getSector prevPlayer
---        (newX, newY) = Player.getSector newPlayer
---        maybeOrientation = case ( sign (newX - prevX), sign (newY - prevY)) of
---            (0, -1) -> Just North
---            (1, 0) -> Just East
---            (0, 1) -> Just South
---            (-1, 0) -> Just West
---            _ -> Nothing
---    in
-
-
-sign : Int -> Int
-sign number =
-    if number > 0 then 1
-    else if number < 0 then -1
-    else 0
 
 getStartingPosition : Level -> ( Int, Int )
 getStartingPosition (Level levelData) =
