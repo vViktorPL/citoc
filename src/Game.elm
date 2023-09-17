@@ -65,8 +65,8 @@ init textures =
 
 type Msg
     = AnimationTick Float
-    | KeyDown String
-    | KeyUp String
+    | KeyDown ControlKey
+    | KeyUp ControlKey
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -84,26 +84,54 @@ update msg model =
 
         KeyDown key ->
             case key of
-                "ArrowRight" -> ({ model | player = Player.turnRight model.player }, Cmd.none)
-                "ArrowLeft" -> ({ model | player = Player.turnLeft model.player }, Cmd.none)
-                "ArrowUp" -> ({ model | player = Player.walkForward model.player }, Cmd.none)
-                "ArrowDown" -> ({ model | player = Player.walkBackward model.player }, Cmd.none)
+                ControlTurnRight -> ({ model | player = Player.turnRight model.player }, Cmd.none)
+                ControlTurnLeft -> ({ model | player = Player.turnLeft model.player }, Cmd.none)
+                ControlForward -> ({ model | player = Player.walkForward model.player }, Cmd.none)
+                ControlBackward -> ({ model | player = Player.walkBackward model.player }, Cmd.none)
+                ControlStrafeLeft -> ({ model | player = Player.strafeLeft model.player }, Cmd.none)
+                ControlStrafeRight -> ({ model | player = Player.strafeRight model.player }, Cmd.none)
                 _ -> (model, Cmd.none)
 
         KeyUp key ->
             case key of
-                "ArrowRight" -> ({ model | player = Player.stopTurning model.player }, Cmd.none)
-                "ArrowLeft" -> ({ model | player = Player.stopTurning model.player }, Cmd.none)
-                "ArrowUp" -> ({ model | player = Player.standStill model.player }, Cmd.none)
-                "ArrowDown" -> ({ model | player = Player.standStill model.player }, Cmd.none)
+                ControlTurnRight -> ({ model | player = Player.stopTurning model.player }, Cmd.none)
+                ControlTurnLeft -> ({ model | player = Player.stopTurning model.player }, Cmd.none)
+                ControlForward -> ({ model | player = Player.stopWalkingForward model.player }, Cmd.none)
+                ControlBackward -> ({ model | player = Player.stopWalkingBackward model.player }, Cmd.none)
+                ControlStrafeLeft -> ({ model | player = Player.stopStrafingLeft model.player }, Cmd.none)
+                ControlStrafeRight -> ({ model | player = Player.stopStrafingRight model.player }, Cmd.none)
                 _ -> (model, Cmd.none)
 
 
+type ControlKey
+    = ControlForward
+    | ControlBackward
+    | ControlStrafeLeft
+    | ControlStrafeRight
+    | ControlTurnLeft
+    | ControlTurnRight
+    | Unknown
 
-
-keyDecoder : Decode.Decoder String
+keyDecoder : Decode.Decoder ControlKey
 keyDecoder =
     Decode.field "key" Decode.string
+        |> Decode.map
+            (\key ->
+                case key of
+                    "ArrowLeft" -> ControlTurnLeft
+                    "ArrowRight" -> ControlTurnRight
+                    "ArrowUp" -> ControlForward
+                    "ArrowDown" -> ControlBackward
+                    "w" -> ControlForward
+                    "W" -> ControlForward
+                    "a" -> ControlStrafeLeft
+                    "A" -> ControlStrafeLeft
+                    "s" -> ControlBackward
+                    "S" -> ControlBackward
+                    "d" -> ControlStrafeRight
+                    "D" -> ControlStrafeRight
+                    _ -> Unknown
+            )
 
 
 handleTriggers : Model -> Player -> Model

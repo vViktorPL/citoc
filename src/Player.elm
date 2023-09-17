@@ -7,7 +7,13 @@ module Player exposing
     , stopTurning
     , walkForward
     , walkBackward
+    , strafeLeft
+    , strafeRight
     , standStill
+    , stopStrafingLeft
+    , stopStrafingRight
+    , stopWalkingBackward
+    , stopWalkingForward
     , update
     , teleport
     , getSector
@@ -27,7 +33,8 @@ type Player =
         { position: Point3d Length.Meters WorldCoordinates
         , horizontalAngle: Angle
         , horizontalTurning: HorizontalTurning
-        , movement: Movement
+        , movementX: Maybe MovementX
+        , movementY: Maybe MovementY
         }
 
 type HorizontalTurning
@@ -35,10 +42,13 @@ type HorizontalTurning
     | TurnLeft
     | TurnRight
 
-type Movement
-    = Stand
-    | Forward
+type MovementY
+    = Forward
     | Backward
+
+type MovementX
+    = StrafeLeft
+    | StrafeRight
 
 turningSpeed = 0.1
 walkingSpeed = 0.002
@@ -54,7 +64,8 @@ init (x, y) orientation =
                 South -> Angle.degrees 0
                 West -> Angle.degrees 90
         , horizontalTurning = None
-        , movement = Stand
+        , movementX = Nothing
+        , movementY = Nothing
         }
 
 teleport : Player -> (Int, Int) -> Player
@@ -131,32 +142,86 @@ stopTurning (Player playerData) =
 
 walkForward : Player -> Player
 walkForward (Player playerData) =
-    Player { playerData | movement = Forward }
+    Player { playerData | movementY = Just Forward }
 
 walkBackward : Player -> Player
 walkBackward (Player playerData) =
-    Player { playerData | movement = Backward }
+    Player { playerData | movementY = Just Backward }
+
+strafeLeft : Player -> Player
+strafeLeft (Player playerData) =
+    Player { playerData | movementX = Just StrafeLeft }
+
+strafeRight : Player -> Player
+strafeRight (Player playerData) =
+    Player { playerData | movementX = Just StrafeRight }
+
+
+stopStrafingLeft : Player -> Player
+stopStrafingLeft (Player playerData) =
+    case playerData.movementX of
+        Just StrafeLeft -> Player { playerData | movementX = Nothing }
+        _ -> Player playerData
+
+
+stopStrafingRight : Player -> Player
+stopStrafingRight (Player playerData) =
+    case playerData.movementX of
+        Just StrafeRight -> Player { playerData | movementX = Nothing }
+        _ -> Player playerData
+
+stopWalkingForward : Player -> Player
+stopWalkingForward (Player playerData) =
+    case playerData.movementY of
+        Just Forward -> Player { playerData | movementY = Nothing }
+        _ -> Player playerData
+
+stopWalkingBackward : Player -> Player
+stopWalkingBackward (Player playerData) =
+    case playerData.movementY of
+        Just Backward -> Player { playerData | movementY = Nothing }
+        _ -> Player playerData
+
 
 standStill : Player -> Player
 standStill (Player playerData) =
-    Player { playerData | movement = Stand }
+    Player { playerData | movementX = Nothing, movementY = Nothing }
 
 update : Float -> Player -> Player
 update delta player =
     player
         |> animatePlayerTurning delta
-        |> animatePlayerMovement delta
+        |> animatePlayerMovementY delta
+        |> animatePlayerMovementX delta
 
-animatePlayerMovement : Float -> Player -> Player
-animatePlayerMovement delta (Player playerData) =
+addAngle : Angle -> Float -> Angle
+addAngle angle degrees =
+    angle
+        |> Angle.inDegrees
+        |> (+) degrees
+        |> Angle.degrees
+
+animatePlayerMovementY : Float -> Player -> Player
+animatePlayerMovementY delta (Player playerData) =
     let
        direction = Direction3d.yx playerData.horizontalAngle
        velocity = delta * walkingSpeed
     in
-    case playerData.movement of
-        Forward -> Player { playerData | position = Point3d.translateIn direction (Length.meters velocity) playerData.position }
-        Backward -> Player { playerData | position = Point3d.translateIn direction (Length.meters -velocity) playerData.position }
-        Stand -> Player playerData
+    case playerData.movementY of
+        Just Forward -> Player { playerData | position = Point3d.translateIn direction (Length.meters velocity) playerData.position }
+        Just Backward -> Player { playerData | position = Point3d.translateIn direction (Length.meters -velocity) playerData.position }
+        _ -> Player playerData
+
+animatePlayerMovementX : Float -> Player -> Player
+animatePlayerMovementX delta (Player playerData) =
+    let
+       direction = Direction3d.yx (addAngle playerData.horizontalAngle -90)
+       velocity = delta * walkingSpeed
+    in
+    case playerData.movementX of
+        Just StrafeLeft -> Player { playerData | position = Point3d.translateIn direction (Length.meters (velocity * 0.7) ) playerData.position }
+        Just StrafeRight -> Player { playerData | position = Point3d.translateIn direction (Length.meters (velocity * -0.7) ) playerData.position }
+        _ -> Player playerData
 
 animatePlayerTurning : Float -> Player -> Player
 animatePlayerTurning delta (Player playerData) =
