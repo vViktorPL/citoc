@@ -45,6 +45,7 @@ type TriggerCondition
     | LookAngle Orientation
     | NegativeHeadshake
     | Nod
+    | StepIn
 
 type TriggerEffect
     = Teleport (Int, Int)

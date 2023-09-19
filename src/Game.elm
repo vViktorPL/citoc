@@ -257,6 +257,9 @@ handleTriggers model newPlayer =
                                   last3Gestures == [LookUp, LookDown, LookUp] ||
                                   last3Gestures == [LookDown, LookUp, LookDown]
 
+                          StepIn ->
+                              True
+
                       )
                       trigger.conditions
                   )
