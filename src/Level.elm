@@ -50,6 +50,11 @@ type TriggerCondition
 type TriggerEffect
     = Teleport (Int, Int)
     | NextLevel
+    | ChangeTile (Int, Int) LevelTile
+    | CreateTrigger Trigger
+    | RemoveAllTriggersInSector (Int, Int)
+    --| SizeUpPlayer
+    --| SizeDownPlayer
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =
@@ -96,6 +101,26 @@ tileCollides levelTile =
         BlueWall -> True
         _ -> False
 
+updateTile : (Int, Int) -> LevelTile -> Level -> Level
+updateTile (x, y) newTile (Level levelData) =
+    Level { levelData | tiles =
+        Array.indexedMap
+            (\rowIndex row ->
+                if rowIndex == y then
+                    Array.indexedMap (\tileIndex tile -> if tileIndex == x then newTile else tile) row
+                else
+                    row
+            ) levelData.tiles
+    }
+
+
+addTrigger : Trigger -> Level -> Level
+addTrigger trigger (Level levelData) =
+    Level { levelData | triggers = trigger :: levelData.triggers }
+
+removeAllTriggersAtSector : (Int, Int) -> Level -> Level
+removeAllTriggersAtSector sector (Level levelData) =
+    Level { levelData | triggers = List.filter (\trigger -> trigger.sector /= sector) levelData.triggers }
 
 createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
     let

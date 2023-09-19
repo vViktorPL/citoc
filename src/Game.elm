@@ -271,6 +271,12 @@ handleTriggers model newPlayer =
                             { modelAcc | player = Player.teleport modelAcc.player targetSector }
                         NextLevel ->
                             transitionToNextLevel modelAcc
+                        ChangeTile sector newTile ->
+                            { modelAcc | level = Level.updateTile sector newTile modelAcc.level }
+                        CreateTrigger trigger ->
+                            { modelAcc | level = Level.addTrigger trigger modelAcc.level }
+                        RemoveAllTriggersInSector sector ->
+                            { modelAcc | level = Level.removeAllTriggersAtSector sector modelAcc.level }
                 )
                 { model
                     | player = newPlayer
