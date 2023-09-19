@@ -44,6 +44,7 @@ type TriggerCondition
     = EnteredFrom Orientation
     | LookAngle Orientation
     | NegativeHeadshake
+    | Nod
 
 type TriggerEffect
     = Teleport (Int, Int)

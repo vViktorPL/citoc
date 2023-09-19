@@ -9,6 +9,7 @@ module Player exposing
     , walkBackward
     , strafeLeft
     , strafeRight
+    , updateLookByMouseMovement
     , standStill
     , stopStrafingLeft
     , stopStrafingRight
@@ -32,6 +33,7 @@ type Player =
     Player
         { position: Point3d Length.Meters WorldCoordinates
         , horizontalAngle: Angle
+        , verticalAngle: Angle
         , horizontalTurning: HorizontalTurning
         , movementX: Maybe MovementX
         , movementY: Maybe MovementY
@@ -63,6 +65,7 @@ init (x, y) orientation =
                 East -> Angle.degrees -90
                 South -> Angle.degrees 0
                 West -> Angle.degrees 90
+        , verticalAngle = Angle.degrees 0
         , horizontalTurning = None
         , movementX = Nothing
         , movementY = Nothing
@@ -118,7 +121,8 @@ view (Player playerData) =
      Camera3d.perspective
           { viewpoint =
             let
-                direction = Direction3d.yx playerData.horizontalAngle
+                horizontalAngle = Angle.degrees (90 - (Angle.inDegrees playerData.horizontalAngle))
+                direction = Direction3d.xyZ horizontalAngle playerData.verticalAngle
             in
                 Viewpoint3d.lookAt
                     { eyePoint = playerData.position
@@ -135,6 +139,15 @@ turnLeft (Player playerData) =
 turnRight : Player -> Player
 turnRight (Player playerData) =
     Player { playerData | horizontalTurning = TurnRight }
+
+mouseSensitivity = 0.25
+
+updateLookByMouseMovement : (Int, Int) -> Player -> Player
+updateLookByMouseMovement (dx, dy) (Player playerData) =
+    (Player { playerData
+        | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) + toFloat dx * mouseSensitivity))
+        , verticalAngle = Angle.degrees (clamp -89.9 89.9 ((Angle.inDegrees playerData.verticalAngle) - toFloat dy * mouseSensitivity * 0.5))
+    })
 
 stopTurning : Player -> Player
 stopTurning (Player playerData) =

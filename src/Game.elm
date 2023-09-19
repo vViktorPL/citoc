@@ -32,7 +32,9 @@ subscriptions _ =
         [ Browser.Events.onAnimationFrameDelta AnimationTick
         , Browser.Events.onKeyDown (Decode.map KeyDown keyDecoder)
         , Browser.Events.onKeyUp (Decode.map KeyUp keyDecoder)
+        , Browser.Events.onMouseMove (Decode.map MouseMove lockedMouseMovementDecoder)
         ]
+
 
 
 type WorldCoordinates = WorldCoordinates
@@ -45,14 +47,20 @@ type alias Model =
     { textures: Textures
     , player: Player
     , level: Level
-    , controlKeysHistory: List ControlKey
+    , gestureHistory: List Gesture
     }
+
+type Gesture
+    = LookLeft
+    | LookRight
+    | LookUp
+    | LookDown
 
 type TurnControl = NoTurn | TurnLeft | TurnRight
 
 type MoveControl = Stand | Forward | Backward
 
-maxControlKeysHistory = 5
+maxGestureHistory = 5
 
 init : Textures -> Model
 init textures =
@@ -62,7 +70,7 @@ init textures =
     { textures = textures
     , player = Player.initOnLevel level
     , level = level
-    , controlKeysHistory = []
+    , gestureHistory = []
     }
 
 -- UPDATE
@@ -71,6 +79,7 @@ type Msg
     = AnimationTick Float
     | KeyDown ControlKey
     | KeyUp ControlKey
+    | MouseMove (Int, Int)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -89,7 +98,10 @@ update msg model =
         KeyDown key ->
             ({ model
                 | player = controlKeyToPlayerAction key model.player
-                , controlKeysHistory = key :: model.controlKeysHistory
+                , gestureHistory = case key of
+                    ControlTurnLeft -> LookLeft :: List.take (maxGestureHistory - 1) model.gestureHistory
+                    ControlTurnRight -> LookRight :: List.take (maxGestureHistory - 1) model.gestureHistory
+                    _ -> model.gestureHistory
             }, Cmd.none )
 
         KeyUp key ->
@@ -101,6 +113,31 @@ update msg model =
                 ControlStrafeLeft -> ({ model | player = Player.stopStrafingLeft model.player }, Cmd.none)
                 ControlStrafeRight -> ({ model | player = Player.stopStrafingRight model.player }, Cmd.none)
                 _ -> (model, Cmd.none)
+
+        MouseMove (x, y) ->
+            let
+                horizontalMove = abs y < abs x
+
+                maybeGesture =
+                    if horizontalMove && x > 2 then
+                        Just LookRight
+                    else if horizontalMove && x < -2 then
+                        Just LookLeft
+                    else if not horizontalMove && y > 2 then
+                        Just LookDown
+                    else if not horizontalMove && y < -2 then
+                        Just LookUp
+                    else
+                        Nothing
+            in
+                ({ model
+                    | player = Player.updateLookByMouseMovement (x, y) model.player
+                    , gestureHistory =
+                        case (maybeGesture, maybeGesture /= List.head model.gestureHistory) of
+                            (Just gesture, True) ->
+                                gesture :: List.take (maxGestureHistory - 1) model.gestureHistory
+                            _ -> model.gestureHistory
+                }, Cmd.none )
 
 
 
@@ -124,6 +161,21 @@ type ControlKey
     | ControlTurnLeft
     | ControlTurnRight
     | Unknown
+
+lockedMouseMovementDecoder : Decode.Decoder (Int, Int)
+lockedMouseMovementDecoder =
+    Decode.at ["view", "document", "pointerLockElement"] (Decode.nullable Decode.value)
+        |> Decode.andThen
+            (\lockElement ->
+                case lockElement of
+                    Just _ ->
+                        Decode.map2 Tuple.pair
+                            (Decode.field "movementX" Decode.int)
+                            (Decode.field "movementY" Decode.int)
+
+                    Nothing -> Decode.fail "Mouse not locked"
+            )
+
 
 keyDecoder : Decode.Decoder ControlKey
 keyDecoder =
@@ -153,16 +205,7 @@ handleTriggers model newPlayer =
         (prevX, prevY) = Player.getSector model.player
         (newX, newY) = Player.getSector newPlayer
         (dX, dY) =  (prevX - newX, prevY - newY)
-        maybeMovingOrientation =
-            --Debug.log "movingOrientation"
-            (if (dX == 0 && dY < 0) then Just North
-            else if dX > 0 && dY == 0 then Just East
-            else if dX == 0 && dY > 0 then Just South
-            else if dX < 0 && dY == 0 then Just West
-            else Nothing
-            )
-
-        lookingAt = (Player.getHorizontalOrientation newPlayer) --Debug.log "lookingAt"
+        lookingAt = (Player.getHorizontalOrientation newPlayer)
     in
         Level.getTriggersAt model.level (newX, newY)
               |> List.filter
@@ -180,10 +223,18 @@ handleTriggers model newPlayer =
 
                           NegativeHeadshake ->
                               let
-                                  last3Controls = List.take 3 model.controlKeysHistory
+                                  last3Gestures = List.take 3 model.gestureHistory
                               in
-                                  last3Controls == [ControlTurnLeft, ControlTurnRight, ControlTurnLeft] ||
-                                  last3Controls == [ControlTurnRight, ControlTurnLeft, ControlTurnRight]
+                                  last3Gestures == [LookLeft, LookRight, LookLeft] ||
+                                  last3Gestures == [LookRight, LookLeft, LookRight]
+
+                          Nod ->
+                              let
+                                  last3Gestures = List.take 3 model.gestureHistory
+                              in
+                                  last3Gestures == [LookUp, LookDown, LookUp] ||
+                                  last3Gestures == [LookDown, LookUp, LookDown]
+
                       )
                       trigger.conditions
                   )
@@ -196,11 +247,11 @@ handleTriggers model newPlayer =
                 )
                 { model
                     | player = newPlayer
-                    , controlKeysHistory =
+                    , gestureHistory =
                         if newX /= prevX || newY /= prevY then
                             []
                         else
-                            model.controlKeysHistory
+                            model.gestureHistory
                 }
 
 
