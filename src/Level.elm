@@ -48,6 +48,7 @@ type TriggerCondition
 
 type TriggerEffect
     = Teleport (Int, Int)
+    | NextLevel
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =
@@ -95,10 +96,8 @@ tileCollides levelTile =
         _ -> False
 
 
---createTexturedBlock : Scene3d.Material.Material coordinates { normals : (), uvs : () } -> { x1 : Quantity Float Length.Meters, x2 : Quantity Float Length.Meters, y1 : Quantity Float Length.Meters, y2 : Quantity Float Length.Meters, z1 : Quantity Float Length.Meters, z2 : Quantity Float Length.Meters } -> Scene3d.Scene Msg
 createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
     let
-        -- Create quads for each wall using your custom `quad` function
         leftQuad = Scene3d.quad material
             (Point3d.xyz x1 y1 z1)
             (Point3d.xyz x1 y2 z1)

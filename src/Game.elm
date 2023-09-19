@@ -1,6 +1,7 @@
 module Game exposing (..)
 
 import Html exposing (Html)
+import Html.Attributes
 import Scene3d
 import Color exposing (..)
 import Direction3d
@@ -23,10 +24,17 @@ subscriptions _ =
         , Browser.Events.onResize WindowResize
         ]
 
+type GameState
+    = Playing
+    | FadingOutLevel Float
+    | FadingInLevel Float
+
 type alias Model =
     { textures: Textures
+    , state: GameState
     , player: Player
     , level: Level
+    , levelsLeft: List Level
     , gestureHistory: List Gesture
     , canvasSize : (Int, Int)
     }
@@ -37,10 +45,6 @@ type Gesture
     | LookUp
     | LookDown
 
-type TurnControl = NoTurn | TurnLeft | TurnRight
-
-type MoveControl = Stand | Forward | Backward
-
 maxGestureHistory = 5
 
 init : Textures -> Model
@@ -49,8 +53,10 @@ init textures =
         level = LevelIndex.firstLevel
     in
     { textures = textures
+    , state = Playing
     , player = Player.initOnLevel level
     , level = level
+    , levelsLeft = LevelIndex.restLevels
     , gestureHistory = []
     , canvasSize = (800, 600)
     }
@@ -63,6 +69,9 @@ type Msg
     | WindowResize Int Int
 
 
+fadeOutTime = 2000
+fadeInTime = 1000
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -70,14 +79,40 @@ update msg model =
             ({ model | canvasSize = (width, height) }, Cmd.none)
 
         AnimationTick delta ->
-            let
-                newPlayer = Player.update delta model.player
-                newSector = (Player.getSector (Player.update (delta * 5) model.player) )
-            in
-                if Level.collisionOnSector model.level newSector then
-                    (model, Cmd.none)
-                else
-                    (handleTriggers model newPlayer, Cmd.none )
+            case model.state of
+                Playing ->
+                    let
+                        newPlayer = Player.update delta model.player
+                        newSector = (Player.getSector (Player.update (delta * 5) model.player) )
+                    in
+                        if Level.collisionOnSector model.level newSector then
+                            (model, Cmd.none)
+                        else
+                            (handleTriggers model newPlayer, Cmd.none )
+                FadingOutLevel timeLeft ->
+                    let
+                        newTimeLeft = max (timeLeft - delta) 0
+                        nextLevel = model.levelsLeft
+                            |> List.head
+                            |> Maybe.withDefault model.level
+                    in
+                        if newTimeLeft == 0 then
+                            ({ model
+                            | level = nextLevel
+                            , levelsLeft = List.drop 1 model.levelsLeft
+                            , player = Player.initOnLevel nextLevel
+                            , state = FadingInLevel fadeInTime
+                            }, Cmd.none)
+                        else
+                            ({ model | state = FadingOutLevel newTimeLeft }, Cmd.none)
+                FadingInLevel timeLeft ->
+                    let
+                        newTimeLeft = max (timeLeft - delta) 0
+                    in
+                        if newTimeLeft == 0 then
+                            ({ model | state = Playing }, Cmd.none)
+                        else
+                            ({ model | state = FadingInLevel newTimeLeft }, Cmd.none)
 
         KeyDown key ->
             ({ model
@@ -182,6 +217,9 @@ keyDecoder =
                     _ -> Unknown
             )
 
+transitionToNextLevel : Model -> Model
+transitionToNextLevel model =
+    { model | state = FadingOutLevel fadeOutTime }
 
 handleTriggers : Model -> Player -> Model
 handleTriggers model newPlayer =
@@ -228,6 +266,8 @@ handleTriggers model newPlayer =
                     case effect of
                         Teleport targetSector ->
                             { modelAcc | player = Player.teleport modelAcc.player targetSector }
+                        NextLevel ->
+                            transitionToNextLevel modelAcc
                 )
                 { model
                     | player = newPlayer
@@ -240,11 +280,19 @@ handleTriggers model newPlayer =
 
 view : Model -> Html Msg
 view model =
-    Scene3d.cloudy
-        { entities = [ Level.view model.textures model.level ]
-        , camera = Player.view model.player
-        , upDirection = Direction3d.z
-        , background = Scene3d.backgroundColor Color.white
-        , clipDepth = Length.centimeters 1
-        , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
-        }
+    let
+        opacity = case model.state of
+            FadingOutLevel timeLeft -> timeLeft / fadeOutTime
+            FadingInLevel timeLeft -> (fadeInTime - timeLeft) / fadeInTime
+            Playing -> 1
+    in
+    Html.div [Html.Attributes.style "opacity" (String.fromFloat opacity) ]
+        [ Scene3d.cloudy
+            { entities = [ Level.view model.textures model.level ]
+            , camera = Player.view model.player
+            , upDirection = Direction3d.z
+            , background = Scene3d.backgroundColor Color.white
+            , clipDepth = Length.centimeters 1
+            , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
+            }
+        ]
