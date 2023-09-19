@@ -12,11 +12,9 @@ getTexture : Textures -> String -> Maybe (Material.Texture Color)
 getTexture textures fileName =
     Dict.get fileName textures
 
---loadTexture : String -> Cmd Msg
 loadTexture fileName =
    Material.loadWith Material.trilinearFiltering ("assets/" ++ fileName)
 
---loadTextures : List String -> Task
 loadTextures fileNames =
     fileNames
         |> List.map (\fileName -> loadTexture fileName |> Task.map (Tuple.pair fileName))

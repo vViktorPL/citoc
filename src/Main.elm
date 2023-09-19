@@ -25,14 +25,6 @@ type Model
     | InitError
     | Playing Game.Model
 
-
-
-
-type TurnControl = NoTurn | TurnLeft | TurnRight
-
-type MoveControl = Stand | Forward | Backward
-
-
 texturesToLoad : List String
 texturesToLoad =
     [ "BricksTexture.jpg"
@@ -62,8 +54,7 @@ init =
 -- UPDATE
 
 type Msg
-    = Loading
-    | Loaded Textures
+    = Loaded Textures
     | LoadingFailed
     | GameMsg Game.Msg
 

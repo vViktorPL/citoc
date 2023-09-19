@@ -1,30 +1,17 @@
 module Game exposing (..)
 
 import Html exposing (Html)
-import Browser
 import Scene3d
 import Color exposing (..)
 import Direction3d
-import Angle
 import Length
 import Pixels
-import Camera3d
-import Viewpoint3d
-import Point3d
-import Scene3d.Material
-import Block3d
 import Browser.Events
 import Json.Decode as Decode
 import Player exposing (Player)
 import Level exposing (Level, Orientation(..), TriggerCondition(..), TriggerEffect(..))
 import Level.Index as LevelIndex
-import Scene3d.Material as Material
-import Task
-import WebGL.Texture
-import Dict exposing (Dict)
 import Textures exposing (Textures)
-
--- MAIN
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -35,14 +22,6 @@ subscriptions _ =
         , Browser.Events.onMouseMove (Decode.map MouseMove lockedMouseMovementDecoder)
         , Browser.Events.onResize WindowResize
         ]
-
-
-
-type WorldCoordinates = WorldCoordinates
-
-type MapCoordinates = MapCoordinates
-
--- MODEL
 
 type alias Model =
     { textures: Textures
@@ -76,8 +55,6 @@ init textures =
     , canvasSize = (800, 600)
     }
 
--- UPDATE
-
 type Msg
     = AnimationTick Float
     | KeyDown ControlKey
@@ -95,7 +72,7 @@ update msg model =
         AnimationTick delta ->
             let
                 newPlayer = Player.update delta model.player
-                newSector = (Player.getSector (Player.update (delta * 5) model.player) ) --Debug.log "pos"
+                newSector = (Player.getSector (Player.update (delta * 5) model.player) )
             in
                 if Level.collisionOnSector model.level newSector then
                     (model, Cmd.none)
@@ -260,10 +237,6 @@ handleTriggers model newPlayer =
                         else
                             model.gestureHistory
                 }
-
-
-
--- VIEW
 
 view : Model -> Html Msg
 view model =
