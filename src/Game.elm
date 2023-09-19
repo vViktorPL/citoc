@@ -33,6 +33,7 @@ subscriptions _ =
         , Browser.Events.onKeyDown (Decode.map KeyDown keyDecoder)
         , Browser.Events.onKeyUp (Decode.map KeyUp keyDecoder)
         , Browser.Events.onMouseMove (Decode.map MouseMove lockedMouseMovementDecoder)
+        , Browser.Events.onResize WindowResize
         ]
 
 
@@ -48,6 +49,7 @@ type alias Model =
     , player: Player
     , level: Level
     , gestureHistory: List Gesture
+    , canvasSize : (Int, Int)
     }
 
 type Gesture
@@ -71,6 +73,7 @@ init textures =
     , player = Player.initOnLevel level
     , level = level
     , gestureHistory = []
+    , canvasSize = (800, 600)
     }
 
 -- UPDATE
@@ -80,11 +83,15 @@ type Msg
     | KeyDown ControlKey
     | KeyUp ControlKey
     | MouseMove (Int, Int)
+    | WindowResize Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        WindowResize width height ->
+            ({ model | canvasSize = (width, height) }, Cmd.none)
+
         AnimationTick delta ->
             let
                 newPlayer = Player.update delta model.player
@@ -266,5 +273,5 @@ view model =
         , upDirection = Direction3d.z
         , background = Scene3d.backgroundColor Color.white
         , clipDepth = Length.centimeters 1
-        , dimensions = ( Pixels.int 800, Pixels.int 600 )
+        , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
         }
