@@ -1,24 +1,17 @@
-#######
-#...X.#
-#A###.#
-#v#  #
-#.#######
-#.......#
-#.......#
-#.......#
-#.##?##.#
-#.#...#.#
-#Q#2#1#W#
-#.#.#.#.#
-#.#.#.#.#
-#...#...#
-#########
+###
+#v#
+#.##############
+#.........A..X.#
+#.........####.#
+#.........#  #.#
+#########.#
+      #Q#.#
+      #.#.#
+      #...#
+      #####
 
 ---
-1 Floor [LookAngle South] [ChangeTile @A Floor, Teleport @Q]
-Q Floor
-2 Floor [LookAngle South] [ChangeTile @A Floor, Teleport @W]
-W Floor
+Q Floor [StepIn] [ChangeTile @A Floor]
+A Floor
 X Floor [StepIn] [NextLevel]
-A Wall
-? (Sign "Sign-ConfusingCorridor.png" South)
+A BlueWall

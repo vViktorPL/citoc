@@ -1,21 +1,24 @@
-##############
-..D#.........#
-##4#.#######.#
- #C#.#.....#.#
- #3#.#.###.#.#
- #B#.#.#v#.#.#
- #2#.#.#...#.#
- #A#.#.#####.#
- #1#.#.......#
- #...#########
- #####
+#######
+#...X.#
+#A###.#
+#v#  #
+#.#######
+#.......#
+#.......#
+#.......#
+#.##?##.#
+#.#...#.#
+#Q#2#1#W#
+#.#.#.#.#
+#.#.#.#.#
+#...#...#
+#########
 
 ---
-1 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @1, ChangeTile @A Floor]
-2 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @2, ChangeTile @B Floor]
-3 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @3, ChangeTile @C Floor]
-4 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @4, ChangeTile @D Floor, CreateTrigger (Trigger @4 [StepIn] [NextLevel])]
+1 Floor [LookAngle South] [ChangeTile @A Floor, Teleport @Q]
+Q Floor
+2 Floor [LookAngle South] [ChangeTile @A Floor, Teleport @W]
+W Floor
+X Floor [StepIn] [NextLevel]
 A Wall
-B Wall
-C Wall
-D Wall
+? (Sign "Sign-ConfusingCorridor.png" South)

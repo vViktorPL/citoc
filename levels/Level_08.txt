@@ -1,0 +1,37 @@
+####
+...#
+##2#
+ #v#
+ #.#
+ #.#
+ #.######
+ #...T..#
+ ####Q#W#
+  #####1#
+  #...E.#
+  #.###.#
+  #.# #.######
+ ##X# #..3|..#
+ ...# ####"#.#
+ ####      #4#
+           #.#
+           #.#
+           #.##
+           #...
+           ####
+---
+1 Floor [EnteredFrom North] [Teleport @v]
+2 Floor [StepIn] [Teleport @W]
+3 Floor
+4 Floor [StepIn] [Teleport @v]
+W Floor
+E Wall
+
+Q (Sign "Sign-Quiz.png" North)
+T Floor [NegativeHeadshake, LookAngle South] [ChangeTile @| Floor, RemoveAllTriggersInSector @3, CreateTrigger (Trigger @3 [StepIn] [CreateTrigger (Trigger @1 [StepIn] [Teleport @v])]), RemoveAllTriggersInSector @1]
+T Floor [Nod, LookAngle South] [ChangeTile @| (Sign "Sign-CorrectAnswer.png" West), RemoveAllTriggersInSector @3, CreateTrigger (Trigger @3 [StepIn] [ChangeTile @1 Wall, ChangeTile @E Floor]), RemoveAllTriggersInSector @1]
+
+| (Sign "Sign-CorrectAnswer.png" West)
+" (Sign "Sign-CorrectAnswer.png" North)
+
+X Floor [StepIn] [NextLevel]

@@ -34,6 +34,14 @@ texturesToLoad =
     , (TextureColor, "CorrugatedSteel007B_1K-JPG_Color.jpg")
     , (TextureFloat, "CorrugatedSteel007B_1K-JPG_Metalness.jpg")
     , (TextureFloat, "CorrugatedSteel007B_1K-JPG_Roughness.jpg")
+    , (TextureColor, "Sign-Quiz.png")
+    , (TextureColor, "Sign-CorrectAnswer.png")
+    , (TextureColor, "Sign-CountTo3.png")
+    , (TextureColor, "Sign-1.png")
+    , (TextureColor, "Sign-2.png")
+    , (TextureColor, "Sign-3.png")
+    , (TextureColor, "Sign-ProgrammerZero.png")
+    , (TextureColor, "Sign-JustKiddin.png")
     --, "Text-Long.png"
     --, "Sign1.png"
     --, "Sign2.png"

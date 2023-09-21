@@ -1,0 +1,29 @@
+
+
+############## ########
+E4D#.........# ER.....K
+##3#.#######.# ######.#
+ #C#.#.....#.#     ##X#
+ #2#.#.#S#.#.#     ...#
+ #B#.#.#v#.#.#     ####
+ #1#.#.#...#.#
+ #A#.#.#####.#
+ #0#.#.......#
+ #...#########
+ #####
+
+---
+0 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-CountTo3.png" South), Teleport @v, RemoveAllTriggersInSector @0, ChangeTile @A Floor]
+1 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-1.png" South), Teleport @v, RemoveAllTriggersInSector @1, ChangeTile @B Floor]
+2 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-2.png" South), Teleport @v, RemoveAllTriggersInSector @2, ChangeTile @C Floor]
+3 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-3.png" South), Teleport @v, RemoveAllTriggersInSector @3, ChangeTile @D Floor]
+4 Floor [LookAngle West] [Teleport @R]
+A (Sign "Sign-CountTo3.png" South)
+B (Sign "Sign-1.png" South)
+C (Sign "Sign-2.png" South)
+D (Sign "Sign-3.png" South)
+E (Sign "Sign-ProgrammerZero.png" East)
+K (Sign "Sign-JustKiddin.png" West)
+S Wall
+R Floor
+X Floor [StepIn] [NextLevel]
