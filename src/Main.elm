@@ -3,7 +3,7 @@ module Main exposing (..)
 import Game
 import Browser
 import Task
-import Textures exposing (Textures)
+import Textures exposing (Textures, TextureType(..))
 import Html exposing (Html)
 
 
@@ -25,17 +25,24 @@ type Model
     | InitError
     | Playing Game.Model
 
-texturesToLoad : List String
 texturesToLoad =
-    [ "BricksTexture.jpg"
-    , "Sign1.png"
-    , "Sign2.png"
-    , "Sign3.png"
-    , "Sign4.png"
-    , "Sign5.png"
-    , "Sign6.png"
-    , "Sign7.png"
-    , "Sign8.png"
+    [ (TextureColor, "Bricks021_1K-JPG_Color.jpg")
+    , (TextureFloat, "Bricks021_1K-JPG_Roughness.jpg")
+    , (TextureColor, "CheckerFloor.jpg")
+    , (TextureColor, "OfficeCeiling005_4K_Color.jpg")
+    , (TextureColor, "Sign-ConfusingCorridor.png")
+    , (TextureColor, "CorrugatedSteel007B_1K-JPG_Color.jpg")
+    , (TextureFloat, "CorrugatedSteel007B_1K-JPG_Metalness.jpg")
+    , (TextureFloat, "CorrugatedSteel007B_1K-JPG_Roughness.jpg")
+    --, "Text-Long.png"
+    --, "Sign1.png"
+    --, "Sign2.png"
+    --, "Sign3.png"
+    --, "Sign4.png"
+    --, "Sign5.png"
+    --, "Sign6.png"
+    --, "Sign7.png"
+    --, "Sign8.png"
     ]
 
 init : (Model, Cmd Msg)

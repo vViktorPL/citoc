@@ -10,6 +10,7 @@ import Color
 --import Player exposing (Player)
 import Textures exposing (Textures)
 import Quantity exposing (Quantity)
+import Luminance
 
 type Level
     = Level
@@ -150,22 +151,61 @@ createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
     in
         Scene3d.group [leftQuad, frontQuad, behindQuad, rightQuad]
 
-viewBlock textures (x, y) =
-    Textures.getTexture textures "BricksTexture.jpg"
+viewFloor textures (x, y) =
+    Textures.getTexture textures "CheckerFloor.jpg"
+        |> Maybe.andThen (\floorTexture -> Textures.getTexture textures "OfficeCeiling005_4K_Color.jpg" |> Maybe.map (\ceilingTexture -> (floorTexture, ceilingTexture)) )
         |> Maybe.map
-            (\texture ->
-                (createTexturedBlock
-                    (Scene3d.Material.texturedMatte texture)
-                    { x1 = Length.meters (toFloat -x)
-                    , x2 = Length.meters (toFloat -(x + 1) )
-                    , y1 = Length.meters (toFloat y)
-                    , y2 = Length.meters (toFloat (y + 1))
-                    , z1 = Length.meters 0
-                    , z2 = Length.meters 1
-                    }
-                )
+            (\(floorTexture, ceilingTexture) ->
+                let
+                   floorMaterial = (Scene3d.Material.texturedNonmetal { baseColor = floorTexture, roughness = Scene3d.Material.constant 0.5 })
+                   ceilingMaterial = (Scene3d.Material.texturedEmissive ceilingTexture (Luminance.footLamberts 100 ))
+                   x1 = Length.meters (toFloat -x)
+                   y1 = Length.meters (toFloat (y + 1))
+                   x2 = Length.meters (toFloat -x - 1)
+                   y2 = Length.meters (toFloat (y + 1))
+                   x3 = Length.meters (toFloat -x - 1)
+                   y3 = Length.meters (toFloat y)
+                   x4 = Length.meters (toFloat -x)
+                   y4 = Length.meters (toFloat y)
+
+                   zBottom = Length.meters 0
+                   zTop = Length.meters 1
+                in
+                    Scene3d.group
+                        [ Scene3d.quad floorMaterial
+                             (Point3d.xyz x1 y1 zBottom)
+                             (Point3d.xyz x2 y2 zBottom)
+                             (Point3d.xyz x3 y3 zBottom)
+                             (Point3d.xyz x4 y4 zBottom)
+                        , Scene3d.quad ceilingMaterial
+                             (Point3d.xyz x1 y1 zTop)
+                             (Point3d.xyz x2 y2 zTop)
+                             (Point3d.xyz x3 y3 zTop)
+                             (Point3d.xyz x4 y4 zTop)
+                        ]
+
+
             )
         |> Maybe.withDefault Scene3d.nothing
+
+viewBlock textures (x, y) =
+    Maybe.map2
+        (\texture roughness ->
+            (createTexturedBlock
+                (Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness })
+                { x1 = Length.meters (toFloat -x)
+                , x2 = Length.meters (toFloat -(x + 1) )
+                , y1 = Length.meters (toFloat y)
+                , y2 = Length.meters (toFloat (y + 1))
+                , z1 = Length.meters 0
+                , z2 = Length.meters 1
+                }
+            )
+        )
+        (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
+        (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
+        |> Maybe.withDefault Scene3d.nothing
+
 
 viewSign : Textures -> String -> Orientation -> (Int, Int) -> Scene3d.Entity WorldCoordinates
 viewSign textures texture orientation (x, y) =
@@ -309,39 +349,25 @@ view textures (Level levelData) =
                                     ]
 
                             BlueWall ->
-                                    Scene3d.block
-                                        (Scene3d.Material.matte Color.darkBlue)
-                                        (Block3d.with
-                                        { x1 = Length.meters (toFloat -x)
-                                        , x2 = Length.meters (toFloat -(x + 1) )
-                                        , y1 = Length.meters (toFloat y)
-                                        , y2 = Length.meters (toFloat (y + 1))
-                                        , z1 = Length.meters 0
-                                        , z2 = Length.meters 1
-                                        })
+                                Maybe.map3
+                                    (\texture metalness roughness ->
+                                        createTexturedBlock
+                                            (Scene3d.Material.texturedPbr { baseColor = texture, metallic = metalness, roughness = roughness } )
+                                            { x1 = Length.meters (toFloat -x)
+                                            , x2 = Length.meters (toFloat -(x + 1) )
+                                            , y1 = Length.meters (toFloat y)
+                                            , y2 = Length.meters (toFloat (y + 1))
+                                            , z1 = Length.meters 0
+                                            , z2 = Length.meters 1
+                                            }
+                                    )
+                                    (Textures.getTexture textures "CorrugatedSteel007B_1K-JPG_Color.jpg")
+                                    (Textures.getTextureFloat textures "CorrugatedSteel007B_1K-JPG_Metalness.jpg")
+                                    (Textures.getTextureFloat textures "CorrugatedSteel007B_1K-JPG_Roughness.jpg")
+                                    |> Maybe.withDefault Scene3d.nothing
                             Floor ->
-                                Scene3d.group
-                                    [ Scene3d.block
-                                           (Scene3d.Material.nonmetal { baseColor = Color.lightPurple, roughness = 0.5 })
-                                           (Block3d.with
-                                           { x1 = Length.meters (toFloat -x - 0.01)
-                                           , x2 = Length.meters (toFloat -(x + 1) + 0.01)
-                                           , y1 = Length.meters (toFloat y + 0.01)
-                                           , y2 = Length.meters (toFloat (y + 1) - 0.01)
-                                           , z1 = Length.meters 0
-                                           , z2 = Length.meters 0.01
-                                           })
-                                    , Scene3d.block
-                                         (Scene3d.Material.matte Color.darkBrown)
-                                         (Block3d.with
-                                         { x1 = Length.meters (toFloat -x)
-                                         , x2 = Length.meters (toFloat -(x + 1))
-                                         , y1 = Length.meters (toFloat y)
-                                         , y2 = Length.meters (toFloat (y + 1))
-                                         , z1 = Length.meters 0
-                                         , z2 = Length.meters 0.005
-                                         })
-                                    ]
+                                viewFloor textures (x, y)
+
                             _ -> Scene3d.nothing
                     )
                     row

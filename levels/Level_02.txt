@@ -1,0 +1,21 @@
+##############
+..D#.........#
+##4#.#######.#
+ #C#.#.....#.#
+ #3#.#.###.#.#
+ #B#.#.#v#.#.#
+ #2#.#.#...#.#
+ #A#.#.#####.#
+ #1#.#.......#
+ #...#########
+ #####
+
+---
+1 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @1, ChangeTile @A Floor]
+2 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @2, ChangeTile @B Floor]
+3 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @3, ChangeTile @C Floor]
+4 Floor [LookAngle North] [Teleport @v, RemoveAllTriggersInSector @4, ChangeTile @D Floor, CreateTrigger (Trigger @4 [StepIn] [NextLevel])]
+A Wall
+B Wall
+C Wall
+D Wall

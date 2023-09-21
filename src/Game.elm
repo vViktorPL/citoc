@@ -298,6 +298,7 @@ view model =
     Html.div [Html.Attributes.style "opacity" (String.fromFloat opacity) ]
         [ Scene3d.cloudy
             { entities = [ Level.view model.textures model.level ]
+            --, sunlightDirection = Direction3d.z
             , camera = Player.view model.player
             , upDirection = Direction3d.z
             , background = Scene3d.backgroundColor Color.white
@@ -305,3 +306,13 @@ view model =
             , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
             }
         ]
+
+--{ upDirection : Direction3d coordinates
+  --    , sunlightDirection : Direction3d coordinates
+  --    , shadows : Bool
+  --    , dimensions : ( Quantity Int Pixels, Quantity Int Pixels )
+  --    , camera : Camera3d Meters coordinates
+  --    , clipDepth : Length
+  --    , background : Background coordinates
+  --    , entities : List (Entity coordinates)
+  --    }

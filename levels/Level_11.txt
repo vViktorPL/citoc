@@ -1,0 +1,19 @@
+########
+#>.....# ########
+#.####.# #.#..#.#
+#.#  #.# #.#..#.#
+#.####.# #.#..#.#
+#..12..# #.#xy#.#
+######## #..QW..#
+#        ########
+##
+
+---
+1 Floor [LookAngle South] [Teleport @Q]
+2 Floor [LookAngle South] [Teleport @W]
+Q Floor [LookAngle West] [Teleport @1]
+Q Floor [LookAngle East] [Teleport @1]
+W Floor [LookAngle West] [Teleport @2]
+W Floor [LookAngle East] [Teleport @2]
+x Floor [StepIn] [RemoveAllTriggersInSector @Q, RemoveAllTriggersInSector @W]
+y Floor [StepIn] [RemoveAllTriggersInSector @Q, RemoveAllTriggersInSector @W]
