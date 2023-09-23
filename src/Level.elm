@@ -46,6 +46,7 @@ type TriggerCondition
     | NegativeHeadshake
     | Nod
     | StepIn
+    | CounterEquals String Int
 
 type TriggerEffect
     = Teleport (Int, Int)
@@ -53,6 +54,8 @@ type TriggerEffect
     | ChangeTile (Int, Int) LevelTile
     | CreateTrigger Trigger
     | RemoveAllTriggersInSector (Int, Int)
+    | IncrementCounter String
+    | DecrementCounter String
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =

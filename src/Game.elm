@@ -14,6 +14,7 @@ import Level exposing (Level, Orientation(..), TriggerCondition(..), TriggerEffe
 import Level.Index as LevelIndex
 import Textures exposing (Textures)
 import Vector3d
+import Dict exposing (Dict)
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -36,6 +37,7 @@ type alias Model =
     , player: Player
     , level: Level
     , levelsLeft: List Level
+    , counters: Dict String Int
     , gestureHistory: List Gesture
     , canvasSize : (Int, Int)
     }
@@ -58,9 +60,11 @@ init textures =
     , player = Player.initOnLevel level
     , level = level
     , levelsLeft = LevelIndex.restLevels
+    , counters = Dict.empty
     , gestureHistory = []
     , canvasSize = (800, 600)
     }
+
 
 type Msg
     = AnimationTick Float
@@ -72,6 +76,12 @@ type Msg
 
 fadeOutTime = 2000
 fadeInTime = 1000
+
+playerCollides : Level -> Player -> Bool
+playerCollides level player =
+    case Level.cylinderCollisionSector level Player.playerRadius (Player.getPlayerPosition player) of
+        Just _ -> True
+        Nothing -> False
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -92,9 +102,16 @@ update msg model =
                             |> Vector3d.scaleBy delta
                             |> Level.applyCollision Player.playerRadius model.level (Player.getPlayerPosition model.player)
                     in
-                        case Level.cylinderCollisionSector model.level Player.playerRadius (Player.getPlayerPosition newPlayer) of
-                            Just _ -> (model, Cmd.none)
-                            Nothing -> (handleTriggers model newPlayer, Cmd.none )
+                        if playerCollides model.level newPlayer then
+                            (model, Cmd.none)
+                        else
+                            let
+                                modelAfterTriggers = handleTriggers model newPlayer
+                            in
+                                if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
+                                    ({ model | player = newPlayer }, Cmd.none)
+                                else
+                                    (modelAfterTriggers, Cmd.none)
 
                 FadingOutLevel timeLeft ->
                     let
@@ -111,7 +128,7 @@ update msg model =
                             , state = FadingInLevel fadeInTime
                             }, Cmd.none)
                         else
-                            ({ model | state = FadingOutLevel newTimeLeft }, Cmd.none)
+                            ({ model | state = FadingOutLevel newTimeLeft, counters = Dict.empty }, Cmd.none)
                 FadingInLevel timeLeft ->
                     let
                         newTimeLeft = max (timeLeft - delta) 0
@@ -267,6 +284,13 @@ handleTriggers model newPlayer =
                           StepIn ->
                               True
 
+                          CounterEquals counterName desiredNumber ->
+                              let
+                                  counterState = Maybe.withDefault 0 (Dict.get counterName model.counters)
+                              in
+                                  desiredNumber == counterState
+
+
                       )
                       trigger.conditions
                   )
@@ -284,6 +308,10 @@ handleTriggers model newPlayer =
                             { modelAcc | level = Level.addTrigger trigger modelAcc.level }
                         RemoveAllTriggersInSector sector ->
                             { modelAcc | level = Level.removeAllTriggersAtSector sector modelAcc.level }
+                        IncrementCounter counterName ->
+                            { modelAcc | counters = Debug.log "Counters update" <| Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
+                        DecrementCounter counterName ->
+                            { modelAcc | counters = Debug.log "Counters update" <| Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount - 1)) modelAcc.counters }
                 )
                 { model
                     | player = newPlayer
