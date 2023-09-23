@@ -19,6 +19,10 @@ module Player exposing
     , teleport
     , getSector
     , getHorizontalOrientation
+    , getMovementVector
+    , getPlayerPosition
+    , updatePlayerPosition
+    , playerRadius
     )
 
 import Point3d exposing (Point3d)
@@ -28,6 +32,7 @@ import Angle exposing (Angle)
 import Camera3d
 import Direction3d
 import Viewpoint3d
+import Vector3d exposing (Vector3d)
 
 type Player =
     Player
@@ -54,6 +59,7 @@ type MovementX
 
 turningSpeed = 0.1
 walkingSpeed = 0.002
+playerRadius = Length.centimeters 20
 
 init : (Int, Int) -> Orientation -> Player
 init (x, y) orientation =
@@ -200,8 +206,7 @@ update : Float -> Player -> Player
 update delta player =
     player
         |> animatePlayerTurning delta
-        |> animatePlayerMovementY delta
-        |> animatePlayerMovementX delta
+        --|> animatePlayerMovement delta
 
 addAngle : Angle -> Float -> Angle
 addAngle angle degrees =
@@ -210,31 +215,76 @@ addAngle angle degrees =
         |> (+) degrees
         |> Angle.degrees
 
-animatePlayerMovementY : Float -> Player -> Player
-animatePlayerMovementY delta (Player playerData) =
-    let
-       direction = Direction3d.yx playerData.horizontalAngle
-       velocity = delta * walkingSpeed
-    in
-    case playerData.movementY of
-        Just Forward -> Player { playerData | position = Point3d.translateIn direction (Length.meters velocity) playerData.position }
-        Just Backward -> Player { playerData | position = Point3d.translateIn direction (Length.meters -velocity) playerData.position }
-        _ -> Player playerData
-
-animatePlayerMovementX : Float -> Player -> Player
-animatePlayerMovementX delta (Player playerData) =
-    let
-       direction = Direction3d.yx (addAngle playerData.horizontalAngle -90)
-       velocity = delta * walkingSpeed
-    in
-    case playerData.movementX of
-        Just StrafeLeft -> Player { playerData | position = Point3d.translateIn direction (Length.meters (velocity * 0.7) ) playerData.position }
-        Just StrafeRight -> Player { playerData | position = Point3d.translateIn direction (Length.meters (velocity * -0.7) ) playerData.position }
-        _ -> Player playerData
-
 animatePlayerTurning : Float -> Player -> Player
 animatePlayerTurning delta (Player playerData) =
     case playerData.horizontalTurning of
         None -> (Player playerData)
         TurnLeft -> (Player { playerData | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) - delta * turningSpeed)) })
         TurnRight -> (Player { playerData | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) + delta * turningSpeed)) })
+
+animatePlayerMovement : Float -> Player -> Player
+animatePlayerMovement delta player =
+    let
+        v = getMovementVector player
+            |> Vector3d.scaleBy delta
+    in
+        updatePlayerPosition v player
+
+updatePlayerPosition : Vector3d Length.Meters WorldCoordinates -> Player -> Player
+updatePlayerPosition v (Player playerData) =
+    Player { playerData | position =
+        (Point3d.toMeters playerData.position)
+            |> Vector3d.fromMeters
+            |> Vector3d.plus v
+            |> Vector3d.toMeters
+            |> Point3d.fromMeters
+    }
+
+getPlayerPosition : Player -> Point3d Length.Meters WorldCoordinates
+getPlayerPosition (Player playerData) =
+    playerData.position
+
+getMovementVector : Player -> Vector3d Length.Meters WorldCoordinates
+getMovementVector (Player playerData) =
+    let
+        forwardAngle = playerData.horizontalAngle
+        strafeLeftAngle = (addAngle playerData.horizontalAngle -90)
+
+        forwardVector = Vector3d.fromMeters
+            { x = Angle.sin forwardAngle
+            , y = Angle.cos forwardAngle
+            , z = 0
+            }
+        strafeLeftVector = Vector3d.fromMeters
+            { x = Angle.sin strafeLeftAngle
+            , y = Angle.cos strafeLeftAngle
+            , z = 0
+            }
+
+        forwardSpeed = case playerData.movementY of
+            Just Forward -> walkingSpeed
+            Just Backward -> -walkingSpeed
+            _ -> 0
+        strafeSpeed = case playerData.movementX of
+            Just StrafeLeft -> walkingSpeed * 0.7
+            Just StrafeRight -> -walkingSpeed * 0.7
+            _ -> 0
+    in
+        forwardVector
+            |> Vector3d.scaleBy forwardSpeed
+            |> Vector3d.plus (Vector3d.scaleBy strafeSpeed strafeLeftVector)
+
+
+
+--calculateMovementVector : Float -> Angle -> Angle -> Vector3d Length.Meters WorldCoordinates
+--calculateMovementVector speed horizontalAngle verticalAngle =
+--    let
+--        forwardVector = Direction3d.yx horizontalAngle
+--        strafeVector = Direction3d.yx (addAngle horizontalAngle -90)
+--        verticalVector = Direction3d.z verticalAngle
+--    in
+--    forwardVector
+--        |> Vector3d.scaleBy speed -- Adjust the speed as needed
+--        |> Vector3d.plus (strafeVector |> Vector3d.scaleBy (speed * 0.7)) -- Adjust the factor as needed
+--        |> Vector3d.plus (verticalVector |> Vector3d.scaleBy speed)
+

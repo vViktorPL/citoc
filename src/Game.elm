@@ -13,6 +13,7 @@ import Player exposing (Player)
 import Level exposing (Level, Orientation(..), TriggerCondition(..), TriggerEffect(..))
 import Level.Index as LevelIndex
 import Textures exposing (Textures)
+import Vector3d
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -82,13 +83,19 @@ update msg model =
             case model.state of
                 Playing ->
                     let
-                        newPlayer = Player.update delta model.player
-                        newSector = (Player.getSector (Player.update (delta * 5) model.player) )
+                        newPlayer =
+                            model.player
+                                |> Player.update delta
+                                |> Player.updatePlayerPosition v
+
+                        v = (Player.getMovementVector model.player)
+                            |> Vector3d.scaleBy delta
+                            |> Level.applyCollision Player.playerRadius model.level (Player.getPlayerPosition model.player)
                     in
-                        if Level.collisionOnSector model.level newSector then
-                            (model, Cmd.none)
-                        else
-                            (handleTriggers model newPlayer, Cmd.none )
+                        case Level.cylinderCollisionSector model.level Player.playerRadius (Player.getPlayerPosition newPlayer) of
+                            Just _ -> (model, Cmd.none)
+                            Nothing -> (handleTriggers model newPlayer, Cmd.none )
+
                 FadingOutLevel timeLeft ->
                     let
                         newTimeLeft = max (timeLeft - delta) 0
