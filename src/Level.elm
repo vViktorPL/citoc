@@ -56,6 +56,7 @@ type TriggerEffect
     | RemoveAllTriggersInSector (Int, Int)
     | IncrementCounter String
     | DecrementCounter String
+    | PlaySound String
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =

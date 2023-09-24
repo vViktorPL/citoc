@@ -15,6 +15,7 @@ import Level.Index as LevelIndex
 import Textures exposing (Textures)
 import Vector3d
 import Dict exposing (Dict)
+import Sound
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -106,12 +107,12 @@ update msg model =
                             (model, Cmd.none)
                         else
                             let
-                                modelAfterTriggers = handleTriggers model newPlayer
+                                (modelAfterTriggers, cmd) = handleTriggers model newPlayer
                             in
                                 if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
                                     ({ model | player = newPlayer }, Cmd.none)
                                 else
-                                    (modelAfterTriggers, Cmd.none)
+                                    (modelAfterTriggers, cmd)
 
                 FadingOutLevel timeLeft ->
                     let
@@ -245,7 +246,7 @@ transitionToNextLevel : Model -> Model
 transitionToNextLevel model =
     { model | state = FadingOutLevel fadeOutTime }
 
-handleTriggers : Model -> Player -> Model
+handleTriggers : Model -> Player -> (Model, Cmd Msg)
 handleTriggers model newPlayer =
     let
         (prevX, prevY) = Player.getSector model.player
@@ -289,38 +290,42 @@ handleTriggers model newPlayer =
                                   counterState = Maybe.withDefault 0 (Dict.get counterName model.counters)
                               in
                                   desiredNumber == counterState
-
-
                       )
                       trigger.conditions
                   )
               |> List.concatMap (.effects)
               |> List.foldl
-                (\effect modelAcc ->
+                (\effect (modelAcc, cmdAcc) ->
                     case effect of
                         Teleport targetSector ->
-                            { modelAcc | player = Player.teleport modelAcc.player targetSector }
+                            ({ modelAcc | player = Player.teleport modelAcc.player targetSector }, cmdAcc)
                         NextLevel ->
-                            transitionToNextLevel modelAcc
+                            (transitionToNextLevel modelAcc, Cmd.batch [cmdAcc, Sound.playSound "success.mp3"])
                         ChangeTile sector newTile ->
-                            { modelAcc | level = Level.updateTile sector newTile modelAcc.level }
+                            ({ modelAcc | level = Level.updateTile sector newTile modelAcc.level }, cmdAcc)
                         CreateTrigger trigger ->
-                            { modelAcc | level = Level.addTrigger trigger modelAcc.level }
+                            ({ modelAcc | level = Level.addTrigger trigger modelAcc.level }, cmdAcc)
                         RemoveAllTriggersInSector sector ->
-                            { modelAcc | level = Level.removeAllTriggersAtSector sector modelAcc.level }
+                            ({ modelAcc | level = Level.removeAllTriggersAtSector sector modelAcc.level }, cmdAcc)
                         IncrementCounter counterName ->
-                            { modelAcc | counters = Debug.log "Counters update" <| Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
+                            ({ modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
+                            , Cmd.batch [cmdAcc, Sound.playSound "notify-up.mp3"]
+                            )
                         DecrementCounter counterName ->
-                            { modelAcc | counters = Debug.log "Counters update" <| Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount - 1)) modelAcc.counters }
+                            ({ modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount - 1)) modelAcc.counters }
+                            , Cmd.batch [cmdAcc, Sound.playSound "notify-down.mp3"]
+                            )
+                        PlaySound fileName ->
+                            (modelAcc, Cmd.batch [cmdAcc, Sound.playSound fileName])
                 )
-                { model
+                ({ model
                     | player = newPlayer
                     , gestureHistory =
                         if newX /= prevX || newY /= prevY then
                             []
                         else
                             model.gestureHistory
-                }
+                }, Cmd.none)
 
 view : Model -> Html Msg
 view model =
@@ -330,17 +335,19 @@ view model =
             FadingInLevel timeLeft -> (fadeInTime - timeLeft) / fadeInTime
             Playing -> 1
     in
-    Html.div [Html.Attributes.style "opacity" (String.fromFloat opacity) ]
-        [ Scene3d.cloudy
-            { entities = [ Level.view model.textures model.level ]
-            --, sunlightDirection = Direction3d.z
-            , camera = Player.view model.player
-            , upDirection = Direction3d.z
-            , background = Scene3d.backgroundColor Color.white
-            , clipDepth = Length.centimeters 1
-            , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
-            }
-        ]
+    Html.div [Html.Attributes.style "background" "white"] [
+        Html.div [Html.Attributes.style "opacity" (String.fromFloat opacity) ]
+            [ Scene3d.cloudy
+                { entities = [ Level.view model.textures model.level ]
+                --, sunlightDirection = Direction3d.z
+                , camera = Player.view model.player
+                , upDirection = Direction3d.z
+                , background = Scene3d.backgroundColor Color.white
+                , clipDepth = Length.centimeters 1
+                , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
+                }
+            ]
+    ]
 
 --{ upDirection : Direction3d coordinates
   --    , sunlightDirection : Direction3d coordinates
