@@ -1,7 +1,7 @@
-###
-#v#
-#.##############
-#.........A..X.#
+######  #####
+#v|..#  #...#
+#.#######A#.####
+#.........#..X.#
 #.........####.#
 #.........#  #.#
 #########.#
@@ -14,4 +14,4 @@
 Q Floor [StepIn] [PlaySound "rumble.mp3", ChangeTile @A Floor, RemoveAllTriggersInSector @Q]
 A Floor
 X Floor [StepIn] [NextLevel]
-A BlueWall
+A Wall

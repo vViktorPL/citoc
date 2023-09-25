@@ -44,6 +44,9 @@ texturesToLoad =
     , (TextureColor, "Sign-JustKiddin.png")
     , (TextureColor, "Sign-Moonwalk.png")
     , (TextureColor, "Sign-Minus1.png")
+    , (TextureColor, "Chip004_1K_Color.jpg")
+    , (TextureFloat, "Chip004_1K_Metalness.jpg")
+    , (TextureFloat, "Chip004_1K_Roughness.jpg")
     --, "Text-Long.png"
     --, "Sign1.png"
     --, "Sign2.png"

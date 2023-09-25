@@ -7,7 +7,7 @@
 #.......#
 #.......#
 #.##?##.#
-#.#...#.#
+#.#.x.#.#
 #Q#2#1#W#
 #.#.#.#.#
 #.#.#.#.#
@@ -15,9 +15,10 @@
 #########
 
 ---
-1 Floor [LookAngle South] [ChangeTile @A Floor, Teleport @Q]
+x Floor [StepIn] [ChangeTile @A Floor, PlaySound "rumble.mp3", RemoveAllTriggersInSector @x]
+1 Floor [LookAngle South] [Teleport @Q]
 Q Floor
-2 Floor [LookAngle South] [ChangeTile @A Floor, Teleport @W]
+2 Floor [LookAngle South] [Teleport @W]
 W Floor
 X Floor [StepIn] [NextLevel]
 A Wall
