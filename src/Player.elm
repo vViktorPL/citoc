@@ -33,6 +33,7 @@ import Camera3d
 import Direction3d
 import Viewpoint3d
 import Vector3d exposing (Vector3d)
+import Sound
 
 type Player =
     Player
@@ -42,6 +43,8 @@ type Player =
         , horizontalTurning: HorizontalTurning
         , movementX: Maybe MovementX
         , movementY: Maybe MovementY
+        , remainingTimeToStepSound: Maybe Float
+        , lastStepSoundNumber: Int
         }
 
 type HorizontalTurning
@@ -75,6 +78,8 @@ init (x, y) orientation =
         , horizontalTurning = None
         , movementX = Nothing
         , movementY = Nothing
+        , remainingTimeToStepSound = Nothing
+        , lastStepSoundNumber = 1
         }
 
 teleport : Player -> (Int, Int) -> Player
@@ -200,13 +205,44 @@ stopWalkingBackward (Player playerData) =
 
 standStill : Player -> Player
 standStill (Player playerData) =
-    Player { playerData | movementX = Nothing, movementY = Nothing }
+    Player { playerData | movementX = Nothing, movementY = Nothing, remainingTimeToStepSound = Nothing }
 
-update : Float -> Player -> Player
+update : Float -> Player -> (Player, Cmd msg)
 update delta player =
     player
         |> animatePlayerTurning delta
+        |> updatePlayerSteps delta
         --|> animatePlayerMovement delta
+
+updatePlayerSteps : Float -> Player -> (Player, Cmd msg)
+updatePlayerSteps delta (Player playerData) =
+    case playerData.remainingTimeToStepSound of
+        Just previousTime ->
+            let
+                newTime = previousTime - delta
+                newStepSoundNumber = calculateStepSoundNumber delta playerData.lastStepSoundNumber
+            in
+                if newTime <= 0 then
+                    ( Player
+                        { playerData
+                        | remainingTimeToStepSound = Just millisecondsPerStep
+                        , lastStepSoundNumber = newStepSoundNumber
+                        }
+                    , Sound.playSound ("step-" ++ String.fromInt newStepSoundNumber  ++ ".mp3")
+                    )
+                else
+                    (Player { playerData | remainingTimeToStepSound = Just newTime }, Cmd.none)
+        Nothing -> (Player playerData, Cmd.none)
+
+calculateStepSoundNumber : Float -> Int -> Int
+calculateStepSoundNumber seed lastStepSoundNumber =
+    let
+        stepSoundNumber = modBy 5 (floor seed) + 1
+    in
+        if stepSoundNumber == lastStepSoundNumber then
+            (modBy 5 lastStepSoundNumber) + 1
+        else
+            stepSoundNumber
 
 addAngle : Angle -> Float -> Angle
 addAngle angle degrees =
@@ -230,6 +266,8 @@ animatePlayerMovement delta player =
     in
         updatePlayerPosition v player
 
+millisecondsPerStep = 500
+
 updatePlayerPosition : Vector3d Length.Meters WorldCoordinates -> Player -> Player
 updatePlayerPosition v (Player playerData) =
     Player { playerData | position =
@@ -238,6 +276,13 @@ updatePlayerPosition v (Player playerData) =
             |> Vector3d.plus v
             |> Vector3d.toMeters
             |> Point3d.fromMeters
+        , remainingTimeToStepSound =
+            if ((v |> Vector3d.length |> Length.inMeters |> abs) > 0) then
+                case playerData.remainingTimeToStepSound of
+                    Just time -> Just time
+                    Nothing -> Just millisecondsPerStep
+            else
+                Nothing
     }
 
 getPlayerPosition : Player -> Point3d Length.Meters WorldCoordinates
@@ -274,17 +319,4 @@ getMovementVector (Player playerData) =
             |> Vector3d.scaleBy forwardSpeed
             |> Vector3d.plus (Vector3d.scaleBy strafeSpeed strafeLeftVector)
 
-
-
---calculateMovementVector : Float -> Angle -> Angle -> Vector3d Length.Meters WorldCoordinates
---calculateMovementVector speed horizontalAngle verticalAngle =
---    let
---        forwardVector = Direction3d.yx horizontalAngle
---        strafeVector = Direction3d.yx (addAngle horizontalAngle -90)
---        verticalVector = Direction3d.z verticalAngle
---    in
---    forwardVector
---        |> Vector3d.scaleBy speed -- Adjust the speed as needed
---        |> Vector3d.plus (strafeVector |> Vector3d.scaleBy (speed * 0.7)) -- Adjust the factor as needed
---        |> Vector3d.plus (verticalVector |> Vector3d.scaleBy speed)
 

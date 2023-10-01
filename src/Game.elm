@@ -94,25 +94,25 @@ update msg model =
             case model.state of
                 Playing ->
                     let
-                        newPlayer =
+                        (newPlayer, playerCmd) =
                             model.player
-                                |> Player.update delta
                                 |> Player.updatePlayerPosition v
+                                |> Player.update delta
 
                         v = (Player.getMovementVector model.player)
                             |> Vector3d.scaleBy delta
                             |> Level.applyCollision Player.playerRadius model.level (Player.getPlayerPosition model.player)
                     in
                         if playerCollides model.level newPlayer then
-                            (model, Cmd.none)
+                            ({ model | player = model.player }, Cmd.none)
                         else
                             let
                                 (modelAfterTriggers, cmd) = handleTriggers model newPlayer
                             in
                                 if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
-                                    ({ model | player = newPlayer }, Cmd.none)
+                                    ({ model | player = newPlayer }, playerCmd)
                                 else
-                                    (modelAfterTriggers, cmd)
+                                    (modelAfterTriggers, Cmd.batch [cmd, playerCmd])
 
                 FadingOutLevel timeLeft ->
                     let

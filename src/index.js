@@ -3,7 +3,12 @@ const sfxFiles = [
   'success.mp3',
   'notify-up.mp3',
   'notify-down.mp3',
-  'rumble.mp3'
+  'rumble.mp3',
+  'step-1.mp3',
+  'step-2.mp3',
+  'step-3.mp3',
+  'step-4.mp3',
+  'step-5.mp3',
 ];
 
 const soundBuffers = {};
