@@ -12,7 +12,7 @@ const audioContext = window.AudioContext && new AudioContext();
 if (audioContext) {
   sfxFiles.forEach(
     (file) => {
-      const url = `/assets/sfx/${file}`;
+      const url = `assets/sfx/${file}`;
       window.fetch(url)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioContext.decodeAudioData(
