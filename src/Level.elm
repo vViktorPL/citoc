@@ -5,7 +5,7 @@ import Length
 import Array exposing (Array)
 import Scene3d
 import Scene3d.Material
-import Textures exposing (Textures)
+import Textures exposing (Model, TextureToLoad)
 import Luminance
 import Vector3d exposing (Vector3d)
 import Point3d exposing (Point3d)
@@ -61,6 +61,26 @@ type TriggerEffect
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =
     Point3d.meters -x y z
+
+--tileToRequiredTextures : LevelTile -> List TextureToLoad
+--tileToRequiredTextures tile =
+--    case tile of
+--        Floor ->
+--            [ Textures.TextureColor "CheckerFloor.jpg"
+--            , Textures.TextureColor "OfficeCeiling005_4K_Color.jpg"
+--            ]
+--        Wall ->
+--            [ Textures.TextureColor "Bricks021_1K-JPG_Color.jpg"
+--            , Textures.TextureFloat "Bricks021_1K-JPG_Roughness.jpg"
+--            ]
+--        Sign fileName text _ ->
+--            [ Textures.GenerateSign fileName text ]
+--        BlueWall ->
+--            [ Textures.TextureColor "CorrugatedSteel007B_1K-JPG_Color.jpg"
+--            , Textures.TextureFloat "CorrugatedSteel007B_1K-JPG_Metalness.jpg"
+--            , Textures.TextureFloat "CorrugatedSteel007B_1K-JPG_Roughness.jpg"
+--            ]
+--        Empty -> []
 
 
 getTriggersAt : Level -> (Int, Int) -> List Trigger
@@ -321,7 +341,7 @@ viewBlock textures (x, y) =
         |> Maybe.withDefault Scene3d.nothing
 
 
-viewSign : Textures -> String -> Orientation -> (Int, Int) -> Scene3d.Entity WorldCoordinates
+viewSign : Model -> String -> Orientation -> (Int, Int) -> Scene3d.Entity WorldCoordinates
 viewSign textures texture orientation (x, y) =
     Textures.getTexture textures texture
           |> Maybe.map
@@ -445,7 +465,7 @@ viewSign textures texture orientation (x, y) =
           |> Maybe.withDefault Scene3d.nothing
 
 
-view : Textures -> Level -> Scene3d.Entity WorldCoordinates
+view : Model -> Level -> Scene3d.Entity WorldCoordinates
 view textures (Level levelData) =
     levelData.tiles
         |> Array.indexedMap

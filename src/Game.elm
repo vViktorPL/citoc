@@ -12,7 +12,7 @@ import Json.Decode as Decode
 import Player exposing (Player)
 import Level exposing (Level, Orientation(..), TriggerCondition(..), TriggerEffect(..))
 import Level.Index as LevelIndex
-import Textures exposing (Textures)
+import Textures
 import Vector3d
 import Dict exposing (Dict)
 import Sound
@@ -33,7 +33,7 @@ type GameState
     | FadingInLevel Float
 
 type alias Model =
-    { textures: Textures
+    { textures: Textures.Model
     , state: GameState
     , player: Player
     , level: Level
@@ -51,7 +51,7 @@ type Gesture
 
 maxGestureHistory = 5
 
-init : Textures -> Model
+init : Textures.Model -> Model
 init textures =
     let
         level = LevelIndex.firstLevel

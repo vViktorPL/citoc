@@ -27,11 +27,11 @@
 W Floor
 E Wall
 
-Q (Sign "Sign-Quiz.png" North)
+Q (Sign "Sign-Quiz" North)
 T Floor [NegativeHeadshake, LookAngle South] [ChangeTile @| Floor, RemoveAllTriggersInSector @3, CreateTrigger (Trigger @3 [StepIn] [CreateTrigger (Trigger @1 [StepIn] [Teleport @v])]), RemoveAllTriggersInSector @1]
-T Floor [Nod, LookAngle South] [ChangeTile @| (Sign "Sign-CorrectAnswer.png" West), RemoveAllTriggersInSector @3, CreateTrigger (Trigger @3 [StepIn] [ChangeTile @1 Wall, ChangeTile @E Floor]), RemoveAllTriggersInSector @1]
+T Floor [Nod, LookAngle South] [ChangeTile @| (Sign "Sign-CorrectAnswer" West), RemoveAllTriggersInSector @3, CreateTrigger (Trigger @3 [StepIn] [ChangeTile @1 Wall, ChangeTile @E Floor]), RemoveAllTriggersInSector @1]
 
-| (Sign "Sign-CorrectAnswer.png" West)
-" (Sign "Sign-CorrectAnswer.png" North)
+| (Sign "Sign-CorrectAnswer" West)
+" (Sign "Sign-CorrectAnswer" North)
 
 X Floor [StepIn] [NextLevel]

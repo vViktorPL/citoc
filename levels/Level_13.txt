@@ -25,9 +25,9 @@
      ###
 
 ---
-1 (Sign "Sign-1.png" South)
-2 (Sign "Sign-2.png" South)
-3 (Sign "Sign-3.png" South)
+1 (Sign "Sign-1" South)
+2 (Sign "Sign-2" South)
+3 (Sign "Sign-3" South)
 4 Wall
 Q Floor [StepIn] [Teleport @+, ChangeTile @_ Floor, RemoveAllTriggersInSector @-, CreateTrigger (Trigger @- [StepIn] [DecrementCounter "Entered_1", Teleport @A]), IncrementCounter "Entered_1"]
 W Floor [StepIn] [Teleport @+, ChangeTile @_ Floor, RemoveAllTriggersInSector @-, CreateTrigger (Trigger @- [StepIn] [DecrementCounter "Entered_2", Teleport @S]), IncrementCounter "Entered_2"]
@@ -48,7 +48,7 @@ e Floor
 = Floor [CounterEquals "Entered_2" 2] [ChangeTile @w BlueWall]
 = Floor [CounterEquals "Entered_3" 3] [ChangeTile @e BlueWall]
 = Floor [CounterEquals "Entered_-1" -1] [ChangeTile @r BlueWall, ChangeTile @x Floor]
-= Floor [CounterEquals "Entered_1" 1, CounterEquals "Entered_2" 2, CounterEquals "Entered_3" 3, CounterEquals "Entered_-1" 0] [ChangeTile @4 (Sign "Sign-Minus1.png" West), ChangeTile @r Floor]
+= Floor [CounterEquals "Entered_1" 1, CounterEquals "Entered_2" 2, CounterEquals "Entered_3" 3, CounterEquals "Entered_-1" 0] [ChangeTile @4 (Sign "Sign-Minus1" West), ChangeTile @r Floor]
 
 ? Floor [CounterEquals "Entered_-1" -1] [RemoveAllTriggersInSector @+, RemoveAllTriggersInSector @=, ChangeTile @r BlueWall, ChangeTile @x Floor]
 

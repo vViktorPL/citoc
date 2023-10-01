@@ -11,6 +11,8 @@ const sfxFiles = [
   'step-5.mp3',
 ];
 
+import { generateSignTexture } from './texture-generator';
+
 const soundBuffers = {};
 const audioContext = window.AudioContext && new AudioContext();
 
@@ -36,6 +38,11 @@ if (audioContext) {
 
   const app = Elm.Main.init({
     node: document.getElementById('game')
+  });
+
+  app.ports.generateTexturePort.subscribe(async ([fileName, text]) => {
+    const url = await generateSignTexture(text);
+    app.ports.generatedSignTextureSub.send([fileName, url]);
   });
 
   app.ports.playSound.subscribe(filename => {

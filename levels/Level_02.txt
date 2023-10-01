@@ -22,4 +22,4 @@ Q Floor
 W Floor
 X Floor [StepIn] [NextLevel]
 A Wall
-? (Sign "Sign-ConfusingCorridor.png" South)
+? (Sign "Sign-ConfusingCorridor" South)
