@@ -15,3 +15,4 @@ Q Floor [StepIn] [PlaySound "rumble.mp3", ChangeTile @A Floor, RemoveAllTriggers
 A Floor
 X Floor [StepIn] [NextLevel]
 A Wall
+| Wall
