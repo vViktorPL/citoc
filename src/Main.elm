@@ -30,10 +30,10 @@ texturesToLoad =
     , TextureFloat "Bricks021_1K-JPG_Roughness.jpg"
     , TextureColor "CheckerFloor.jpg"
     , TextureColor "OfficeCeiling005_4K_Color.jpg"
-    , GenerateSign "Sign-ConfusingCorridor" "BEWARE OF\nCONFUSING\nCORRIDORS"
     , TextureColor "CorrugatedSteel007B_1K-JPG_Color.jpg"
     , TextureFloat "CorrugatedSteel007B_1K-JPG_Metalness.jpg"
     , TextureFloat "CorrugatedSteel007B_1K-JPG_Roughness.jpg"
+    , GenerateSign "Sign-ConfusingCorridor" "BEWARE OF\nCONFUSING\nCORRIDORS"
     , GenerateSign "Sign-Quiz" "QUIZ TIME!\n\nDo you think that there is a\ndead end around the corner?"
     , GenerateSign "Sign-CorrectAnswer" "Correct answer!\n\nIt seems that you were right!"
     , GenerateSign "Sign-CountTo3" "Let's count to 3"
@@ -42,7 +42,7 @@ texturesToLoad =
     , GenerateSign "Sign-3" "3"
     , GenerateSign "Sign-ProgrammerZero" "Actually,\na good programmer\nwould start with zero...\nso let's start over..."
     , GenerateSign "Sign-JustKiddin" "Just kidding"
-    , GenerateSign "Sign-Moonwalk" "MOONWALKERS ONLY"
+    , GenerateSign "Sign-Moonwalk" "MOONWALKERS\nONLY"
     , GenerateSign "Sign-Minus1" "-1"
     --, (TextureColor, "Chip004_1K_Color.jpg")
     --, (TextureFloat, "Chip004_1K_Metalness.jpg")

@@ -29,7 +29,13 @@ export function generateSignTexture(text) {
 
 async function generateSignTextureInternal(text) {
   const textLines = text.split('\n');
-  const fontSize = Math.min(Math.round(PAINT_WIDTH / Math.max(...textLines.map(line => line.length))), PAINT_HEIGHT / (textLines.length * 1.3) );
+  const fontSize = Math.min(PAINT_WIDTH / Math.max(...textLines.map(line => {
+    let width = 0;
+    for (let char of line) {
+      width += char.toUpperCase() === char ? 0.75 : 0.4;
+    }
+    return width;
+  })), PAINT_HEIGHT / (textLines.length * 1.3));
 
   ctx.fillStyle = SIGN_BG_COLOR;
   ctx.fillRect(0, 0, PAINT_WIDTH, PAINT_HEIGHT);
@@ -40,7 +46,7 @@ async function generateSignTextureInternal(text) {
   ctx.font = `${fontSize}px ${HANDWRITTEN_FONT_NAME}`;
   ctx.textBaseline = 'top';
 
-  const lineHeight = fontSize * 1.3;
+  const lineHeight = fontSize * (textLines.length > 1 ? 1.3 : 1);
   const textHeight = lineHeight * textLines.length;
   const textTop = PAINT_HEIGHT * 0.5 - textHeight * 0.5;
 
