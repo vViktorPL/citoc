@@ -54,15 +54,6 @@ texturesToLoad =
     --, (TextureColor, "Chip004_1K_Color.jpg")
     --, (TextureFloat, "Chip004_1K_Metalness.jpg")
     --, (TextureFloat, "Chip004_1K_Roughness.jpg")
-    --, "Text-Long.png"
-    --, "Sign1.png"
-    --, "Sign2.png"
-    --, "Sign3.png"
-    --, "Sign4.png"
-    --, "Sign5.png"
-    --, "Sign6.png"
-    --, "Sign7.png"
-    --, "Sign8.png"
     ]
 
 init : (Model, Cmd Msg)
