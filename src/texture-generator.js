@@ -19,7 +19,7 @@ canvas.height = TEXTURE_SIZE;
 
 const ctx = canvas.getContext('2d');
 
-let busyCanvasPromise = Promise.resolve();
+let busyCanvasPromise = fontLoadPromise;
 
 export function generateSignTexture(text) {
   busyCanvasPromise = busyCanvasPromise.then(() => generateSignTextureInternal(text));
@@ -27,7 +27,7 @@ export function generateSignTexture(text) {
   return busyCanvasPromise;
 }
 
-async function generateSignTextureInternal(text) {
+function generateSignTextureInternal(text) {
   const textLines = text.split('\n');
   const fontSize = Math.min(PAINT_WIDTH / Math.max(...textLines.map(line => {
     let width = 0;
@@ -39,8 +39,6 @@ async function generateSignTextureInternal(text) {
 
   ctx.fillStyle = SIGN_BG_COLOR;
   ctx.fillRect(0, 0, PAINT_WIDTH, PAINT_HEIGHT);
-
-  await fontLoadPromise;
 
   ctx.fillStyle = INK_COLOR;
   ctx.font = `${fontSize}px ${HANDWRITTEN_FONT_NAME}`;

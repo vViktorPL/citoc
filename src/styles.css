@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.mainMenuContainer canvas {
+    opacity: 0.6;
+}
+
+.logo {
+    position: absolute;
+    top: 20vh;
+    height: 18vh;
+    width: 100vw;
+    left: 0;
+    background-image: url("../assets/citoc.svg");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+}
+
+.mainMenu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 40vh;
+    font-family: Verdana;
+}
+
+.menuPosition {
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 2.5vh 1vw;
+    width: 70vw;
+    text-align: center;
+    color: #ffffff;
+    font-size: 5vh;
+    text-shadow:
+            0 0 7px #fff,
+            0 0 10px #000;
+    transition: background-color 200ms;
+}
+.menuPosition:hover {
+    background: rgba(0, 0, 0, 0.6);
+}

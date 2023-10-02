@@ -5,6 +5,7 @@ import Browser
 import Task
 import Textures exposing (Model, TextureToLoad(..), TexturesState(..))
 import Html exposing (Html)
+import Menu
 
 
 -- MAIN
@@ -23,6 +24,7 @@ main =
 type Model
     = Initialising Textures.Model
     | InitError
+    | InMenu Menu.Model
     | Playing Game.Model
 
 texturesToLoad =
@@ -73,6 +75,7 @@ init =
 type Msg
     = GameMsg Game.Msg
     | TexturesMsg Textures.Msg
+    | MenuMsg Menu.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -87,9 +90,13 @@ update msg model =
                 (newTexturesModel, texturesCmd) = Textures.update texturesMsg texturesModel
             in
                 case Textures.getState newTexturesModel of
-                    TexturesLoaded -> (Playing (Game.init newTexturesModel), Cmd.none)
+                    TexturesLoaded -> (InMenu (Menu.init newTexturesModel), Cmd.none) --(Playing (Game.init newTexturesModel), Cmd.none)
                     RemainingTextures _ -> (Initialising newTexturesModel, Cmd.map TexturesMsg texturesCmd)
                     TextureInitError -> (InitError, Cmd.none)
+
+        (MenuMsg menuMsg, InMenu menuModel) ->
+            Menu.update menuMsg menuModel
+                |> Tuple.mapBoth InMenu (Cmd.map MenuMsg)
 
         _ -> (model, Cmd.none)
 
@@ -103,6 +110,9 @@ subscriptions model =
         Initialising _ ->
             Textures.subscription
                 |> Sub.map TexturesMsg
+        InMenu menu ->
+            Menu.subscription menu
+                |> Sub.map MenuMsg
         _ -> Sub.none
 
 view : Model -> Html Msg
@@ -115,3 +125,6 @@ view model =
             Html.div [] [Html.text "Loading..."]
         InitError ->
             Html.div [] [Html.text "Error :-("]
+        InMenu menu ->
+            Menu.view menu
+                |> Html.map MenuMsg
