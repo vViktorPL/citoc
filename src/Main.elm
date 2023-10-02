@@ -21,8 +21,13 @@ main =
 
 -- MODEL
 
-type Model
-    = Initialising Textures.Model
+type alias Model
+    = { screen: Screen
+      , textures: Textures.Model
+      }
+
+type Screen
+    = Initialising
     | InitError
     | InMenu Menu.Model
     | Playing Game.Model
@@ -65,7 +70,7 @@ init =
     let
         (texturesModel, texturesCmd) = Textures.init texturesToLoad
     in
-        ( Initialising texturesModel
+        ( { screen = Initialising, textures = texturesModel }
         , Cmd.map TexturesMsg texturesCmd
         )
 
@@ -80,34 +85,44 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case (msg, model) of
+    case (msg, model.screen) of
         (GameMsg gameMsg, Playing gameModel) ->
-            (Game.update gameMsg gameModel)
-                |> Tuple.mapFirst Playing
-                |> Tuple.mapSecond (Cmd.map GameMsg)
-        (TexturesMsg texturesMsg, Initialising texturesModel) ->
             let
-                (newTexturesModel, texturesCmd) = Textures.update texturesMsg texturesModel
+                (newGameModel, gameCmd) = (Game.update gameMsg gameModel)
+            in
+                ({ model | screen = Playing newGameModel }, Cmd.map GameMsg gameCmd)
+
+        (TexturesMsg texturesMsg, Initialising) ->
+            let
+                (newTexturesModel, texturesCmd) = Textures.update texturesMsg model.textures
             in
                 case Textures.getState newTexturesModel of
-                    TexturesLoaded -> (InMenu (Menu.init newTexturesModel), Cmd.none) --(Playing (Game.init newTexturesModel), Cmd.none)
-                    RemainingTextures _ -> (Initialising newTexturesModel, Cmd.map TexturesMsg texturesCmd)
-                    TextureInitError -> (InitError, Cmd.none)
+                    TexturesLoaded -> ({ model | screen = InMenu (Menu.init newTexturesModel), textures = newTexturesModel }, Cmd.none)
+                    RemainingTextures _ -> ({ model | textures = newTexturesModel }, Cmd.map TexturesMsg texturesCmd)
+                    TextureInitError -> ({ model | screen = InitError }, Cmd.none)
 
         (MenuMsg menuMsg, InMenu menuModel) ->
-            Menu.update menuMsg menuModel
-                |> Tuple.mapBoth InMenu (Cmd.map MenuMsg)
+            let
+                (newMenuModel, menuOutMsg) = Menu.update menuMsg menuModel
+            in
+                case menuOutMsg of
+                    Menu.Noop -> ({ model | screen = InMenu newMenuModel }, Cmd.none)
+                    Menu.StartNewGame ->
+                        let
+                            (initializedGameModel, gameCmd) = (Game.init model.textures)
+                        in
+                        ({ model | screen = Playing initializedGameModel }, Cmd.map GameMsg gameCmd )
 
         _ -> (model, Cmd.none)
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
+    case model.screen of
         Playing game ->
             Game.subscriptions game
                 |> Sub.map GameMsg
-        Initialising _ ->
+        Initialising ->
             Textures.subscription
                 |> Sub.map TexturesMsg
         InMenu menu ->
@@ -117,11 +132,11 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    case model of
+    case model.screen of
         Playing game ->
             Game.view game
                 |> Html.map GameMsg
-        Initialising _ ->
+        Initialising ->
             Html.div [] [Html.text "Loading..."]
         InitError ->
             Html.div [] [Html.text "Error :-("]

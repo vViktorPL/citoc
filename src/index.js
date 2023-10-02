@@ -67,25 +67,10 @@ if (audioContext) {
   window.focus();
 
   // Pointer locking
-  const canvas = await waitForElementToAppear('canvas');
-  canvas.addEventListener('click', () => {
-    canvas.requestPointerLock();
-  });
-
-})();
-
-async function waitForElementToAppear(targetSelector) {
-  return new Promise(
-    resolve => {
-      const observer = new MutationObserver((mutationsList, observer) => {
-        const element = document.querySelector(targetSelector);
-        if (element) {
-          observer.disconnect();
-          resolve(element);
-        }
-      });
-
-      observer.observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('click', function (event) {
+    if (event.target.tagName === 'CANVAS') {
+      const canvasElement = event.target;
+      canvasElement.requestPointerLock();
     }
-  );
-}
+  });
+})();

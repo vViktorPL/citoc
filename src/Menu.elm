@@ -8,6 +8,7 @@ import Point3d
 import Luminance
 import Html exposing (Html)
 import Html.Attributes exposing (class)
+import Html.Events
 import Direction3d
 import Color
 import Pixels
@@ -26,6 +27,11 @@ type alias Model =
 type Msg
     = AnimationTick Float
     | WindowResize Int Int
+    | NewGamePositionActivated
+
+type OutMsg
+    = Noop
+    | StartNewGame
 
 init : Textures.Model -> Model
 init textures =
@@ -34,7 +40,7 @@ init textures =
     , offset = 0
     }
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, OutMsg )
 update msg model =
     case msg of
         AnimationTick delta ->
@@ -42,12 +48,15 @@ update msg model =
                 newOffset = model.offset + delta * 0.0001
                 safeNewOffset = newOffset - toFloat (floor newOffset)
             in
-            ({ model | offset = safeNewOffset }, Cmd.none)
+            ({ model | offset = safeNewOffset }, Noop)
 
         WindowResize width height ->
-            ({ model | canvasSize = (width, height) }, Cmd.none)
+            ({ model | canvasSize = (width, height) }, Noop)
 
-view : Model -> Html msg
+        NewGamePositionActivated ->
+            (model, StartNewGame)
+
+view : Model -> Html Msg
 view model =
     let
         segments = List.range 0 40
@@ -73,9 +82,9 @@ view model =
                  }
             , Html.div [class "mainMenu"]
                 [ Html.div [class "logo"] []
-                , Html.div [class "menuPosition"] [Html.text "New game"]
-                , Html.div [class "menuPosition"] [Html.text "Settings"]
-                , Html.div [class "menuPosition"] [Html.text "About"]
+                , Html.div [class "menuPosition", Html.Events.onClick NewGamePositionActivated ] [Html.text "New game"]
+                , Html.div [class "menuPosition", class "disabled"] [Html.text "Settings"]
+                , Html.div [class "menuPosition", class "disabled"] [Html.text "About"]
                 ]
             ]
 

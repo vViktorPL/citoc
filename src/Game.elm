@@ -16,6 +16,8 @@ import Textures
 import Vector3d
 import Dict exposing (Dict)
 import Sound
+import Browser.Dom
+import Task
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -51,20 +53,24 @@ type Gesture
 
 maxGestureHistory = 5
 
-init : Textures.Model -> Model
+init : Textures.Model -> (Model, Cmd Msg)
 init textures =
     let
         level = LevelIndex.firstLevel
     in
-    { textures = textures
-    , state = Playing
-    , player = Player.initOnLevel level
-    , level = level
-    , levelsLeft = LevelIndex.restLevels
-    , counters = Dict.empty
-    , gestureHistory = []
-    , canvasSize = (800, 600)
-    }
+    ( { textures = textures
+        , state = Playing
+        , player = Player.initOnLevel level
+        , level = level
+        , levelsLeft = LevelIndex.restLevels
+        , counters = Dict.empty
+        , gestureHistory = []
+        , canvasSize = (800, 600)
+      }
+    , Task.perform
+        (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
+        Browser.Dom.getViewport
+    )
 
 
 type Msg
