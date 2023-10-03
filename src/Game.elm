@@ -30,7 +30,8 @@ subscriptions _ =
         ]
 
 type GameState
-    = Playing
+    = Initializing
+    | Playing
     | FadingOutLevel Float
     | FadingInLevel Float
 
@@ -43,6 +44,7 @@ type alias Model =
     , counters: Dict String Int
     , gestureHistory: List Gesture
     , canvasSize : (Int, Int)
+    , fadeColor: String
     }
 
 type Gesture
@@ -58,14 +60,15 @@ init textures =
     let
         level = LevelIndex.firstLevel
     in
-    ( { textures = textures
-        , state = Playing
+    ( {   textures = textures
+        , state = Initializing
         , player = Player.initOnLevel level
         , level = level
         , levelsLeft = LevelIndex.restLevels
         , counters = Dict.empty
         , gestureHistory = []
         , canvasSize = (800, 600)
+        , fadeColor = "black"
       }
     , Task.perform
         (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
@@ -81,8 +84,9 @@ type Msg
     | WindowResize Int Int
 
 
-fadeOutTime = 2000
-fadeInTime = 1000
+initFadeInTime = 3000
+levelFadeOutTime = 2000
+levelFadeInTime = 1000
 
 playerCollides : Level -> Player -> Bool
 playerCollides level player =
@@ -98,6 +102,7 @@ update msg model =
 
         AnimationTick delta ->
             case model.state of
+                Initializing -> ({ model | state = FadingInLevel initFadeInTime }, Cmd.none)
                 Playing ->
                     let
                         (newPlayer, playerCmd) =
@@ -132,7 +137,7 @@ update msg model =
                             | level = nextLevel
                             , levelsLeft = List.drop 1 model.levelsLeft
                             , player = Player.initOnLevel nextLevel
-                            , state = FadingInLevel fadeInTime
+                            , state = FadingInLevel levelFadeInTime
                             }, Cmd.none)
                         else
                             ({ model | state = FadingOutLevel newTimeLeft, counters = Dict.empty }, Cmd.none)
@@ -141,7 +146,7 @@ update msg model =
                         newTimeLeft = max (timeLeft - delta) 0
                     in
                         if newTimeLeft == 0 then
-                            ({ model | state = Playing }, Cmd.none)
+                            ({ model | state = Playing, fadeColor = "white" }, Cmd.none)
                         else
                             ({ model | state = FadingInLevel newTimeLeft }, Cmd.none)
 
@@ -250,7 +255,7 @@ keyDecoder =
 
 transitionToNextLevel : Model -> Model
 transitionToNextLevel model =
-    { model | state = FadingOutLevel fadeOutTime }
+    { model | state = FadingOutLevel levelFadeOutTime }
 
 handleTriggers : Model -> Player -> (Model, Cmd Msg)
 handleTriggers model newPlayer =
@@ -337,18 +342,23 @@ view : Model -> Html Msg
 view model =
     let
         opacity = case model.state of
-            FadingOutLevel timeLeft -> timeLeft / fadeOutTime
-            FadingInLevel timeLeft -> (fadeInTime - timeLeft) / fadeInTime
+            FadingOutLevel timeLeft -> timeLeft / levelFadeOutTime
+            FadingInLevel timeLeft -> (levelFadeInTime - timeLeft) / levelFadeInTime
             Playing -> 1
+            Initializing -> 0
+
     in
-    Html.div [Html.Attributes.style "background" "white"] [
-        Html.div [Html.Attributes.style "opacity" (String.fromFloat opacity) ]
+    Html.div [Html.Attributes.style "background" model.fadeColor] [
+        Html.div
+            [ Html.Attributes.style "opacity" (String.fromFloat opacity)
+            , Html.Attributes.style "visibility" (if model.state == Initializing then "hidden" else "visible")
+            ]
             [ Scene3d.cloudy
                 { entities = [ Level.view model.textures model.level ]
                 --, sunlightDirection = Direction3d.z
                 , camera = Player.view model.player
                 , upDirection = Direction3d.z
-                , background = Scene3d.backgroundColor Color.white
+                , background = Scene3d.backgroundColor Color.black
                 , clipDepth = Length.centimeters 1
                 , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
                 }

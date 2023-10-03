@@ -88,7 +88,11 @@ update msg model =
                 (newTexturesModel, texturesCmd) = Textures.update texturesMsg model.textures
             in
                 case Textures.getState newTexturesModel of
-                    TexturesLoaded -> ({ model | screen = InMenu (Menu.init newTexturesModel), textures = newTexturesModel }, Cmd.none)
+                    TexturesLoaded ->
+                        let
+                            (menuModel, menuCmd) = Menu.init newTexturesModel
+                        in
+                        ({ model | screen = InMenu menuModel, textures = newTexturesModel }, Cmd.map MenuMsg menuCmd)
                     RemainingTextures _ -> ({ model | textures = newTexturesModel }, Cmd.map TexturesMsg texturesCmd)
                     TextureInitError -> ({ model | screen = InitError }, Cmd.none)
 

@@ -7,7 +7,7 @@ import Length
 import Point3d
 import Luminance
 import Html exposing (Html)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, style)
 import Html.Events
 import Direction3d
 import Color
@@ -16,12 +16,15 @@ import Camera3d
 import Viewpoint3d
 import Angle
 import Browser.Events
-
+import Browser.Dom
+import Task
 
 type alias Model =
-    { textures: Textures.Model
+    { initialized : Bool
+    , textures: Textures.Model
     , canvasSize : (Int, Int)
     , offset: Float
+    , state: MenuState
     }
 
 type Msg
@@ -29,16 +32,26 @@ type Msg
     | WindowResize Int Int
     | NewGamePositionActivated
 
+type MenuState
+    = Idle
+    | StartingNewGame Float
+
 type OutMsg
     = Noop
     | StartNewGame
 
-init : Textures.Model -> Model
+init : Textures.Model -> (Model, Cmd Msg)
 init textures =
-    { textures = textures
-    , canvasSize = (800, 600)
-    , offset = 0
-    }
+    ( { initialized = False
+      , textures = textures
+      , canvasSize = (800, 600)
+      , offset = 0
+      , state = Idle
+      }
+    , Task.perform
+            (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
+            Browser.Dom.getViewport
+    )
 
 update : Msg -> Model -> ( Model, OutMsg )
 update msg model =
@@ -47,18 +60,32 @@ update msg model =
             let
                 newOffset = model.offset + delta * 0.0001
                 safeNewOffset = newOffset - toFloat (floor newOffset)
+                animatedModel = { model | offset = safeNewOffset, initialized = True }
             in
-            ({ model | offset = safeNewOffset }, Noop)
+                case model.state of
+                    Idle -> (animatedModel, Noop)
+                    StartingNewGame remainingFadeout ->
+                        let
+                            newFadeout = max 0 (remainingFadeout - delta * 0.002)
+                        in
+                            ({ animatedModel | state = StartingNewGame newFadeout }
+                            , if newFadeout == 0 then StartNewGame else Noop
+                            )
 
         WindowResize width height ->
             ({ model | canvasSize = (width, height) }, Noop)
 
         NewGamePositionActivated ->
-            (model, StartNewGame)
+            ({ model | state = StartingNewGame 1.0 }, Noop)
 
 view : Model -> Html Msg
 view model =
     let
+        opacity = String.fromFloat
+            (case model.state of
+                StartingNewGame fadeOut -> fadeOut
+                _ -> 1
+            )
         segments = List.range 0 40
             |> List.map (\index ->
                 let
@@ -71,8 +98,9 @@ view model =
                 )
             |> Scene3d.group
     in
-        Html.div [class "mainMenuContainer"]
-            [ Scene3d.cloudy
+        Html.div [class "mainMenuContainer", style "opacity" opacity]
+            [ Html.div [] [Html.text (if model.initialized then "" else "Initializing...")]
+            , Scene3d.cloudy
                  { entities = [ segments ]
                  , camera = camera
                  , upDirection = Direction3d.z
@@ -80,7 +108,7 @@ view model =
                  , clipDepth = Length.centimeters 1
                  , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
                  }
-            , Html.div [class "mainMenu"]
+            , Html.div [class "mainMenu", style "visibility" (if model.initialized then "visible" else "hidden")]
                 [ Html.div [class "logo"] []
                 , Html.div [class "menuPosition", Html.Events.onClick NewGamePositionActivated ] [Html.text "New game"]
                 , Html.div [class "menuPosition", class "disabled"] [Html.text "Settings"]
