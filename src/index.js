@@ -144,12 +144,11 @@ function startNewMusic(filename) {
   currentGainNode = gainNode;
 
   currentMusicSource.onended = function() {
-    if (!musicLoop) {
-      currentMusicSource = null;
-      currentGainNode = null;
-      return;
-    }
+    currentMusicSource = null;
+    currentGainNode = null;
 
-    startNewMusic(filename);
+    if (musicLoop) {
+      startNewMusic(filename);
+    }
   };
 }
