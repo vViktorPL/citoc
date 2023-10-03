@@ -18,6 +18,7 @@ import Angle
 import Browser.Events
 import Browser.Dom
 import Task
+import Sound
 
 type alias Model =
     { initialized : Bool
@@ -48,9 +49,12 @@ init textures =
       , offset = 0
       , state = Idle
       }
-    , Task.perform
+    , Cmd.batch
+        [ Task.perform
             (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
             Browser.Dom.getViewport
+        , Sound.playMusic "menu.mp3"
+        ]
     )
 
 update : Msg -> Model -> ( Model, OutMsg )

@@ -70,9 +70,12 @@ init textures =
         , canvasSize = (800, 600)
         , fadeColor = "black"
       }
-    , Task.perform
-        (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
-        Browser.Dom.getViewport
+    , Cmd.batch
+        [ Task.perform
+            (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
+            Browser.Dom.getViewport
+        , Sound.playMusic "first-level.mp3"
+        ]
     )
 
 

@@ -1,6 +1,10 @@
 body {
     margin: 0;
     padding: 0;
+    background: black;
+    color: white;
+    font-size: 50px;
+    text-align: center;
 }
 
 .mainMenuContainer canvas {
