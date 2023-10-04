@@ -120,6 +120,7 @@ function playMusic(filename) {
     const currentTime = audioContext.currentTime;
 
     musicLoop = false;
+    currentMusicSource.onended = null;
     currentGainNode.gain.setValueAtTime(currentGainNode.gain.value, currentTime);
     currentGainNode.gain.linearRampToValueAtTime(0, currentTime + fadeOutDuration);
     currentMusicSource.stop(currentTime + fadeOutDuration);
