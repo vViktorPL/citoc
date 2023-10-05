@@ -2,10 +2,10 @@ module Main exposing (..)
 
 import Game
 import Browser
-import Task
 import Textures exposing (Model, TextureToLoad(..), TexturesState(..))
 import Html exposing (Html)
 import Menu
+import MeshCollection exposing (Model(..))
 
 
 -- MAIN
@@ -24,6 +24,7 @@ main =
 type alias Model
     = { screen: Screen
       , textures: Textures.Model
+      , meshes: MeshCollection.Model
       }
 
 type Screen
@@ -51,18 +52,30 @@ texturesToLoad =
     , GenerateSign "Sign-JustKiddin" "Just kidding"
     , GenerateSign "Sign-Moonwalk" "MOONWALKERS\nONLY"
     , GenerateSign "Sign-Minus1" "-1"
+    , TextureColor "ConeColor.jpg"
     --, (TextureColor, "Chip004_1K_Color.jpg")
     --, (TextureFloat, "Chip004_1K_Metalness.jpg")
     --, (TextureFloat, "Chip004_1K_Roughness.jpg")
+    ]
+
+meshesToLoad =
+    [ "Cone.obj"
     ]
 
 init : (Model, Cmd Msg)
 init =
     let
         (texturesModel, texturesCmd) = Textures.init texturesToLoad
+        (meshesModel, meshesCmd) = MeshCollection.init meshesToLoad
     in
-        ( { screen = Initialising, textures = texturesModel }
-        , Cmd.map TexturesMsg texturesCmd
+        ( { screen = Initialising
+          , textures = texturesModel
+          , meshes = meshesModel
+          }
+        , Cmd.batch
+            [ Cmd.map TexturesMsg texturesCmd
+            , Cmd.map MeshesMsg meshesCmd
+            ]
         )
 
 
@@ -71,7 +84,26 @@ init =
 type Msg
     = GameMsg Game.Msg
     | TexturesMsg Textures.Msg
+    | MeshesMsg MeshCollection.Msg
     | MenuMsg Menu.Msg
+
+
+handleInitializationFinish : ( Model, Cmd Msg) -> ( Model, Cmd Msg )
+handleInitializationFinish (model, cmd) =
+    case (Textures.getState model.textures, model.meshes) of
+        (TexturesLoaded, MeshCollectionLoaded _) ->
+            let
+                (menuModel, menuCmd) = Menu.init model.textures model.meshes
+            in
+                ({ model | screen = InMenu menuModel}, Cmd.batch [cmd, Cmd.map MenuMsg menuCmd])
+
+        (TextureInitError, _) ->
+            ({ model | screen = InitError }, Cmd.none)
+
+        (_, MeshCollectionFailed) ->
+            ({ model | screen = InitError }, Cmd.none)
+
+        _ -> (model, cmd)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -83,18 +115,17 @@ update msg model =
             in
                 ({ model | screen = Playing newGameModel }, Cmd.map GameMsg gameCmd)
 
+        (MeshesMsg meshesMsg, Initialising) ->
+            let
+                (newMeshesModel, meshesCmd) = MeshCollection.update meshesMsg model.meshes
+            in
+                handleInitializationFinish ({ model | meshes = newMeshesModel }, Cmd.map MeshesMsg meshesCmd)
+
         (TexturesMsg texturesMsg, Initialising) ->
             let
                 (newTexturesModel, texturesCmd) = Textures.update texturesMsg model.textures
             in
-                case Textures.getState newTexturesModel of
-                    TexturesLoaded ->
-                        let
-                            (menuModel, menuCmd) = Menu.init newTexturesModel
-                        in
-                        ({ model | screen = InMenu menuModel, textures = newTexturesModel }, Cmd.map MenuMsg menuCmd)
-                    RemainingTextures _ -> ({ model | textures = newTexturesModel }, Cmd.map TexturesMsg texturesCmd)
-                    TextureInitError -> ({ model | screen = InitError }, Cmd.none)
+                handleInitializationFinish ({ model | textures = newTexturesModel }, Cmd.map TexturesMsg texturesCmd)
 
         (MenuMsg menuMsg, InMenu menuModel) ->
             let

@@ -19,10 +19,13 @@ import Browser.Events
 import Browser.Dom
 import Task
 import Sound
+import MeshCollection
+import Vector3d
 
 type alias Model =
     { initialized : Bool
     , textures: Textures.Model
+    , meshes: MeshCollection.Model
     , canvasSize : (Int, Int)
     , offset: Float
     , state: MenuState
@@ -41,10 +44,11 @@ type OutMsg
     = Noop
     | StartNewGame
 
-init : Textures.Model -> (Model, Cmd Msg)
-init textures =
+init : Textures.Model -> MeshCollection.Model -> (Model, Cmd Msg)
+init textures meshes =
     ( { initialized = False
       , textures = textures
+      , meshes = meshes
       , canvasSize = (800, 600)
       , offset = 0
       , state = Idle
@@ -101,11 +105,16 @@ view model =
                     ]
                 )
             |> Scene3d.group
+
+        coneTexture = Textures.getTexture model.textures "ConeColor.jpg"
+        cone =
+            MeshCollection.getMeshEntity model.meshes "Cone.obj" coneTexture
+                |> Maybe.map (Scene3d.translateBy (Vector3d.meters 0 model.offset 0))
     in
         Html.div [class "mainMenuContainer", style "opacity" opacity]
             [ Html.div [] [Html.text (if model.initialized then "" else "Initializing...")]
             , Scene3d.cloudy
-                 { entities = [ segments ]
+                 { entities = [ segments, Maybe.withDefault Scene3d.nothing cone ]
                  , camera = camera
                  , upDirection = Direction3d.z
                  , background = Scene3d.backgroundColor Color.black
@@ -123,7 +132,7 @@ view model =
 camera = Camera3d.perspective
    { viewpoint =
      Viewpoint3d.lookAt
-         { eyePoint = Point3d.xyz (Length.meters 0) (Length.meters 0) (Length.meters 0.5)
+         { eyePoint = Point3d.xyz (Length.meters 0) (Length.meters 0.5) (Length.meters 0.5)
          , focalPoint = Point3d.xyz (Length.meters 0) (Length.meters -1) (Length.meters 0.5)
          , upDirection = Direction3d.positiveZ
          }
