@@ -286,40 +286,41 @@ createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
         Scene3d.group [leftQuad, frontQuad, behindQuad, rightQuad]
 
 viewFloor textures (x, y) =
-    Textures.getTexture textures "CheckerFloor.jpg"
-        |> Maybe.andThen (\floorTexture -> Textures.getTexture textures "OfficeCeiling005_4K_Color.jpg" |> Maybe.map (\ceilingTexture -> (floorTexture, ceilingTexture)) )
-        |> Maybe.map
-            (\(floorTexture, ceilingTexture) ->
-                let
-                   floorMaterial = (Scene3d.Material.texturedNonmetal { baseColor = floorTexture, roughness = Scene3d.Material.constant 0.5 })
-                   ceilingMaterial = (Scene3d.Material.texturedEmissive ceilingTexture (Luminance.footLamberts 100 ))
-                   x1 = Length.meters (toFloat -x)
-                   y1 = Length.meters (toFloat (y + 1))
-                   x2 = Length.meters (toFloat -x - 1)
-                   y2 = Length.meters (toFloat (y + 1))
-                   x3 = Length.meters (toFloat -x - 1)
-                   y3 = Length.meters (toFloat y)
-                   x4 = Length.meters (toFloat -x)
-                   y4 = Length.meters (toFloat y)
+   Maybe.map2
+        (\floorTexture ceilingTexture ->
+            let
+               floorMaterial = (Scene3d.Material.texturedNonmetal { baseColor = floorTexture, roughness = Scene3d.Material.constant 0.5 })
+               ceilingMaterial = (Scene3d.Material.texturedEmissive ceilingTexture (Luminance.footLamberts 100 ))
+               x1 = Length.meters (toFloat -x)
+               y1 = Length.meters (toFloat (y + 1))
+               x2 = Length.meters (toFloat -x - 1)
+               y2 = Length.meters (toFloat (y + 1))
+               x3 = Length.meters (toFloat -x - 1)
+               y3 = Length.meters (toFloat y)
+               x4 = Length.meters (toFloat -x)
+               y4 = Length.meters (toFloat y)
 
-                   zBottom = Length.meters 0
-                   zTop = Length.meters 1
-                in
-                    Scene3d.group
-                        [ Scene3d.quad floorMaterial
-                             (Point3d.xyz x1 y1 zBottom)
-                             (Point3d.xyz x2 y2 zBottom)
-                             (Point3d.xyz x3 y3 zBottom)
-                             (Point3d.xyz x4 y4 zBottom)
-                        , Scene3d.quad ceilingMaterial
-                             (Point3d.xyz x1 y1 zTop)
-                             (Point3d.xyz x2 y2 zTop)
-                             (Point3d.xyz x3 y3 zTop)
-                             (Point3d.xyz x4 y4 zTop)
-                        ]
+               zBottom = Length.meters 0
+               zTop = Length.meters 1
+            in
+                Scene3d.group
+                    [ Scene3d.quad floorMaterial
+                         (Point3d.xyz x1 y1 zBottom)
+                         (Point3d.xyz x2 y2 zBottom)
+                         (Point3d.xyz x3 y3 zBottom)
+                         (Point3d.xyz x4 y4 zBottom)
+                    , Scene3d.quad ceilingMaterial
+                         (Point3d.xyz x1 y1 zTop)
+                         (Point3d.xyz x2 y2 zTop)
+                         (Point3d.xyz x3 y3 zTop)
+                         (Point3d.xyz x4 y4 zTop)
+                    ]
 
 
-            )
+        )
+        --(Textures.getTexture textures "CheckerFloor.jpg")
+        (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
+        (Textures.getTexture textures "OfficeCeiling005_4K_Color.jpg")
         |> Maybe.withDefault Scene3d.nothing
 
 viewBlock textures (x, y) =

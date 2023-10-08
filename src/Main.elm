@@ -53,6 +53,9 @@ texturesToLoad =
     , GenerateSign "Sign-Moonwalk" "MOONWALKERS\nONLY"
     , GenerateSign "Sign-Minus1" "-1"
     , TextureColor "ConeColor.jpg"
+    , TextureColor "SofaChair_Base_Color.png"
+    , TextureColor "Ground054_1K-JPG_Color.jpg"
+    , TextureColor "ToyBucket.png"
     --, (TextureColor, "Chip004_1K_Color.jpg")
     --, (TextureFloat, "Chip004_1K_Metalness.jpg")
     --, (TextureFloat, "Chip004_1K_Roughness.jpg")
@@ -60,6 +63,8 @@ texturesToLoad =
 
 meshesToLoad =
     [ "Cone.obj"
+    , "Chair.obj"
+    , "ToyBucket.obj"
     ]
 
 init : (Model, Cmd Msg)

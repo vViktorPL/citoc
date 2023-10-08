@@ -67,7 +67,7 @@ getMesh fileName =
 
                         Http.GoodStatus_ _ body ->
                                 (Obj.Decode.decodeString
-                                   Length.centimeters
+                                   Length.meters
                                    meshDecoder
                                    body
                                 )

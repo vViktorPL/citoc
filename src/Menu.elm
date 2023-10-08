@@ -106,15 +106,20 @@ view model =
                 )
             |> Scene3d.group
 
-        coneTexture = Textures.getTexture model.textures "ConeColor.jpg"
-        cone =
-            MeshCollection.getMeshEntity model.meshes "Cone.obj" coneTexture
-                |> Maybe.map (Scene3d.translateBy (Vector3d.meters 0 model.offset 0))
+        bucketTexture = Textures.getTexture model.textures "ToyBucket.png"
+        bucket =
+            MeshCollection.getMeshEntity model.meshes "ToyBucket.obj" bucketTexture
+                |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.4)
+
+        --chairTexture = Textures.getTexture model.textures "SofaChair_Base_Color.png"
+        --chair =
+        --    MeshCollection.getMeshEntity model.meshes "Chair.obj" chairTexture
+        --        --|> Maybe.map (Scene3d.translateBy (Vector3d.meters 0 model.offset 0))
     in
         Html.div [class "mainMenuContainer", style "opacity" opacity]
             [ Html.div [] [Html.text (if model.initialized then "" else "Initializing...")]
             , Scene3d.cloudy
-                 { entities = [ segments, Maybe.withDefault Scene3d.nothing cone ]
+                 { entities = [ Maybe.withDefault Scene3d.nothing bucket ]
                  , camera = camera
                  , upDirection = Direction3d.z
                  , background = Scene3d.backgroundColor Color.black
