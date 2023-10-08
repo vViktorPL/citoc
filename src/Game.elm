@@ -10,7 +10,8 @@ import Pixels
 import Browser.Events
 import Json.Decode as Decode
 import Player exposing (Player)
-import Level exposing (Level, Orientation(..), TriggerCondition(..), TriggerEffect(..))
+import Level exposing (Level, TriggerCondition(..), TriggerEffect(..))
+import Orientation exposing (Orientation(..))
 import Level.Index as LevelIndex
 import Textures
 import Vector3d
@@ -18,6 +19,8 @@ import Dict exposing (Dict)
 import Sound
 import Browser.Dom
 import Task
+import MeshCollection
+import SceneAssets
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -36,8 +39,7 @@ type GameState
     | FadingInLevel Float
 
 type alias Model =
-    { textures: Textures.Model
-    , state: GameState
+    { state: GameState
     , player: Player
     , level: Level
     , levelsLeft: List Level
@@ -55,13 +57,12 @@ type Gesture
 
 maxGestureHistory = 5
 
-init : Textures.Model -> (Model, Cmd Msg)
-init textures =
+init : (Model, Cmd Msg)
+init =
     let
         level = LevelIndex.firstLevel
     in
-    ( {   textures = textures
-        , state = Initializing
+    ( { state = Initializing
         , player = Player.initOnLevel level
         , level = level
         , levelsLeft = LevelIndex.restLevels
@@ -341,8 +342,8 @@ handleTriggers model newPlayer =
                             model.gestureHistory
                 }, Cmd.none)
 
-view : Model -> Html Msg
-view model =
+view : SceneAssets.Model -> Model -> Html Msg
+view sceneAssets model =
     let
         opacity = case model.state of
             FadingOutLevel timeLeft -> timeLeft / levelFadeOutTime
@@ -357,7 +358,7 @@ view model =
             , Html.Attributes.style "visibility" (if model.state == Initializing then "hidden" else "visible")
             ]
             [ Scene3d.cloudy
-                { entities = [ Level.view model.textures model.level ]
+                { entities = [ Level.view sceneAssets model.level ]
                 --, sunlightDirection = Direction3d.z
                 , camera = Player.view model.player
                 , upDirection = Direction3d.z

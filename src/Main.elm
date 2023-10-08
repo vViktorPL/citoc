@@ -2,10 +2,10 @@ module Main exposing (..)
 
 import Game
 import Browser
-import Textures exposing (Model, TextureToLoad(..), TexturesState(..))
+import SceneAssets
 import Html exposing (Html)
 import Menu
-import MeshCollection exposing (Model(..))
+
 
 
 -- MAIN
@@ -23,8 +23,7 @@ main =
 
 type alias Model
     = { screen: Screen
-      , textures: Textures.Model
-      , meshes: MeshCollection.Model
+      , sceneAssets: SceneAssets.Model
       }
 
 type Screen
@@ -33,54 +32,16 @@ type Screen
     | InMenu Menu.Model
     | Playing Game.Model
 
-texturesToLoad =
-    [ TextureColor "Bricks021_1K-JPG_Color.jpg"
-    , TextureFloat "Bricks021_1K-JPG_Roughness.jpg"
-    , TextureColor "CheckerFloor.jpg"
-    , TextureColor "OfficeCeiling005_4K_Color.jpg"
-    , TextureColor "CorrugatedSteel007B_1K-JPG_Color.jpg"
-    , TextureFloat "CorrugatedSteel007B_1K-JPG_Metalness.jpg"
-    , TextureFloat "CorrugatedSteel007B_1K-JPG_Roughness.jpg"
-    , GenerateSign "Sign-ConfusingCorridor" "BEWARE OF\nCONFUSING\nCORRIDORS"
-    , GenerateSign "Sign-Quiz" "QUIZ TIME!\n\nDo you think that there is a\ndead end around the corner?"
-    , GenerateSign "Sign-CorrectAnswer" "Correct answer!\n\nIt seems that you were right!"
-    , GenerateSign "Sign-CountTo3" "Let's count to 3"
-    , GenerateSign "Sign-1" "1"
-    , GenerateSign "Sign-2" "2"
-    , GenerateSign "Sign-3" "3"
-    , GenerateSign "Sign-ProgrammerZero" "Actually,\na good programmer\nwould start with zero...\nso let's start over..."
-    , GenerateSign "Sign-JustKiddin" "Just kidding"
-    , GenerateSign "Sign-Moonwalk" "MOONWALKERS\nONLY"
-    , GenerateSign "Sign-Minus1" "-1"
-    , TextureColor "ConeColor.jpg"
-    , TextureColor "SofaChair_Base_Color.png"
-    , TextureColor "Ground054_1K-JPG_Color.jpg"
-    , TextureColor "ToyBucket.png"
-    --, (TextureColor, "Chip004_1K_Color.jpg")
-    --, (TextureFloat, "Chip004_1K_Metalness.jpg")
-    --, (TextureFloat, "Chip004_1K_Roughness.jpg")
-    ]
-
-meshesToLoad =
-    [ "Cone.obj"
-    , "Chair.obj"
-    , "ToyBucket.obj"
-    ]
 
 init : (Model, Cmd Msg)
 init =
     let
-        (texturesModel, texturesCmd) = Textures.init texturesToLoad
-        (meshesModel, meshesCmd) = MeshCollection.init meshesToLoad
+        (sceneAssetsModel, sceneAssetsCmd) = SceneAssets.init
     in
         ( { screen = Initialising
-          , textures = texturesModel
-          , meshes = meshesModel
+          , sceneAssets = sceneAssetsModel
           }
-        , Cmd.batch
-            [ Cmd.map TexturesMsg texturesCmd
-            , Cmd.map MeshesMsg meshesCmd
-            ]
+        , Cmd.map SceneAssetsMsg sceneAssetsCmd
         )
 
 
@@ -88,27 +49,8 @@ init =
 
 type Msg
     = GameMsg Game.Msg
-    | TexturesMsg Textures.Msg
-    | MeshesMsg MeshCollection.Msg
+    | SceneAssetsMsg SceneAssets.Msg
     | MenuMsg Menu.Msg
-
-
-handleInitializationFinish : ( Model, Cmd Msg) -> ( Model, Cmd Msg )
-handleInitializationFinish (model, cmd) =
-    case (Textures.getState model.textures, model.meshes) of
-        (TexturesLoaded, MeshCollectionLoaded _) ->
-            let
-                (menuModel, menuCmd) = Menu.init model.textures model.meshes
-            in
-                ({ model | screen = InMenu menuModel}, Cmd.batch [cmd, Cmd.map MenuMsg menuCmd])
-
-        (TextureInitError, _) ->
-            ({ model | screen = InitError }, Cmd.none)
-
-        (_, MeshCollectionFailed) ->
-            ({ model | screen = InitError }, Cmd.none)
-
-        _ -> (model, cmd)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -120,17 +62,19 @@ update msg model =
             in
                 ({ model | screen = Playing newGameModel }, Cmd.map GameMsg gameCmd)
 
-        (MeshesMsg meshesMsg, Initialising) ->
+        (SceneAssetsMsg sceneAssetsMsg, Initialising) ->
             let
-                (newMeshesModel, meshesCmd) = MeshCollection.update meshesMsg model.meshes
+                (newSceneAssetsModel, sceneAssetsCmd) = SceneAssets.update sceneAssetsMsg model.sceneAssets
+                assetsReady = SceneAssets.ready newSceneAssetsModel
+                assetsUpdatedModel = { model | sceneAssets = newSceneAssetsModel }
             in
-                handleInitializationFinish ({ model | meshes = newMeshesModel }, Cmd.map MeshesMsg meshesCmd)
-
-        (TexturesMsg texturesMsg, Initialising) ->
-            let
-                (newTexturesModel, texturesCmd) = Textures.update texturesMsg model.textures
-            in
-                handleInitializationFinish ({ model | textures = newTexturesModel }, Cmd.map TexturesMsg texturesCmd)
+                if assetsReady then
+                    let
+                        (menuModel, menuCmd) = Menu.init
+                    in
+                    ({ assetsUpdatedModel | screen = InMenu menuModel }, Cmd.map MenuMsg menuCmd)
+                else
+                    (assetsUpdatedModel, Cmd.map SceneAssetsMsg sceneAssetsCmd)
 
         (MenuMsg menuMsg, InMenu menuModel) ->
             let
@@ -140,7 +84,7 @@ update msg model =
                     Menu.Noop -> ({ model | screen = InMenu newMenuModel }, Cmd.none)
                     Menu.StartNewGame ->
                         let
-                            (initializedGameModel, gameCmd) = (Game.init model.textures)
+                            (initializedGameModel, gameCmd) = Game.init
                         in
                         ({ model | screen = Playing initializedGameModel }, Cmd.map GameMsg gameCmd )
 
@@ -154,8 +98,8 @@ subscriptions model =
             Game.subscriptions game
                 |> Sub.map GameMsg
         Initialising ->
-            Textures.subscription
-                |> Sub.map TexturesMsg
+            SceneAssets.subscription model.sceneAssets
+                |> Sub.map SceneAssetsMsg
         InMenu menu ->
             Menu.subscription menu
                 |> Sub.map MenuMsg
@@ -165,12 +109,12 @@ view : Model -> Html Msg
 view model =
     case model.screen of
         Playing game ->
-            Game.view game
+            Game.view model.sceneAssets game
                 |> Html.map GameMsg
         Initialising ->
             Html.div [] [Html.text "Loading..."]
         InitError ->
             Html.div [] [Html.text "Error :-("]
         InMenu menu ->
-            Menu.view menu
+            Menu.view model.sceneAssets menu
                 |> Html.map MenuMsg

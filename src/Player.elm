@@ -27,7 +27,8 @@ module Player exposing
 
 import Point3d exposing (Point3d)
 import Length
-import Level exposing (Orientation(..), WorldCoordinates, pointOnLevel)
+import Level exposing ( WorldCoordinates, pointOnLevel)
+import Orientation exposing (Orientation(..))
 import Angle exposing (Angle)
 import Camera3d
 import Direction3d

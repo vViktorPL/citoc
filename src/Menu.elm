@@ -19,13 +19,12 @@ import Browser.Events
 import Browser.Dom
 import Task
 import Sound
-import MeshCollection
+import SceneAssets
+import Frame3d
 import Vector3d
 
 type alias Model =
     { initialized : Bool
-    , textures: Textures.Model
-    , meshes: MeshCollection.Model
     , canvasSize : (Int, Int)
     , offset: Float
     , state: MenuState
@@ -44,11 +43,9 @@ type OutMsg
     = Noop
     | StartNewGame
 
-init : Textures.Model -> MeshCollection.Model -> (Model, Cmd Msg)
-init textures meshes =
+init : (Model, Cmd Msg)
+init =
     ( { initialized = False
-      , textures = textures
-      , meshes = meshes
       , canvasSize = (800, 600)
       , offset = 0
       , state = Idle
@@ -86,8 +83,8 @@ update msg model =
         NewGamePositionActivated ->
             ({ model | state = StartingNewGame 1.0 }, Noop)
 
-view : Model -> Html Msg
-view model =
+view : SceneAssets.Model -> Model -> Html Msg
+view sceneAssets model =
     let
         opacity = String.fromFloat
             (case model.state of
@@ -98,28 +95,21 @@ view model =
             |> List.map (\index ->
                 let
                     currentSegmentOffset = -(toFloat index) + model.offset
+                    position = (Point3d.meters 0 currentSegmentOffset 0)
                 in
                 Scene3d.group
-                    [ viewFloor model.textures 0 currentSegmentOffset 0.5
-                    , viewWall model.textures 0 currentSegmentOffset 0.5
+                    [ SceneAssets.floorTile sceneAssets
+                    , SceneAssets.ceilingTile sceneAssets
+                    , SceneAssets.wallBlock sceneAssets |> Scene3d.translateBy (Vector3d.fromMeters { x = 1, y = 0, z = 0 })
+                    , SceneAssets.wallBlock sceneAssets |> Scene3d.translateBy (Vector3d.fromMeters { x = -1, y = 0, z = 0 })
                     ]
+                    |> Scene3d.placeIn (Frame3d.atPoint position)
                 )
-            |> Scene3d.group
-
-        bucketTexture = Textures.getTexture model.textures "ToyBucket.png"
-        bucket =
-            MeshCollection.getMeshEntity model.meshes "ToyBucket.obj" bucketTexture
-                |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.4)
-
-        --chairTexture = Textures.getTexture model.textures "SofaChair_Base_Color.png"
-        --chair =
-        --    MeshCollection.getMeshEntity model.meshes "Chair.obj" chairTexture
-        --        --|> Maybe.map (Scene3d.translateBy (Vector3d.meters 0 model.offset 0))
     in
         Html.div [class "mainMenuContainer", style "opacity" opacity]
             [ Html.div [] [Html.text (if model.initialized then "" else "Initializing...")]
             , Scene3d.cloudy
-                 { entities = [ Maybe.withDefault Scene3d.nothing bucket ]
+                 { entities = segments
                  , camera = camera
                  , upDirection = Direction3d.z
                  , background = Scene3d.backgroundColor Color.black
@@ -143,35 +133,35 @@ camera = Camera3d.perspective
          }
    , verticalFieldOfView = Angle.degrees 110
    }
-
-viewWall textures x y z =
-    Maybe.withDefault Scene3d.nothing <|
-    Maybe.map2
-        (\texture roughness ->
-            let
-                material = (Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness })
-                x1 = Length.meters (-x + 0.5)
-                x2 = Length.meters (-x - 0.5)
-                y1 = Length.meters (y - 0.5)
-                y2 = Length.meters (y + 0.5)
-                z1 = Length.meters (z - 0.5)
-                z2 = Length.meters (z + 0.5)
-            in
-                 Scene3d.group
-                    [ Scene3d.quad material
-                         (Point3d.xyz x1 y1 z1)
-                         (Point3d.xyz x1 y2 z1)
-                         (Point3d.xyz x1 y2 z2)
-                         (Point3d.xyz x1 y1 z2)
-                    , Scene3d.quad material
-                         (Point3d.xyz x2 y2 z1)
-                         (Point3d.xyz x2 y1 z1)
-                         (Point3d.xyz x2 y1 z2)
-                         (Point3d.xyz x2 y2 z2)
-                    ]
-        )
-    (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
-    (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
+--
+--viewWall textures x y z =
+--    Maybe.withDefault Scene3d.nothing <|
+--    Maybe.map2
+--        (\texture roughness ->
+--            let
+--                material = (Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness })
+--                x1 = Length.meters (-x + 0.5)
+--                x2 = Length.meters (-x - 0.5)
+--                y1 = Length.meters (y - 0.5)
+--                y2 = Length.meters (y + 0.5)
+--                z1 = Length.meters (z - 0.5)
+--                z2 = Length.meters (z + 0.5)
+--            in
+--                 Scene3d.group
+--                    [ Scene3d.quad material
+--                         (Point3d.xyz x1 y1 z1)
+--                         (Point3d.xyz x1 y2 z1)
+--                         (Point3d.xyz x1 y2 z2)
+--                         (Point3d.xyz x1 y1 z2)
+--                    , Scene3d.quad material
+--                         (Point3d.xyz x2 y2 z1)
+--                         (Point3d.xyz x2 y1 z1)
+--                         (Point3d.xyz x2 y1 z2)
+--                         (Point3d.xyz x2 y2 z2)
+--                    ]
+--        )
+--    (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
+--    (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
 
 viewFloor textures x y z =
     Maybe.withDefault Scene3d.nothing <|
