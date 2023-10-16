@@ -4,6 +4,7 @@ import Game
 import Browser
 import SceneAssets
 import Html exposing (Html)
+import Html.Attributes
 import Menu
 
 
@@ -112,7 +113,11 @@ view model =
             Game.view model.sceneAssets game
                 |> Html.map GameMsg
         Initialising ->
-            Html.div [] [Html.text "Loading..."]
+            Html.div
+                [Html.Attributes.class "loadingScreen"]
+                [ Html.div [Html.Attributes.class "loadingSpinner"] []
+                , Html.text "Loading..."
+                ]
         InitError ->
             Html.div [] [Html.text "Error :-("]
         InMenu menu ->
