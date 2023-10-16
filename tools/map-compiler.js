@@ -64,6 +64,8 @@ fs.readdir(path.join(__dirname, '../levels')).then(
             `module Level.${filename.replace(".txt", "")} exposing (data)`,
             'import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), fromData)',
             'import Orientation exposing (Orientation(..))',
+            'import Color',
+            'import Length',
             // 'import Screen.Game.Direction exposing (..)',
             // 'import Color exposing (Color)',
             '',

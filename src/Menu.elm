@@ -112,9 +112,10 @@ view sceneAssets model =
                  { entities = segments
                  , camera = camera
                  , upDirection = Direction3d.z
-                 , background = Scene3d.backgroundColor Color.black
+                 , background = Scene3d.backgroundColor Color.white
                  , clipDepth = Length.centimeters 1
                  , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
+                 , visibility = Scene3d.fog (Length.meters 4)
                  }
             , Html.div [class "mainMenu", style "visibility" (if model.initialized then "visible" else "hidden")]
                 [ Html.div [class "logo"] []

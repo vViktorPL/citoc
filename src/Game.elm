@@ -21,6 +21,11 @@ import Browser.Dom
 import Task
 import MeshCollection
 import SceneAssets
+import Frame3d
+import Point3d
+import Axis3d
+import Angle
+import Scene3d
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -47,6 +52,8 @@ type alias Model =
     , gestureHistory: List Gesture
     , canvasSize : (Int, Int)
     , fadeColor: String
+    , backgroundColor: Color
+    , visibility : Scene3d.Visibility
     }
 
 type Gesture
@@ -70,6 +77,8 @@ init =
         , gestureHistory = []
         , canvasSize = (800, 600)
         , fadeColor = "black"
+        , backgroundColor = Color.white
+        , visibility = Scene3d.clearView
       }
     , Cmd.batch
         [ Task.perform
@@ -283,6 +292,9 @@ handleTriggers model newPlayer =
                           LookAngle orientation ->
                               orientation == lookingAt
 
+                          LookingAtGround ->
+                              (Angle.inDegrees (Player.getVerticalLookAngle newPlayer)) <= -45
+
                           NegativeHeadshake ->
                               let
                                   last3Gestures = List.take 3 model.gestureHistory
@@ -332,6 +344,8 @@ handleTriggers model newPlayer =
                             )
                         PlaySound fileName ->
                             (modelAcc, Cmd.batch [cmdAcc, Sound.playSound fileName])
+                        InitFog color distance ->
+                            ({ modelAcc | backgroundColor = color, visibility = Scene3d.fog distance }, cmdAcc)
                 )
                 ({ model
                     | player = newPlayer
@@ -358,13 +372,25 @@ view sceneAssets model =
             , Html.Attributes.style "visibility" (if model.state == Initializing then "hidden" else "visible")
             ]
             [ Scene3d.cloudy
-                { entities = [ Level.view sceneAssets model.level ]
+                { entities =
+                    [ Level.view sceneAssets model.level
+
+                    --, SceneAssets.castle sceneAssets
+                    --    |> Scene3d.rotateAround (Axis3d.x) (Angle.degrees 180)
+                    --    |> Scene3d.scaleAbout Point3d.origin 0.2
+                    --    --|> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -12 32 9))
+                    --
+                    --    |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -17 35 5.4))
+                    ]
+                    --, SceneAssets.castleSkybox sceneAssets
+                    --    |> Scene3d.placeIn (Frame3d.atPoint (Player.getPlayerPosition model.player)) ]
                 --, sunlightDirection = Direction3d.z
                 , camera = Player.view model.player
                 , upDirection = Direction3d.z
-                , background = Scene3d.backgroundColor Color.black
+                , background = Scene3d.backgroundColor model.backgroundColor
                 , clipDepth = Length.centimeters 1
                 , dimensions = Tuple.mapBoth Pixels.int Pixels.int model.canvasSize
+                , visibility = model.visibility
                 }
             ]
     ]

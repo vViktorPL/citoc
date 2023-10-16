@@ -1,4 +1,23 @@
-module SceneAssets exposing (Model, Msg, init, update, subscription, ready, wallBlock, blueWallBlock, floorTile, ceilingTile, sign, sandTile, toyBucket)
+module SceneAssets exposing
+    (Model
+    , Msg
+    , init
+    , update
+    , subscription
+    , ready
+    , wallBlock
+    , blueWallBlock
+    , floorTile
+    , ceilingTile
+    , sign
+    , sandTile
+    , toyBucket
+    , castleWall
+    , castleDoor
+    , castleWallTower
+    , castleEntryVoid
+    , chair
+    )
 
 import Textures exposing (TextureToLoad(..), TexturesState(..))
 import MeshCollection exposing (Model(..))
@@ -9,6 +28,9 @@ import Obj.Decode exposing (ObjCoordinates)
 import Dict exposing (Dict)
 import Point3d
 import Luminance
+import Color
+import Axis3d
+import Angle
 
 type alias SceneEntity = Scene3d.Entity ObjCoordinates
 
@@ -25,6 +47,11 @@ type alias ReadyAssetsData =
     , signs: Dict String SceneEntity
     , sandTile: SceneEntity
     , toyBucket: SceneEntity
+    , castleWall : SceneEntity
+    , castleDoor: SceneEntity
+    , castleWallTower : SceneEntity
+    , castleEntryVoid : SceneEntity
+    , chair : SceneEntity
     }
 
 type Model
@@ -57,14 +84,19 @@ texturesToLoad =
     , GenerateSign "Sign-Moonwalk" "MOONWALKERS\nONLY"
     , GenerateSign "Sign-Minus1" "-1"
     , TextureColor "ConeColor.jpg"
-    , TextureColor "SofaChair_Base_Color.png"
     , TextureColor "Ground054_1K-JPG_Color.jpg"
     , TextureFloat "Ground054_1K-JPG_Roughness.jpg"
     , TextureColor "ToyBucket.png"
+    , TextureColor "SofaChairTexture.jpg"
     ]
 
 meshesToLoad =
     [ "ToyBucket.obj"
+    , "wall.obj"
+    --, "wallCorner.obj"
+    , "wallDoor.obj"
+    , "wallCornerHalfTower.obj"
+    , "Chair.obj"
     ]
 
 init : (Model, Cmd Msg)
@@ -202,6 +234,27 @@ initializeEntities model =
                             (MeshCollection.getMeshEntity meshes "ToyBucket.obj" (Textures.getTexture textures "ToyBucket.png"))
                                  |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.4)
                                  |> Maybe.withDefault Scene3d.nothing
+                        , castleWall =
+                            (MeshCollection.getMeshEntity meshes "wall.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
+                            |> Maybe.withDefault Scene3d.nothing
+                        , castleDoor =
+                            (MeshCollection.getMeshEntity meshes "wallDoor.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
+                            |> Maybe.withDefault Scene3d.nothing
+                        , castleWallTower =
+                            (MeshCollection.getMeshEntity meshes "wallCornerHalfTower.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
+                                |> Maybe.withDefault Scene3d.nothing
+                        , castleEntryVoid =
+                            Scene3d.quad
+                                (Scene3d.Material.color Color.black)
+                                (Point3d.unsafe { x = 0, y = 0, z = 0 })
+                                (Point3d.unsafe { x = 0, y = -1, z = 0 })
+                                (Point3d.unsafe { x = 0, y = -1, z = 1 })
+                                (Point3d.unsafe { x = 0, y = 0, z = 1 })
+                        , chair =
+                            (MeshCollection.getMeshEntity meshes "Chair.obj" (Textures.getTexture textures "SofaChairTexture.jpg"))
+                                |> Maybe.map (Scene3d.rotateAround (Axis3d.z) (Angle.degrees 90))
+                                |> Maybe.map (Scene3d.scaleAbout Point3d.origin 0.7)
+                                |> Maybe.withDefault Scene3d.nothing
                         }
 
                  _ -> model
@@ -246,16 +299,27 @@ createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
         Scene3d.group [leftQuad, frontQuad, behindQuad, rightQuad]
 
 
---
---  x1 = Length.meters (toFloat -x)
-  --       y1 = Length.meters (toFloat (y + 1))
+createSkybox { x1, x2, y1, y2, z1, z2 } matLeft matFront matRight  =
+     let
+            leftQuad = Scene3d.quad matLeft
+                (Point3d.xyz x1 y1 z1)
+                (Point3d.xyz x1 y2 z1)
+                (Point3d.xyz x1 y2 z2)
+                (Point3d.xyz x1 y1 z2)
 
-  --       x2 = Length.meters (toFloat -x - 1)
-  --       y2 = Length.meters (toFloat (y + 1))
-  --       x3 = Length.meters (toFloat -x - 1)
-  --       y3 = Length.meters (toFloat y)
-  --       x4 = Length.meters (toFloat -x)
-  --       y4 = Length.meters (toFloat y)
+            frontQuad = Scene3d.quad matFront
+                (Point3d.xyz x1 y2 z1)
+                (Point3d.xyz x2 y2 z1)
+                (Point3d.xyz x2 y2 z2)
+                (Point3d.xyz x1 y2 z2)
+
+            rightQuad = Scene3d.quad matRight
+                (Point3d.xyz x2 y2 z1)
+                (Point3d.xyz x2 y1 z1)
+                (Point3d.xyz x2 y1 z2)
+                (Point3d.xyz x2 y2 z2)
+        in
+            Scene3d.group [leftQuad, frontQuad, rightQuad]
 
 createTexturedFloor z material =
     let
@@ -340,4 +404,34 @@ toyBucket : Model -> SceneEntity
 toyBucket model =
     case model of
         ReadyAssets data -> data.toyBucket
+        _ -> Scene3d.nothing
+
+castleWall : Model -> SceneEntity
+castleWall model =
+    case model of
+        ReadyAssets data -> data.castleWall
+        _ -> Scene3d.nothing
+
+castleDoor : Model -> SceneEntity
+castleDoor model =
+    case model of
+        ReadyAssets data -> data.castleDoor
+        _ -> Scene3d.nothing
+
+castleWallTower : Model -> SceneEntity
+castleWallTower model =
+    case model of
+        ReadyAssets data -> data.castleWallTower
+        _ -> Scene3d.nothing
+
+castleEntryVoid : Model -> SceneEntity
+castleEntryVoid model =
+    case model of
+        ReadyAssets data -> data.castleEntryVoid
+        _ -> Scene3d.nothing
+
+chair : Model -> SceneEntity
+chair model =
+    case model of
+        ReadyAssets data -> data.chair
         _ -> Scene3d.nothing

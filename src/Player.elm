@@ -19,6 +19,7 @@ module Player exposing
     , teleport
     , getSector
     , getHorizontalOrientation
+    , getVerticalLookAngle
     , getMovementVector
     , getPlayerPosition
     , updatePlayerPosition
@@ -108,6 +109,10 @@ getHorizontalOrientation (Player playerData) =
         else
             West
         )
+
+getVerticalLookAngle : Player -> Angle
+getVerticalLookAngle (Player playerData) =
+    playerData.verticalAngle
 
 getSector : Player -> (Int, Int)
 getSector (Player playerData) =

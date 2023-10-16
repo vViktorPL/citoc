@@ -13,6 +13,10 @@ import SceneAssets
 import Frame3d
 import Axis3d
 import Angle
+import Color exposing (Color)
+import Length exposing (Length)
+
+import Castle
 
 type Level
     = Level
@@ -34,6 +38,9 @@ type LevelTile
     | BlueWall
     | Sand
     | ToyBucket
+    | InvisibleWall LevelTile
+    | BigCastle
+    | Chair
     | Empty
 
 type alias Trigger =
@@ -45,6 +52,7 @@ type alias Trigger =
 type TriggerCondition
     = EnteredFrom Orientation
     | LookAngle Orientation
+    | LookingAtGround
     | NegativeHeadshake
     | Nod
     | StepIn
@@ -59,6 +67,7 @@ type TriggerEffect
     | IncrementCounter String
     | DecrementCounter String
     | PlaySound String
+    | InitFog Color Length
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =
@@ -236,6 +245,7 @@ tileCollides levelTile =
         Wall -> True
         Sign _ _ -> True
         BlueWall -> True
+        InvisibleWall _ -> True
         _ -> False
 
 updateTile : (Int, Int) -> LevelTile -> Level -> Level
@@ -259,6 +269,73 @@ removeAllTriggersAtSector : (Int, Int) -> Level -> Level
 removeAllTriggersAtSector sector (Level levelData) =
     Level { levelData | triggers = List.filter (\trigger -> trigger.sector /= sector) levelData.triggers }
 
+viewTile : SceneAssets.Model -> Int -> Int -> LevelTile -> Scene3d.Entity WorldCoordinates
+viewTile sceneAssets x y tile =
+    let
+        worldX = -(toFloat x) - 0.5
+        worldY = (toFloat y) + 0.5
+        tileCenter = (Frame3d.atPoint (Point3d.meters worldX worldY 0))
+    in
+    case tile of
+        Wall ->
+            SceneAssets.wallBlock sceneAssets
+                |> Scene3d.placeIn tileCenter
+
+        BlueWall ->
+            SceneAssets.blueWallBlock sceneAssets
+                |> Scene3d.placeIn tileCenter
+
+        Floor ->
+            Scene3d.group
+                [ SceneAssets.floorTile sceneAssets
+                , SceneAssets.ceilingTile sceneAssets
+                ]
+                |> Scene3d.placeIn tileCenter
+
+        Sand ->
+             SceneAssets.sandTile sceneAssets
+                |> Scene3d.placeIn tileCenter
+
+        Sign signName orientation ->
+            let
+                rotationAngle =
+                    case orientation of
+                        South -> 0
+                        West -> 90
+                        North -> 180
+                        East -> -90
+
+            in
+            Scene3d.group
+                [ SceneAssets.sign sceneAssets signName
+                    |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.51, z = 0 })
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees rotationAngle)
+                , SceneAssets.wallBlock sceneAssets
+                ]
+                |> Scene3d.placeIn tileCenter
+
+        ToyBucket ->
+            Scene3d.group
+                [ SceneAssets.toyBucket sceneAssets
+                , SceneAssets.sandTile sceneAssets
+                ]
+                |> Scene3d.placeIn tileCenter
+
+        InvisibleWall innerTile ->
+            viewTile sceneAssets x y innerTile
+
+        BigCastle ->
+            Scene3d.group
+                [ Castle.view sceneAssets (x, y)
+                , viewTile sceneAssets x y Sand
+                ]
+
+        Chair ->
+            SceneAssets.chair sceneAssets
+                |> Scene3d.placeIn tileCenter
+
+        _ -> Scene3d.nothing
+
 view : SceneAssets.Model -> Level -> Scene3d.Entity WorldCoordinates
 view sceneAssets (Level levelData) =
     levelData.tiles
@@ -266,54 +343,7 @@ view sceneAssets (Level levelData) =
             (\y row ->
                 Array.indexedMap
                     (\x tile ->
-                        let
-                            worldX = -(toFloat x) - 0.5
-                            worldY = (toFloat y) + 0.5
-                            tileCenter = (Frame3d.atPoint (Point3d.meters worldX worldY 0))
-                        in
-                        case tile of
-                            Wall ->
-                                SceneAssets.wallBlock sceneAssets
-                                    |> Scene3d.placeIn tileCenter
-
-                            BlueWall ->
-                                SceneAssets.blueWallBlock sceneAssets
-                                    |> Scene3d.placeIn tileCenter
-
-                            Floor ->
-                                Scene3d.group
-                                    [ SceneAssets.floorTile sceneAssets
-                                    , SceneAssets.ceilingTile sceneAssets
-                                    ]
-                                    |> Scene3d.placeIn tileCenter
-
-                            Sand ->
-                                 SceneAssets.sandTile sceneAssets
-                                    |> Scene3d.placeIn tileCenter
-
-                            Sign signName orientation ->
-                                let
-                                    rotationAngle =
-                                        case orientation of
-                                            South -> 0
-                                            West -> 90
-                                            North -> 180
-                                            East -> -90
-
-                                in
-                                Scene3d.group
-                                    [ SceneAssets.sign sceneAssets signName
-                                        |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.51, z = 0 })
-                                        |> Scene3d.rotateAround Axis3d.z (Angle.degrees rotationAngle)
-                                    , SceneAssets.wallBlock sceneAssets
-                                    ]
-                                    |> Scene3d.placeIn tileCenter
-
-                            ToyBucket ->
-                                SceneAssets.toyBucket sceneAssets
-                                    |> Scene3d.placeIn tileCenter
-
-                            _ -> Scene3d.nothing
+                        viewTile sceneAssets x y tile
                     )
                     row
                     |> Array.toList
