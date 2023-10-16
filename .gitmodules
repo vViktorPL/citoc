@@ -1,0 +1,4 @@
+[submodule "submodules/elm-3d-scene"]
+	path = submodules/elm-3d-scene
+	url = https://github.com/vViktorPL/elm-3d-scene.git
+	branch = fog
