@@ -24,10 +24,11 @@ module Player exposing
     , getPlayerPosition
     , updatePlayerPosition
     , playerRadius
+    , sitDown
     )
 
 import Point3d exposing (Point3d)
-import Length
+import Length exposing (Length)
 import Level exposing ( WorldCoordinates, pointOnLevel)
 import Orientation exposing (Orientation(..))
 import Angle exposing (Angle)
@@ -47,7 +48,19 @@ type Player =
         , movementY: Maybe MovementY
         , remainingTimeToStepSound: Maybe Float
         , lastStepSoundNumber: Int
+        , will : PlayerWill
         }
+
+type PlayerWill
+    = FreeWill
+    | SittingDown
+        { targetHorizontalAngle: Angle
+        , initialHorizontalAngle: Angle
+        , zPositionOffset: Length
+        , completed: Bool
+        }
+    | StandingUp Length
+
 
 type HorizontalTurning
     = None
@@ -82,6 +95,7 @@ init (x, y) orientation =
         , movementY = Nothing
         , remainingTimeToStepSound = Nothing
         , lastStepSoundNumber = 1
+        , will = FreeWill
         }
 
 teleport : Player -> (Int, Int) -> Player
@@ -136,10 +150,11 @@ view (Player playerData) =
             let
                 horizontalAngle = Angle.degrees (90 - (Angle.inDegrees playerData.horizontalAngle))
                 direction = Direction3d.xyZ horizontalAngle playerData.verticalAngle
+                playerPos = getPlayerPosition (Player playerData)
             in
                 Viewpoint3d.lookAt
-                    { eyePoint = playerData.position
-                    , focalPoint = Point3d.translateIn direction Length.meter playerData.position
+                    { eyePoint = playerPos
+                    , focalPoint = Point3d.translateIn direction Length.meter playerPos
                     , upDirection = Direction3d.positiveZ
                     }
           , verticalFieldOfView = Angle.degrees 45
@@ -157,10 +172,13 @@ mouseSensitivity = 0.25
 
 updateLookByMouseMovement : (Int, Int) -> Player -> Player
 updateLookByMouseMovement (dx, dy) (Player playerData) =
-    (Player { playerData
-        | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) + toFloat dx * mouseSensitivity))
-        , verticalAngle = Angle.degrees (clamp -89.9 89.9 ((Angle.inDegrees playerData.verticalAngle) - toFloat dy * mouseSensitivity * 0.5))
-    })
+    case playerData.will of
+        FreeWill ->
+            (Player { playerData
+                | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) + toFloat dx * mouseSensitivity))
+                , verticalAngle = Angle.degrees (clamp -89.9 89.9 ((Angle.inDegrees playerData.verticalAngle) - toFloat dy * mouseSensitivity * 0.5))
+            })
+        _ -> Player playerData
 
 stopTurning : Player -> Player
 stopTurning (Player playerData) =
@@ -168,7 +186,9 @@ stopTurning (Player playerData) =
 
 walkForward : Player -> Player
 walkForward (Player playerData) =
-    Player { playerData | movementY = Just Forward }
+    case playerData.will of
+        SittingDown _ -> tryToStandUp (Player playerData)
+        _ -> Player { playerData | movementY = Just Forward }
 
 walkBackward : Player -> Player
 walkBackward (Player playerData) =
@@ -217,8 +237,49 @@ update : Float -> Player -> (Player, Cmd msg)
 update delta player =
     player
         |> animatePlayerTurning delta
+        |> animatePlayer delta
         |> updatePlayerSteps delta
+
         --|> animatePlayerMovement delta
+
+animatePlayer : Float -> Player -> Player
+animatePlayer delta (Player playerData) =
+    case playerData.will of
+        FreeWill -> Player playerData
+        SittingDown { initialHorizontalAngle, targetHorizontalAngle, zPositionOffset } ->
+            let
+                playerPrevHorizontalAngleDeg = Angle.inDegrees playerData.horizontalAngle
+                playerInitialHorizontalAngleDeg = Angle.inDegrees initialHorizontalAngle
+                playerTargetHorizontalAngleDeg = Angle.inDegrees targetHorizontalAngle
+                angleStep = delta * 0.001 * (playerTargetHorizontalAngleDeg - playerInitialHorizontalAngleDeg)
+                playerNewHorizontalAngleDeg =
+                    (if playerTargetHorizontalAngleDeg > playerInitialHorizontalAngleDeg then
+                        min playerTargetHorizontalAngleDeg (playerPrevHorizontalAngleDeg + angleStep)
+                    else
+                        max playerTargetHorizontalAngleDeg (playerPrevHorizontalAngleDeg + angleStep)
+                    )
+                newZPositionOffsetFloat = (max ((Length.inMeters zPositionOffset) - delta * 0.0001) -0.2)
+                newZPositionOffset = Length.meters newZPositionOffsetFloat
+            in
+                Player
+                    { playerData
+                    | horizontalAngle = Angle.degrees playerNewHorizontalAngleDeg
+                    , will = SittingDown { initialHorizontalAngle = initialHorizontalAngle, targetHorizontalAngle = targetHorizontalAngle, zPositionOffset = newZPositionOffset, completed = newZPositionOffsetFloat == -0.2 }
+                    }
+        StandingUp zPositionOffset ->
+            let
+                newZPositionOffsetFloat = (min ((Length.inMeters zPositionOffset) + delta * 0.0001) 0)
+                newZPositionOffset = Length.meters newZPositionOffsetFloat
+            in
+                if newZPositionOffsetFloat == 0 then
+                    let
+                       {x, y, z} = Point3d.toMeters playerData.position
+                       newY = (toFloat (floor y)) - 0.01
+                    in
+                    Player { playerData | will = FreeWill, position = Point3d.unsafe { x = x, y = newY, z = z } }
+                else
+                    Player { playerData | will = StandingUp newZPositionOffset }
+
 
 updatePlayerSteps : Float -> Player -> (Player, Cmd msg)
 updatePlayerSteps delta (Player playerData) =
@@ -259,41 +320,56 @@ addAngle angle degrees =
 
 animatePlayerTurning : Float -> Player -> Player
 animatePlayerTurning delta (Player playerData) =
-    case playerData.horizontalTurning of
-        None -> (Player playerData)
-        TurnLeft -> (Player { playerData | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) - delta * turningSpeed)) })
-        TurnRight -> (Player { playerData | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) + delta * turningSpeed)) })
+    case (playerData.horizontalTurning, playerData.will) of
+        (TurnLeft, FreeWill) -> (Player { playerData | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) - delta * turningSpeed)) })
+        (TurnRight, FreeWill) -> (Player { playerData | horizontalAngle = Angle.normalize (Angle.degrees ((Angle.inDegrees playerData.horizontalAngle) + delta * turningSpeed)) })
+        _ -> (Player playerData)
 
-animatePlayerMovement : Float -> Player -> Player
-animatePlayerMovement delta player =
-    let
-        v = getMovementVector player
-            |> Vector3d.scaleBy delta
-    in
-        updatePlayerPosition v player
 
 millisecondsPerStep = 500
 
 updatePlayerPosition : Vector3d Length.Meters WorldCoordinates -> Player -> Player
 updatePlayerPosition v (Player playerData) =
-    Player { playerData | position =
-        (Point3d.toMeters playerData.position)
-            |> Vector3d.fromMeters
-            |> Vector3d.plus v
-            |> Vector3d.toMeters
-            |> Point3d.fromMeters
-        , remainingTimeToStepSound =
-            if ((v |> Vector3d.length |> Length.inMeters |> abs) > 0) then
-                case playerData.remainingTimeToStepSound of
-                    Just time -> Just time
-                    Nothing -> Just millisecondsPerStep
-            else
-                Nothing
-    }
+    case playerData.will of
+        FreeWill ->
+            Player { playerData | position =
+                (Point3d.toMeters playerData.position)
+                    |> Vector3d.fromMeters
+                    |> Vector3d.plus v
+                    |> Vector3d.toMeters
+                    |> Point3d.fromMeters
+                , remainingTimeToStepSound =
+                    if ((v |> Vector3d.length |> Length.inMeters |> abs) > 0) then
+                        case playerData.remainingTimeToStepSound of
+                            Just time -> Just time
+                            Nothing -> Just millisecondsPerStep
+                    else
+                        Nothing
+            }
+        _ -> Player playerData
 
 getPlayerPosition : Player -> Point3d Length.Meters WorldCoordinates
 getPlayerPosition (Player playerData) =
-    playerData.position
+    case playerData.will of
+        SittingDown { zPositionOffset } ->
+            let
+                originalPos = Point3d.toMeters playerData.position
+            in
+                Point3d.fromMeters
+                    { x = originalPos.x
+                    , y = originalPos.y - Length.inMeters zPositionOffset
+                    , z = originalPos.z + Length.inMeters zPositionOffset
+                    }
+        StandingUp zPositionOffset ->
+            let
+                originalPos = Point3d.toMeters playerData.position
+            in
+                Point3d.fromMeters
+                    { x = originalPos.x
+                    , y = originalPos.y - Length.inMeters zPositionOffset
+                    , z = originalPos.z + Length.inMeters zPositionOffset
+                    }
+        _ -> playerData.position
 
 getMovementVector : Player -> Vector3d Length.Meters WorldCoordinates
 getMovementVector (Player playerData) =
@@ -326,3 +402,28 @@ getMovementVector (Player playerData) =
             |> Vector3d.plus (Vector3d.scaleBy strafeSpeed strafeLeftVector)
 
 
+sitDown : Player -> Player
+sitDown (Player playerData) =
+    case playerData.will of
+        SittingDown _ -> (Player playerData)
+        _ ->
+            Player
+                { playerData
+                | will = SittingDown
+                    { targetHorizontalAngle = Angle.degrees 180
+                    , initialHorizontalAngle = playerData.horizontalAngle
+                    , zPositionOffset = Length.meters 0
+                    , completed = False
+                    }
+                }
+                |> standStill
+
+tryToStandUp : Player -> Player
+tryToStandUp (Player playerData) =
+    case playerData.will of
+        SittingDown { completed, zPositionOffset } ->
+            if completed then
+                Player { playerData | will = StandingUp zPositionOffset }
+            else
+                Player playerData
+        _ -> Player playerData

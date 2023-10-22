@@ -346,6 +346,8 @@ handleTriggers model newPlayer =
                             (modelAcc, Cmd.batch [cmdAcc, Sound.playSound fileName])
                         InitFog color distance ->
                             ({ modelAcc | backgroundColor = color, visibility = Scene3d.fog distance }, cmdAcc)
+                        SitDown ->
+                            ({ modelAcc | player = Player.sitDown modelAcc.player }, cmdAcc)
                 )
                 ({ model
                     | player = newPlayer

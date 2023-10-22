@@ -41,6 +41,7 @@ type LevelTile
     | InvisibleWall LevelTile
     | BigCastle
     | Chair
+    | Sandbox
     | Empty
 
 type alias Trigger =
@@ -68,6 +69,8 @@ type TriggerEffect
     | DecrementCounter String
     | PlaySound String
     | InitFog Color Length
+    | SitDown
+    --| Timeout (List TriggerEffect) Float
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
 pointOnLevel x y z =
@@ -246,6 +249,7 @@ tileCollides levelTile =
         Sign _ _ -> True
         BlueWall -> True
         InvisibleWall _ -> True
+        Sandbox -> True
         _ -> False
 
 updateTile : (Int, Int) -> LevelTile -> Level -> Level
@@ -326,9 +330,23 @@ viewTile sceneAssets x y tile =
 
         BigCastle ->
             Scene3d.group
-                [ Castle.view sceneAssets (x, y)
+                [ Castle.view sceneAssets True
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees -90)
+                    |> Scene3d.scaleAbout Point3d.origin 3
+                    |> Scene3d.placeIn tileCenter
                 , viewTile sceneAssets x y Sand
                 ]
+
+        Sandbox ->
+            Scene3d.group
+                [ SceneAssets.sandbox sceneAssets
+                    |> Scene3d.placeIn tileCenter
+                , Castle.view sceneAssets False
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees 90)
+                    |> Scene3d.scaleAbout Point3d.origin 0.05
+                    |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX worldY 0.08))
+                ]
+
 
         Chair ->
             SceneAssets.chair sceneAssets

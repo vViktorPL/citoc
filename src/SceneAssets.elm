@@ -17,6 +17,7 @@ module SceneAssets exposing
     , castleWallTower
     , castleEntryVoid
     , chair
+    , sandbox
     )
 
 import Textures exposing (TextureToLoad(..), TexturesState(..))
@@ -31,6 +32,7 @@ import Luminance
 import Color
 import Axis3d
 import Angle
+import Block3d
 
 type alias SceneEntity = Scene3d.Entity ObjCoordinates
 
@@ -52,6 +54,7 @@ type alias ReadyAssetsData =
     , castleWallTower : SceneEntity
     , castleEntryVoid : SceneEntity
     , chair : SceneEntity
+    , sandbox : SceneEntity
     }
 
 type Model
@@ -232,7 +235,7 @@ initializeEntities model =
                                 |> Maybe.withDefault Scene3d.nothing
                         , toyBucket =
                             (MeshCollection.getMeshEntity meshes "ToyBucket.obj" (Textures.getTexture textures "ToyBucket.png"))
-                                 |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.4)
+                                 |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.3)
                                  |> Maybe.withDefault Scene3d.nothing
                         , castleWall =
                             (MeshCollection.getMeshEntity meshes "wall.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
@@ -253,8 +256,54 @@ initializeEntities model =
                         , chair =
                             (MeshCollection.getMeshEntity meshes "Chair.obj" (Textures.getTexture textures "SofaChairTexture.jpg"))
                                 |> Maybe.map (Scene3d.rotateAround (Axis3d.z) (Angle.degrees 90))
-                                |> Maybe.map (Scene3d.scaleAbout Point3d.origin 0.7)
+                                |> Maybe.map (Scene3d.scaleAbout Point3d.origin 0.6)
                                 |> Maybe.withDefault Scene3d.nothing
+                        , sandbox =
+                            Scene3d.group
+                                [ Scene3d.block
+                                    (Scene3d.Material.color Color.darkRed)
+                                    (Block3d.from
+                                        (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
+                                        (Point3d.unsafe { x = -0.5, y = -0.45, z = 0.12 })
+                                    )
+                                , Scene3d.block
+                                    (Scene3d.Material.color Color.darkRed)
+                                    (Block3d.from
+                                      (Point3d.unsafe { x = -0.5, y = -0.5, z = 0 })
+                                      (Point3d.unsafe { x = -0.45, y = 0.5, z = 0.12 })
+                                    )
+                                , Scene3d.block
+                                    (Scene3d.Material.color Color.darkRed)
+                                    (Block3d.from
+                                      (Point3d.unsafe { x = -0.5, y = 0.45, z = 0 })
+                                      (Point3d.unsafe { x = 0.5, y = 0.5, z = 0.12 })
+                                    )
+                                , Scene3d.block
+                                    (Scene3d.Material.color Color.darkRed)
+                                    (Block3d.from
+                                      (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
+                                      (Point3d.unsafe { x = 0.45, y = 0.5, z = 0.12 })
+                                    )
+                                ,
+                                    let
+                                          x1 = Length.meters 0.45
+                                          y1 = Length.meters 0.45
+                                          x2 = Length.meters -0.45
+                                          y2 = Length.meters -0.45
+                                          z = Length.meters 0.08
+                                    in
+                                      Maybe.map2
+                                        (\sandTexture roughnessTexture ->
+                                          Scene3d.quad (Scene3d.Material.texturedNonmetal { baseColor = sandTexture, roughness = roughnessTexture })
+                                               (Point3d.xyz x1 y1 z)
+                                               (Point3d.xyz x2 y1 z)
+                                               (Point3d.xyz x2 y2 z)
+                                               (Point3d.xyz x1 y2 z)
+                                        )
+                                        (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
+                                        (Textures.getTextureFloat textures "Ground054_1K-JPG_Roughness.jpg")
+                                      |> Maybe.withDefault Scene3d.nothing
+                                ]
                         }
 
                  _ -> model
@@ -434,4 +483,11 @@ chair : Model -> SceneEntity
 chair model =
     case model of
         ReadyAssets data -> data.chair
+        _ -> Scene3d.nothing
+
+
+sandbox : Model -> SceneEntity
+sandbox model =
+    case model of
+        ReadyAssets data -> data.sandbox
         _ -> Scene3d.nothing
