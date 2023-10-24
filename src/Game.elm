@@ -26,6 +26,7 @@ import Point3d
 import Axis3d
 import Angle
 import Scene3d
+import BreakableWall
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -376,6 +377,9 @@ view sceneAssets model =
             [ Scene3d.cloudy
                 { entities =
                     [ Level.view sceneAssets model.level
+                    , SceneAssets.breakableWall sceneAssets
+                        |> Maybe.map BreakableWall.view
+                        |> Maybe.withDefault Scene3d.nothing
 
                     --, SceneAssets.castle sceneAssets
                     --    |> Scene3d.rotateAround (Axis3d.x) (Angle.degrees 180)

@@ -18,6 +18,7 @@ module SceneAssets exposing
     , castleEntryVoid
     , chair
     , sandbox
+    , breakableWall
     )
 
 import Textures exposing (TextureToLoad(..), TexturesState(..))
@@ -33,6 +34,7 @@ import Color
 import Axis3d
 import Angle
 import Block3d
+import BreakableWall
 
 type alias SceneEntity = Scene3d.Entity ObjCoordinates
 
@@ -55,6 +57,7 @@ type alias ReadyAssetsData =
     , castleEntryVoid : SceneEntity
     , chair : SceneEntity
     , sandbox : SceneEntity
+    , breakableWall : BreakableWall.Model
     }
 
 type Model
@@ -304,6 +307,10 @@ initializeEntities model =
                                         (Textures.getTextureFloat textures "Ground054_1K-JPG_Roughness.jpg")
                                       |> Maybe.withDefault Scene3d.nothing
                                 ]
+                        , breakableWall =
+                            (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
+                                |> Maybe.map (\wallTexture -> BreakableWall.init (Scene3d.Material.texturedColor wallTexture))
+                                |> Maybe.withDefault (BreakableWall.init (Scene3d.Material.color (Color.brown)))
                         }
 
                  _ -> model
@@ -491,3 +498,9 @@ sandbox model =
     case model of
         ReadyAssets data -> data.sandbox
         _ -> Scene3d.nothing
+
+breakableWall : Model -> Maybe BreakableWall.Model
+breakableWall model =
+    case model of
+        ReadyAssets data -> Just data.breakableWall
+        _ -> Nothing
