@@ -2,7 +2,6 @@ module Level exposing (..)
 
 import Point3d
 import Length
-import Array exposing (Array)
 import Scene3d
 import Vector3d exposing (Vector3d)
 import Point3d exposing (Point3d)
@@ -15,18 +14,26 @@ import Axis3d
 import Angle
 import Color exposing (Color)
 import Length exposing (Length)
+import Dict exposing (Dict)
+import Scene3d.Material
+import Block3d
 
 import Castle
 
 type Level
     = Level
-        { tiles : Array (Array LevelTile)
+        { tiles : List TileEntity
+        , dynamicCollisions: List (Int, Int)
+        , collisions: Dict (Int, Int) Bool
         , triggers: List Trigger
         , startingPosition : ( Int, Int )
         , startingOrientation: Orientation
         }
 
-
+type alias TileEntity =
+    { sector: (Int, Int)
+    , tile: LevelTile
+    }
 
 type alias WorldCoordinates = ObjCoordinates
 
@@ -42,7 +49,17 @@ type LevelTile
     | BigCastle
     | Chair
     | Sandbox
+    | Terms TermsState
+    | BlackWall
+    | BlackFloor
     | Empty
+
+type TermsState
+    = Closed
+    | ShiftingBackAnimation Float
+    | OpeningAnimation Float
+    | FullyOpened
+
 
 type alias Trigger =
     { sector: (Int, Int)
@@ -70,6 +87,8 @@ type TriggerEffect
     | PlaySound String
     | InitFog Color Length
     | SitDown
+    | OpenTerms
+    | PlayMusic String
     --| Timeout (List TriggerEffect) Float
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
@@ -112,22 +131,51 @@ getStartingOrientation (Level levelData) =
 
 fromData : List (List LevelTile) -> List Trigger -> ( Int, Int ) -> Orientation -> Level
 fromData tiles triggers startingPosition startingOrientation =
+    let
+        tileEntities = tiles
+            |> List.indexedMap Tuple.pair
+            |> List.concatMap
+                (\(y, row) ->
+                        row
+                            |> List.indexedMap
+                               (\x tile ->
+                                   { sector = (x, y)
+                                   , tile = tile
+                                   }
+                               )
+                            |> List.filter
+                                (\tileEntity -> tileEntity.tile /= Empty)
+                )
+    in
     Level
-        { tiles = tiles
-            |> List.map Array.fromList
-            |> Array.fromList
+        { tiles = tileEntities
+        , dynamicCollisions = tileEntities
+            |> List.filterMap (\tileEntity ->
+                case tileEntity.tile of
+                    Terms _ -> Just tileEntity.sector
+                    _ -> Nothing
+            )
+        , collisions = tileEntities
+            |> List.map (\tileEntity -> (tileEntity.sector, tileCollides tileEntity.tile))
+            |> Dict.fromList
         , triggers = triggers
         , startingPosition = startingPosition
         , startingOrientation = startingOrientation
         }
 
 collisionOnSector : Level -> (Int, Int) -> Bool
-collisionOnSector (Level levelData) (x, y) =
-    levelData.tiles
-        |> Array.get y
-        |> Maybe.andThen (Array.get x)
-        |> Maybe.map tileCollides
-        |> Maybe.withDefault False
+collisionOnSector (Level levelData) sector =
+    if List.any ((==) sector) levelData.dynamicCollisions then
+        levelData.tiles
+            |> List.filter (\tileEntity -> tileEntity.sector == sector)
+            |> List.head
+            |> Maybe.map (\tileEntity -> tileEntity.tile)
+            |> Maybe.withDefault Empty
+            |> tileCollides
+    else
+        levelData.collisions
+            |> Dict.get sector
+            |> Maybe.withDefault False
 
 worldCoordinateToSector : Point3d Length.Meters WorldCoordinates -> (Int, Int)
 worldCoordinateToSector point =
@@ -248,20 +296,25 @@ tileCollides levelTile =
         Wall -> True
         Sign _ _ -> True
         BlueWall -> True
+        BlackWall -> True
         InvisibleWall _ -> True
         Sandbox -> True
+        Terms FullyOpened -> False
+        Terms _ -> True
         _ -> False
 
 updateTile : (Int, Int) -> LevelTile -> Level -> Level
-updateTile (x, y) newTile (Level levelData) =
-    Level { levelData | tiles =
-        Array.indexedMap
-            (\rowIndex row ->
-                if rowIndex == y then
-                    Array.indexedMap (\tileIndex tile -> if tileIndex == x then newTile else tile) row
-                else
-                    row
-            ) levelData.tiles
+updateTile sector newTile (Level levelData) =
+    Level { levelData
+        | tiles = levelData.tiles
+            |> List.map
+                (\tileEntity ->
+                    if tileEntity.sector == sector then
+                        { sector = sector, tile = newTile }
+                    else
+                        tileEntity
+                )
+        , collisions = Dict.insert sector (tileCollides newTile) levelData.collisions
     }
 
 
@@ -273,8 +326,8 @@ removeAllTriggersAtSector : (Int, Int) -> Level -> Level
 removeAllTriggersAtSector sector (Level levelData) =
     Level { levelData | triggers = List.filter (\trigger -> trigger.sector /= sector) levelData.triggers }
 
-viewTile : SceneAssets.Model -> Int -> Int -> LevelTile -> Scene3d.Entity WorldCoordinates
-viewTile sceneAssets x y tile =
+viewTile : SceneAssets.Model -> (Int, Int) -> LevelTile -> Scene3d.Entity WorldCoordinates
+viewTile sceneAssets (x, y) tile =
     let
         worldX = -(toFloat x) - 0.5
         worldY = (toFloat y) + 0.5
@@ -288,6 +341,34 @@ viewTile sceneAssets x y tile =
         BlueWall ->
             SceneAssets.blueWallBlock sceneAssets
                 |> Scene3d.placeIn tileCenter
+
+        BlackWall ->
+            Scene3d.block (Scene3d.Material.color Color.black) (
+                Block3d.with
+                    { x1 = Length.meters -0.5
+                    , x2 = Length.meters 0.5
+                    , y1 = Length.meters -0.5
+                    , y2 = Length.meters 0.5
+                    , z1 = Length.meters 0
+                    , z2 = Length.meters 1
+                }
+            )
+                |> Scene3d.placeIn tileCenter
+
+        BlackFloor ->
+            Scene3d.group
+                [ Scene3d.quad (Scene3d.Material.color Color.black)
+                    (Point3d.unsafe { x = -0.5, y = -0.5, z = 0 })
+                    (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
+                    (Point3d.unsafe { x = 0.5, y = 0.5, z = 0 })
+                    (Point3d.unsafe { x = -0.5, y = 0.5, z = 0 })
+                , Scene3d.quad (Scene3d.Material.color Color.black)
+                    (Point3d.unsafe { x = -0.5, y = -0.5, z = 1 })
+                    (Point3d.unsafe { x = 0.5, y = -0.5, z = 1 })
+                    (Point3d.unsafe { x = 0.5, y = 0.5, z = 1 })
+                    (Point3d.unsafe { x = -0.5, y = 0.5, z = 1 })
+                ]
+                    |> Scene3d.placeIn tileCenter
 
         Floor ->
             Scene3d.group
@@ -305,9 +386,9 @@ viewTile sceneAssets x y tile =
                 rotationAngle =
                     case orientation of
                         South -> 0
-                        West -> 90
+                        West -> -90
                         North -> 180
-                        East -> -90
+                        East -> 90
 
             in
             Scene3d.group
@@ -326,7 +407,7 @@ viewTile sceneAssets x y tile =
                 |> Scene3d.placeIn tileCenter
 
         InvisibleWall innerTile ->
-            viewTile sceneAssets x y innerTile
+            viewTile sceneAssets (x, y) innerTile
 
         BigCastle ->
             Scene3d.group
@@ -334,7 +415,7 @@ viewTile sceneAssets x y tile =
                     |> Scene3d.rotateAround Axis3d.z (Angle.degrees -90)
                     |> Scene3d.scaleAbout Point3d.origin 3
                     |> Scene3d.placeIn tileCenter
-                , viewTile sceneAssets x y Sand
+                , viewTile sceneAssets (x, y) Sand
                 ]
 
         Sandbox ->
@@ -352,20 +433,96 @@ viewTile sceneAssets x y tile =
             SceneAssets.chair sceneAssets
                 |> Scene3d.placeIn tileCenter
 
+        Terms termsState ->
+            let
+                (leftSideOriginal, rightSideOriginal) = SceneAssets.terms sceneAssets
+
+                (leftSide, rightSide) = case termsState of
+                    Closed -> (leftSideOriginal, rightSideOriginal)
+                    ShiftingBackAnimation progress ->
+                        ( leftSideOriginal
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0, y = -progress * 0.2, z = 0 })
+                        , rightSideOriginal
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0, y = -progress * 0.2, z = 0 })
+                        )
+                    OpeningAnimation progress ->
+                         ( leftSideOriginal
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = progress * 0.49, y = -0.2, z = 0 })
+                        , rightSideOriginal
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = -progress * 0.49, y = -0.2, z = 0 })
+                        )
+                    FullyOpened ->
+                         ( leftSideOriginal
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0.49, y = -0.2, z = 0 })
+                         , rightSideOriginal
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = -0.49, y = -0.2, z = 0 })
+                         )
+
+            in
+                Scene3d.group
+                    [  Scene3d.group
+                          [ leftSide
+                          , rightSide
+                          ]
+                          |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX (worldY + 0.5) 0))
+                    ,viewTile sceneAssets (x, y) Floor
+                    ]
+
+
+
         _ -> Scene3d.nothing
 
 view : SceneAssets.Model -> Level -> Scene3d.Entity WorldCoordinates
 view sceneAssets (Level levelData) =
     levelData.tiles
-        |> Array.indexedMap
-            (\y row ->
-                Array.indexedMap
-                    (\x tile ->
-                        viewTile sceneAssets x y tile
-                    )
-                    row
-                    |> Array.toList
-            )
-        |> Array.toList
-        |> List.concatMap identity
+        |> List.map (\tileEntity -> viewTile sceneAssets tileEntity.sector tileEntity.tile)
         |> Scene3d.group
+
+update : Float -> Level -> Level
+update delta (Level levelData) =
+    (Level { levelData | tiles =
+        levelData.tiles
+            |> List.map (\tileEntity ->
+                    case tileEntity.tile of
+                        Terms termsState ->
+                            { tileEntity | tile = Terms (updateTermsState delta termsState) }
+                        _ -> tileEntity
+                )
+
+    })
+
+
+updateTermsState : Float -> TermsState -> TermsState
+updateTermsState delta termsState =
+        case termsState of
+            ShiftingBackAnimation progress ->
+                let
+                    newProgress = progress + delta * 0.001
+                in
+                    if newProgress >= 1 then
+                        OpeningAnimation 0
+                    else
+                        ShiftingBackAnimation newProgress
+            OpeningAnimation progress ->
+                let
+                    newProgress = progress + delta * 0.0005
+                in
+                    if newProgress >= 1 then
+                        FullyOpened
+                    else
+                        OpeningAnimation newProgress
+            _ -> termsState
+
+
+openTerms : Level -> Level
+openTerms (Level levelData) =
+    Level {
+        levelData | tiles = List.map
+            (\tileEntity ->
+                if tileEntity.tile == Terms Closed then
+                    { sector = tileEntity.sector, tile = Terms (ShiftingBackAnimation 0) }
+                else
+                    tileEntity
+            )
+            levelData.tiles
+    }

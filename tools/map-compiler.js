@@ -62,7 +62,7 @@ fs.readdir(path.join(__dirname, '../levels')).then(
 
           const code = [
             `module Level.${filename.replace(".txt", "")} exposing (data)`,
-            'import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), fromData)',
+            'import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), fromData, TermsState(..))',
             'import Orientation exposing (Orientation(..))',
             'import Color',
             'import Length',
@@ -98,6 +98,10 @@ fs.readdir(path.join(__dirname, '../levels')).then(
 
 
 const asciiToTile = legend => ascii => {
+  if (ascii in legend) {
+    return legend[ascii];
+  }
+
   switch (ascii) {
     case '.':
     case '^':
@@ -110,10 +114,6 @@ const asciiToTile = legend => ascii => {
       return "Wall";
 
     default:
-      if (ascii in legend) {
-        return legend[ascii];
-      }
-
       return "Empty";
   }
 };

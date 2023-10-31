@@ -85,7 +85,7 @@ init =
         [ Task.perform
             (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
             Browser.Dom.getViewport
-        , Sound.playMusic "first-level.mp3"
+        , Sound.stopMusic ()
         ]
     )
 
@@ -119,6 +119,7 @@ update msg model =
                 Initializing -> ({ model | state = FadingInLevel initFadeInTime }, Cmd.none)
                 Playing ->
                     let
+                        modelToUpdate = { model | level = Level.update delta model.level }
                         (newPlayer, playerCmd) =
                             model.player
                                 |> Player.updatePlayerPosition v
@@ -129,13 +130,13 @@ update msg model =
                             |> Level.applyCollision Player.playerRadius model.level (Player.getPlayerPosition model.player)
                     in
                         if playerCollides model.level newPlayer then
-                            ({ model | player = model.player }, Cmd.none)
+                            ({ modelToUpdate | player = model.player }, Cmd.none)
                         else
                             let
-                                (modelAfterTriggers, cmd) = handleTriggers model newPlayer
+                                (modelAfterTriggers, cmd) = handleTriggers modelToUpdate newPlayer
                             in
                                 if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
-                                    ({ model | player = newPlayer }, playerCmd)
+                                    ({ modelToUpdate | player = newPlayer }, playerCmd)
                                 else
                                     (modelAfterTriggers, Cmd.batch [cmd, playerCmd])
 
@@ -349,6 +350,10 @@ handleTriggers model newPlayer =
                             ({ modelAcc | backgroundColor = color, visibility = Scene3d.fog distance }, cmdAcc)
                         SitDown ->
                             ({ modelAcc | player = Player.sitDown modelAcc.player }, cmdAcc)
+                        OpenTerms ->
+                            ({ modelAcc | level = Level.openTerms modelAcc.level }, Cmd.batch [cmdAcc, Sound.playSound "elevator_door.mp3"])
+                        PlayMusic fileName ->
+                            (modelAcc, Cmd.batch [cmdAcc, Sound.playMusic fileName ])
                 )
                 ({ model
                     | player = newPlayer

@@ -1,14 +1,15 @@
 ######  #####
-#v|..#  #...#
+#.|..#  #...#
 #.#######A#.####
 #.........#..X.#
 #.........####.#
 #.........#  #.#
-#########.#
-      #Q#.#
-      #.#.#
-      #...#
-      #####
+###.#####.#
+  #.# #Q#.#
+  #T###.#.#
+  BtB #...#
+  B^B #####
+  BBB
 
 ---
 Q Floor [StepIn] [PlaySound "rumble.mp3", ChangeTile @A Floor, RemoveAllTriggersInSector @Q]
@@ -16,3 +17,7 @@ A Floor
 X Floor [StepIn] [NextLevel]
 A Wall
 | Wall
+T (Terms Closed) [StepIn] [PlayMusic "first-level.mp3", RemoveAllTriggersInSector @T]
+t BlackFloor [Nod] [OpenTerms, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+^ BlackFloor [Nod] [OpenTerms, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+B BlackWall

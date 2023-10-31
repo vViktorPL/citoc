@@ -19,6 +19,7 @@ module SceneAssets exposing
     , chair
     , sandbox
     , breakableWall
+    , terms
     )
 
 import Textures exposing (TextureToLoad(..), TexturesState(..))
@@ -35,6 +36,8 @@ import Axis3d
 import Angle
 import Block3d
 import BreakableWall
+import TriangularMesh
+import Scene3d.Mesh
 
 type alias SceneEntity = Scene3d.Entity ObjCoordinates
 
@@ -58,6 +61,7 @@ type alias ReadyAssetsData =
     , chair : SceneEntity
     , sandbox : SceneEntity
     , breakableWall : BreakableWall.Model
+    , terms: (SceneEntity, SceneEntity)
     }
 
 type Model
@@ -94,6 +98,7 @@ texturesToLoad =
     , TextureFloat "Ground054_1K-JPG_Roughness.jpg"
     , TextureColor "ToyBucket.png"
     , TextureColor "SofaChairTexture.jpg"
+    , TextureColor "toc.png"
     ]
 
 meshesToLoad =
@@ -311,6 +316,39 @@ initializeEntities model =
                             (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
                                 |> Maybe.map (\wallTexture -> BreakableWall.init (Scene3d.Material.texturedColor wallTexture))
                                 |> Maybe.withDefault (BreakableWall.init (Scene3d.Material.color (Color.brown)))
+                        , terms =
+                            (Textures.getTexture textures "toc.png")
+                                |> Maybe.map (\termsTexture ->
+                                    let
+                                        material = Scene3d.Material.texturedColor termsTexture
+                                        leftQuad = TriangularMesh.triangles
+                                            [( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = (0, 0) }
+                                             , { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = (0.5, 0) }
+                                             , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = (0.5, 1) }
+                                             )
+                                            ,( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = (0, 0) }
+                                             , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = (0.5, 1) }
+                                             , { position = Point3d.unsafe { x = 0.5, y = 0, z = 1}, uv = (0, 1) }
+                                             )
+                                            ]
+                                            |> Scene3d.Mesh.texturedTriangles
+                                            |> Scene3d.mesh material
+                                        rightQuad = TriangularMesh.triangles
+                                            [ ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = (0.5, 0) }
+                                              , { position = Point3d.unsafe { x = -0.5, y = 0, z = 0 }, uv = (1, 0) }
+                                              , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = (1, 1) }
+                                              )
+                                            , ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = (0.5, 0) }
+                                              , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = (1, 1) }
+                                              , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = (0.5, 1) }
+                                              )
+                                            ]
+                                            |> Scene3d.Mesh.texturedTriangles
+                                            |> Scene3d.mesh material
+                                    in
+                                        (leftQuad, rightQuad)
+                                )
+                                |> Maybe.withDefault (Scene3d.nothing, Scene3d.nothing)
                         }
 
                  _ -> model
@@ -504,3 +542,9 @@ breakableWall model =
     case model of
         ReadyAssets data -> Just data.breakableWall
         _ -> Nothing
+
+terms : Model -> (SceneEntity, SceneEntity)
+terms model =
+    case model of
+        ReadyAssets data -> data.terms
+        _ -> (Scene3d.nothing, Scene3d.nothing)

@@ -9,6 +9,7 @@ const sfxFiles = [
   'step-3.mp3',
   'step-4.mp3',
   'step-5.mp3',
+  'elevator_door.mp3'
 ];
 const musicFiles = [
   'menu.mp3',
@@ -85,6 +86,13 @@ function startAudioContext() {
 
     playMusic(filename);
   });
+  app.ports.stopMusic.subscribe(() => {
+    if (!audioContext) {
+      return;
+    }
+
+    fadeoutMusic();
+  })
 
   // Prevent scrolling with arrow and space keys
   window.addEventListener('keydown', e => {
@@ -114,8 +122,14 @@ let currentMusicSource = null;
 let currentGainNode = null;
 let musicLoop = false;
 
-function playMusic(filename) {
+async function playMusic(filename) {
+  await fadeoutMusic();
+  startNewMusic(filename);
+}
+
+async function fadeoutMusic() {
   if (currentMusicSource && currentGainNode) {
+
     const fadeOutDuration = 1.5;
     const currentTime = audioContext.currentTime;
 
@@ -125,9 +139,7 @@ function playMusic(filename) {
     currentGainNode.gain.linearRampToValueAtTime(0, currentTime + fadeOutDuration);
     currentMusicSource.stop(currentTime + fadeOutDuration);
 
-    setTimeout(() => startNewMusic(filename), fadeOutDuration * 1000);
-  } else {
-    startNewMusic(filename);
+    await new Promise(resolve => setTimeout(() => resolve(), fadeOutDuration * 1000));
   }
 }
 
