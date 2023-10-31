@@ -447,15 +447,15 @@ viewTile sceneAssets (x, y) tile =
                         )
                     OpeningAnimation progress ->
                          ( leftSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = progress * 0.49, y = -0.2, z = 0 })
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = progress * 0.5, y = -0.2, z = 0 })
                         , rightSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = -progress * 0.49, y = -0.2, z = 0 })
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = -progress * 0.5, y = -0.2, z = 0 })
                         )
                     FullyOpened ->
                          ( leftSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0.49, y = -0.2, z = 0 })
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0.5, y = -0.2, z = 0 })
                          , rightSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = -0.49, y = -0.2, z = 0 })
+                            |> Scene3d.translateBy (Vector3d.unsafe { x = -0.5, y = -0.2, z = 0 })
                          )
 
             in
@@ -465,7 +465,7 @@ viewTile sceneAssets (x, y) tile =
                           , rightSide
                           ]
                           |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX (worldY + 0.5) 0))
-                    ,viewTile sceneAssets (x, y) Floor
+                    ,viewTile sceneAssets (x, y) BlackFloor
                     ]
 
 
