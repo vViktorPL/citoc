@@ -1,4 +1,4 @@
-module BreakableWall exposing (Model, init, view, break, update)
+module BreakableWall exposing (Model, init, view, update)
 
 import Obj.Decode exposing (ObjCoordinates)
 
@@ -13,15 +13,28 @@ import Length
 import Array
 import Triangle2d
 import Scene3d
-import TriangularMesh
+import TriangularMesh exposing (TriangularMesh)
 import Scene3d.Mesh
 import Scene3d.Material exposing (Material)
 import Color exposing (Color)
 import Frame3d
+import Physics.Body
+import Physics.Coordinates exposing (BodyCoordinates)
+import Physics.Shape
+import Physics.World exposing (World)
+import Length exposing (Meters)
+import Acceleration
+import Direction3d
+import Duration
+import Mass
 
 type Model
-    = BreakableWall (List (Scene3d.Entity WorldCoordinates))
-    --| BreakingWall
+    = BreakableWall
+        { physics: (World (Scene3d.Entity BodyCoordinates))
+        , active: Bool
+        }
+     --(List (TriangularMesh (Point3d Meters BodyCoordinates)))
+    --| BreakingWall (World (Scene3d.Entity WorldCoordinates))
 
 
 type alias WorldCoordinates = ObjCoordinates
@@ -38,10 +51,10 @@ random2DPoints =
         |> List.map (\(x, y) -> Point2d.meters x y)
         |> Array.fromList
 
-init : Material WorldCoordinates { uvs : () } -> Model
+--init : Material WorldCoordinates { uvs : () } -> Model
 init material =
     let
-        texturedTriangles = DelaunayTriangulation2d.fromPoints random2DPoints
+        vertexesWithUvs = DelaunayTriangulation2d.fromPoints random2DPoints
             |> Result.withDefault DelaunayTriangulation2d.empty
             |> DelaunayTriangulation2d.triangles
             |> List.map
@@ -52,28 +65,69 @@ init material =
                         p2m = Point2d.toMeters p2
                         p3m = Point2d.toMeters p3
                     in
-                        (TriangularMesh.triangles
-                            [({ position = Point3d.meters -p1m.x 0.1 (1 - p1m.y), uv = (p1m.x, p1m.y) }
-                            , { position = Point3d.meters -p2m.x 0 (1 - p2m.y), uv = (p2m.x, p2m.y) }
-                            , { position = Point3d.meters -p3m.x 0 (1 - p3m.y), uv = (p3m.x, p3m.y) }
-                            )]
+                        ( { position = Point3d.meters -p1m.x 0.1 (1 - p1m.y), uv = (p1m.x, p1m.y) }
+                        , { position = Point3d.meters -p2m.x 0 (1 - p2m.y), uv = (p2m.x, p2m.y) }
+                        , { position = Point3d.meters -p3m.x 0 (1 - p3m.y), uv = (p3m.x, p3m.y) }
                         )
-                            |> Scene3d.Mesh.texturedTriangles
-
                 )
 
-        segments = List.map (Scene3d.mesh material) texturedTriangles
+        triangles =
+            vertexesWithUvs
+                |> List.map
+                    (\(v1, v2, v3) ->
+                        ( TriangularMesh.triangles [(v1.position, v2.position, v3.position)]
+                        , TriangularMesh.triangles [(v1, v2, v3)]
+                        )
+                    )
+
+        physics = List.foldl
+            (\(triangleForPhysics, triangleWithUv) world ->
+              let
+                  sceneEntity =
+                      triangleWithUv
+                          |> Scene3d.Mesh.texturedTriangles
+                          |> Scene3d.mesh material
+                  body =
+                      Physics.Body.compound [Physics.Shape.unsafeConvex triangleForPhysics] sceneEntity
+                        |> Physics.Body.withBehavior (Physics.Body.dynamic (Mass.kilograms 1))
+              in
+              world
+                  |> Physics.World.add body
+            )
+            (Physics.World.withGravity (Acceleration.metersPerSecondSquared 9.80665) Direction3d.negativeZ Physics.World.empty)
+            triangles
     in
-    BreakableWall segments
+    BreakableWall
+        { physics = physics
+        , active = False
+        }
 
 
-view : Model -> Scene3d.Entity WorldCoordinates
-view model =
-    case model of
-        BreakableWall segments -> Scene3d.group segments
+--view : Model -> Scene3d.Entity BodyCoordinates
+view (BreakableWall { physics }) =
+    physics
+        |> Physics.World.bodies
+        |> List.map
+            (\body ->
+                let
+                    frame3d =
+                        Physics.Body.frame body
+                in
+                    Physics.Body.data body
+                        |> Scene3d.placeIn frame3d
+            )
+        |> Scene3d.group
 
-break : Point3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates -> Model -> Model
-break collisionPoint forceVector model = model
+--break : Point3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates -> Model -> Model
+--break collisionPoint forceVector (BreakableWall model) =
+--    BreakableWall
+--        { physics =
+--
+--        }
 
 update : Float -> Model -> Model
-update delta model = model
+update delta (BreakableWall model) =
+    BreakableWall {
+        model | physics = Physics.World.simulate (Duration.milliseconds delta) model.physics
+    }
+

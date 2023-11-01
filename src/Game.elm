@@ -383,7 +383,7 @@ view sceneAssets model =
                 { entities =
                     [ Level.view sceneAssets model.level
                     , SceneAssets.breakableWall sceneAssets
-                        |> Maybe.map BreakableWall.view
+                        |> Maybe.map (BreakableWall.view >> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters 0 0 0)) )
                         |> Maybe.withDefault Scene3d.nothing
 
                     --, SceneAssets.castle sceneAssets
