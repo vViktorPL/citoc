@@ -17,23 +17,30 @@ import Length exposing (Length)
 import Dict exposing (Dict)
 import Scene3d.Material
 import Block3d
+import Terms
+import BreakableWall
 
 import Castle
 
 type Level
     = Level
-        { tiles : List TileEntity
-        , dynamicCollisions: List (Int, Int)
+        { staticEntities : List StaticEntity
+        , dynamicEntities : List DynamicEntity
         , collisions: Dict (Int, Int) Bool
+        , dynamicCollisions: List (Int, Int)
         , triggers: List Trigger
         , startingPosition : ( Int, Int )
         , startingOrientation: Orientation
         }
 
-type alias TileEntity =
+type alias StaticEntity =
     { sector: (Int, Int)
     , tile: LevelTile
     }
+
+type DynamicEntity
+    = TermsEntity (Int, Int) Terms.Model
+    | BreakableWallEntity (Int, Int) BreakableWall.Model
 
 type alias WorldCoordinates = ObjCoordinates
 
@@ -49,16 +56,10 @@ type LevelTile
     | BigCastle
     | Chair
     | Sandbox
-    | Terms TermsState
+    | Terms
     | BlackWall
     | BlackFloor
     | Empty
-
-type TermsState
-    = Closed
-    | ShiftingBackAnimation Float
-    | OpeningAnimation Float
-    | FullyOpened
 
 
 type alias Trigger =
@@ -95,26 +96,6 @@ pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoo
 pointOnLevel x y z =
     Point3d.meters -x y z
 
---tileToRequiredTextures : LevelTile -> List TextureToLoad
---tileToRequiredTextures tile =
---    case tile of
---        Floor ->
---            [ Textures.TextureColor "CheckerFloor.jpg"
---            , Textures.TextureColor "OfficeCeiling005_4K_Color.jpg"
---            ]
---        Wall ->
---            [ Textures.TextureColor "Bricks021_1K-JPG_Color.jpg"
---            , Textures.TextureFloat "Bricks021_1K-JPG_Roughness.jpg"
---            ]
---        Sign fileName text _ ->
---            [ Textures.GenerateSign fileName text ]
---        BlueWall ->
---            [ Textures.TextureColor "CorrugatedSteel007B_1K-JPG_Color.jpg"
---            , Textures.TextureFloat "CorrugatedSteel007B_1K-JPG_Metalness.jpg"
---            , Textures.TextureFloat "CorrugatedSteel007B_1K-JPG_Roughness.jpg"
---            ]
---        Empty -> []
-
 
 getTriggersAt : Level -> (Int, Int) -> List Trigger
 getTriggersAt (Level levelData) sector =
@@ -132,30 +113,38 @@ getStartingOrientation (Level levelData) =
 fromData : List (List LevelTile) -> List Trigger -> ( Int, Int ) -> Orientation -> Level
 fromData tiles triggers startingPosition startingOrientation =
     let
-        tileEntities = tiles
-            |> List.indexedMap Tuple.pair
-            |> List.concatMap
-                (\(y, row) ->
+        sectorTilePairs =
+            tiles
+                |> List.indexedMap Tuple.pair
+                |> List.concatMap
+                    (\(y, row) ->
                         row
                             |> List.indexedMap
-                               (\x tile ->
-                                   { sector = (x, y)
-                                   , tile = tile
-                                   }
-                               )
-                            |> List.filter
-                                (\tileEntity -> tileEntity.tile /= Empty)
-                )
+                                (\x tile -> ((x, y), tile))
+                    )
+
+        (staticEntities, dynamicEntities) =
+            sectorTilePairs
+                |> List.foldr
+                    (\(sector, tile) (staticEntitiesAcc, dynamicEntitiesAcc) ->
+                        case tile of
+                            Terms -> (staticEntitiesAcc, (TermsEntity sector Terms.init) :: dynamicEntitiesAcc)
+                            _ -> ({ sector = sector, tile = tile } :: staticEntitiesAcc, dynamicEntitiesAcc)
+                    )
+                    ([], [])
+
+
     in
     Level
-        { tiles = tileEntities
-        , dynamicCollisions = tileEntities
-            |> List.filterMap (\tileEntity ->
-                case tileEntity.tile of
-                    Terms _ -> Just tileEntity.sector
-                    _ -> Nothing
-            )
-        , collisions = tileEntities
+        { staticEntities = staticEntities
+        , dynamicEntities = dynamicEntities
+        , dynamicCollisions = dynamicEntities
+                |> List.map
+                    (\dynamicEntity -> case dynamicEntity of
+                        TermsEntity sector _ -> sector
+                        BreakableWallEntity sector _ -> sector
+                    )
+        , collisions = staticEntities
             |> List.map (\tileEntity -> (tileEntity.sector, tileCollides tileEntity.tile))
             |> Dict.fromList
         , triggers = triggers
@@ -166,12 +155,13 @@ fromData tiles triggers startingPosition startingOrientation =
 collisionOnSector : Level -> (Int, Int) -> Bool
 collisionOnSector (Level levelData) sector =
     if List.any ((==) sector) levelData.dynamicCollisions then
-        levelData.tiles
-            |> List.filter (\tileEntity -> tileEntity.sector == sector)
-            |> List.head
-            |> Maybe.map (\tileEntity -> tileEntity.tile)
-            |> Maybe.withDefault Empty
-            |> tileCollides
+        levelData.dynamicEntities
+            |> List.any (\dynamicEntity ->
+                case dynamicEntity of
+                    TermsEntity entitySector terms ->
+                        entitySector == sector && Terms.doesCollide terms
+                    _ -> False
+            )
     else
         levelData.collisions
             |> Dict.get sector
@@ -299,14 +289,12 @@ tileCollides levelTile =
         BlackWall -> True
         InvisibleWall _ -> True
         Sandbox -> True
-        Terms FullyOpened -> False
-        Terms _ -> True
         _ -> False
 
 updateTile : (Int, Int) -> LevelTile -> Level -> Level
 updateTile sector newTile (Level levelData) =
     Level { levelData
-        | tiles = levelData.tiles
+        | staticEntities = levelData.staticEntities
             |> List.map
                 (\tileEntity ->
                     if tileEntity.sector == sector then
@@ -325,6 +313,15 @@ addTrigger trigger (Level levelData) =
 removeAllTriggersAtSector : (Int, Int) -> Level -> Level
 removeAllTriggersAtSector sector (Level levelData) =
     Level { levelData | triggers = List.filter (\trigger -> trigger.sector /= sector) levelData.triggers }
+
+--sectorCenter : (Int, Int) -> Point3d Length.Meters WorldCoordinates
+sectorCenter (x, y) =
+    let
+        worldX = -(toFloat x) - 0.5
+        worldY = (toFloat y) + 0.5
+    in
+        Frame3d.atPoint (Point3d.meters worldX worldY 0)
+
 
 viewTile : SceneAssets.Model -> (Int, Int) -> LevelTile -> Scene3d.Entity WorldCoordinates
 viewTile sceneAssets (x, y) tile =
@@ -433,96 +430,52 @@ viewTile sceneAssets (x, y) tile =
             SceneAssets.chair sceneAssets
                 |> Scene3d.placeIn tileCenter
 
-        Terms termsState ->
-            let
-                (leftSideOriginal, rightSideOriginal) = SceneAssets.terms sceneAssets
-
-                (leftSide, rightSide) = case termsState of
-                    Closed -> (leftSideOriginal, rightSideOriginal)
-                    ShiftingBackAnimation progress ->
-                        ( leftSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0, y = -progress * 0.2, z = 0 })
-                        , rightSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0, y = -progress * 0.2, z = 0 })
-                        )
-                    OpeningAnimation progress ->
-                         ( leftSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = progress * 0.5, y = -0.2, z = 0 })
-                        , rightSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = -progress * 0.5, y = -0.2, z = 0 })
-                        )
-                    FullyOpened ->
-                         ( leftSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = 0.5, y = -0.2, z = 0 })
-                         , rightSideOriginal
-                            |> Scene3d.translateBy (Vector3d.unsafe { x = -0.5, y = -0.2, z = 0 })
-                         )
-
-            in
-                Scene3d.group
-                    [  Scene3d.group
-                          [ leftSide
-                          , rightSide
-                          ]
-                          |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX (worldY + 0.5) 0))
-                    ,viewTile sceneAssets (x, y) BlackFloor
-                    ]
-
-
-
         _ -> Scene3d.nothing
 
 view : SceneAssets.Model -> Level -> Scene3d.Entity WorldCoordinates
 view sceneAssets (Level levelData) =
-    levelData.tiles
+    [ levelData.staticEntities
         |> List.map (\tileEntity -> viewTile sceneAssets tileEntity.sector tileEntity.tile)
+    , levelData.dynamicEntities
+        |> List.map
+            (\dynamicEntity ->
+                case dynamicEntity of
+                    TermsEntity (x, y) terms ->
+                        Scene3d.group
+                            [Terms.view sceneAssets terms
+                                 |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters (-(toFloat x) - 0.5) ((toFloat y) + 1) 0))
+                            , viewTile sceneAssets (x, y) BlackFloor
+                            ]
+                    BreakableWallEntity sector _ ->
+                        Scene3d.nothing
+            )
+    ]
+        |> List.concat
         |> Scene3d.group
 
 update : Float -> Level -> Level
 update delta (Level levelData) =
-    (Level { levelData | tiles =
-        levelData.tiles
-            |> List.map (\tileEntity ->
-                    case tileEntity.tile of
-                        Terms termsState ->
-                            { tileEntity | tile = Terms (updateTermsState delta termsState) }
-                        _ -> tileEntity
+    (Level { levelData | dynamicEntities =
+        levelData.dynamicEntities
+            |> List.map (\dynamicEntity ->
+                    case dynamicEntity of
+                        TermsEntity sector termsState ->
+                            TermsEntity sector (Terms.update delta termsState)
+                        _ -> dynamicEntity
                 )
 
     })
 
 
-updateTermsState : Float -> TermsState -> TermsState
-updateTermsState delta termsState =
-        case termsState of
-            ShiftingBackAnimation progress ->
-                let
-                    newProgress = progress + delta * 0.001
-                in
-                    if newProgress >= 1 then
-                        OpeningAnimation 0
-                    else
-                        ShiftingBackAnimation newProgress
-            OpeningAnimation progress ->
-                let
-                    newProgress = progress + delta * 0.0005
-                in
-                    if newProgress >= 1 then
-                        FullyOpened
-                    else
-                        OpeningAnimation newProgress
-            _ -> termsState
-
-
 openTerms : Level -> Level
 openTerms (Level levelData) =
     Level {
-        levelData | tiles = List.map
-            (\tileEntity ->
-                if tileEntity.tile == Terms Closed then
-                    { sector = tileEntity.sector, tile = Terms (ShiftingBackAnimation 0) }
-                else
-                    tileEntity
+        levelData | dynamicEntities = List.map
+            (\dynamicEntity ->
+               case dynamicEntity of
+                   TermsEntity sector termsState ->
+                       TermsEntity sector (Terms.open termsState)
+                   _ -> dynamicEntity
             )
-            levelData.tiles
+            levelData.dynamicEntities
     }

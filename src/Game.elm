@@ -382,19 +382,7 @@ view sceneAssets model =
             [ Scene3d.cloudy
                 { entities =
                     [ Level.view sceneAssets model.level
-                    , SceneAssets.breakableWall sceneAssets
-                        |> Maybe.map (BreakableWall.view >> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters 0 0 0)) )
-                        |> Maybe.withDefault Scene3d.nothing
-
-                    --, SceneAssets.castle sceneAssets
-                    --    |> Scene3d.rotateAround (Axis3d.x) (Angle.degrees 180)
-                    --    |> Scene3d.scaleAbout Point3d.origin 0.2
-                    --    --|> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -12 32 9))
-                    --
-                    --    |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -17 35 5.4))
                     ]
-                    --, SceneAssets.castleSkybox sceneAssets
-                    --    |> Scene3d.placeIn (Frame3d.atPoint (Player.getPlayerPosition model.player)) ]
                 --, sunlightDirection = Direction3d.z
                 , camera = Player.view model.player
                 , upDirection = Direction3d.z

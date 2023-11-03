@@ -1,5 +1,5 @@
 module Level.Level_13 exposing (data)
-import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), fromData, TermsState(..))
+import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), fromData)
 import Orientation exposing (Orientation(..))
 import Color
 import Length
