@@ -129,6 +129,7 @@ fromData tiles triggers startingPosition startingOrientation =
                     (\(sector, tile) (staticEntitiesAcc, dynamicEntitiesAcc) ->
                         case tile of
                             Terms -> (staticEntitiesAcc, (TermsEntity sector Terms.init) :: dynamicEntitiesAcc)
+                            Empty -> (staticEntitiesAcc, dynamicEntitiesAcc)
                             _ -> ({ sector = sector, tile = tile } :: staticEntitiesAcc, dynamicEntitiesAcc)
                     )
                     ([], [])
