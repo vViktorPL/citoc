@@ -19,6 +19,8 @@ import Scene3d.Material
 import Block3d
 import Terms
 import BreakableWall
+import Point2d
+import Sound
 
 import Castle
 
@@ -44,6 +46,11 @@ type DynamicEntity
 
 type alias WorldCoordinates = ObjCoordinates
 
+type LevelInteractionResult
+    = NoInteraction
+    | LevelCollision (Vector3d Length.Meters WorldCoordinates)
+    | LevelUpdated Level
+
 type LevelTile
     = Floor
     | OpenFloor
@@ -57,6 +64,7 @@ type LevelTile
     | Chair
     | Sandbox
     | Terms
+    | BreakableWall
     | BlackWall
     | BlackFloor
     | Empty
@@ -129,6 +137,7 @@ fromData tiles triggers startingPosition startingOrientation =
                     (\(sector, tile) (staticEntitiesAcc, dynamicEntitiesAcc) ->
                         case tile of
                             Terms -> (staticEntitiesAcc, (TermsEntity sector Terms.init) :: dynamicEntitiesAcc)
+                            BreakableWall -> (staticEntitiesAcc, (BreakableWallEntity sector BreakableWall.init) :: dynamicEntitiesAcc)
                             Empty -> (staticEntitiesAcc, dynamicEntitiesAcc)
                             _ -> ({ sector = sector, tile = tile } :: staticEntitiesAcc, dynamicEntitiesAcc)
                     )
@@ -161,7 +170,8 @@ collisionOnSector (Level levelData) sector =
                 case dynamicEntity of
                     TermsEntity entitySector terms ->
                         entitySector == sector && Terms.doesCollide terms
-                    _ -> False
+                    BreakableWallEntity entitySector breakableWall ->
+                        entitySector == sector && not (BreakableWall.isBroken breakableWall)
             )
     else
         levelData.collisions
@@ -174,6 +184,57 @@ worldCoordinateToSector point =
         p = Point3d.toMeters point
     in
         (floor -p.x, floor p.y) -- ceiling for negativeX ?
+
+interactAsCylinder : Length.Length -> Point3d Length.Meters WorldCoordinates -> Vector3d.Vector3d Length.Meters WorldCoordinates -> Level -> (LevelInteractionResult, Cmd msg)
+interactAsCylinder radius center v level =
+    let
+        --applyCollision bodyRadius (Level levelData) position v =
+        adjustedVector =
+            applyCollision radius level center v
+        targetSectorCollision = center
+            |> Point3d.translateBy v
+            |> cylinderCollisionSector level radius
+
+        adjustedSectorCollision = center
+            |> Point3d.translateBy adjustedVector
+            |> cylinderCollisionSector level radius
+    in
+        case targetSectorCollision of
+            Just sector ->
+                case (dynamicEntityAtSector level sector, adjustedSectorCollision) of
+                     (Just (BreakableWallEntity _ _), _) -> (LevelUpdated (breakWall level sector center v), Sound.playSound "glass-break.mp3")
+                     (_, Just _) -> (LevelCollision Vector3d.zero, Cmd.none)
+                     _ -> (LevelCollision adjustedVector, Cmd.none)
+            Nothing -> (NoInteraction, Cmd.none)
+
+breakWall : Level -> (Int, Int) -> Point3d.Point3d Length.Meters WorldCoordinates -> Vector3d.Vector3d Length.Meters WorldCoordinates -> Level
+breakWall (Level level) sector collisionPoint speedVector =
+    Level { level | dynamicEntities = List.map
+        (\dynamicEntity -> case dynamicEntity of
+            BreakableWallEntity entitySector breakableWall ->
+                if entitySector == sector then
+                    let
+                        { x, y, z } = Point3d.toMeters collisionPoint
+                        offsetX = -x - toFloat (floor -x) - 0.5
+                    in
+                    BreakableWallEntity entitySector (BreakableWall.break (Point2d.fromMeters { x = offsetX, y = 1 - z }) speedVector breakableWall)
+                else
+                    BreakableWallEntity entitySector breakableWall
+            _ -> dynamicEntity
+        ) level.dynamicEntities
+        }
+
+dynamicEntityAtSector : Level -> (Int, Int) -> Maybe DynamicEntity
+dynamicEntityAtSector (Level level) sector =
+    level.dynamicEntities
+        |> List.filter
+            (\dynamicEntity ->
+                case dynamicEntity of
+                    TermsEntity entitySector _ -> sector == entitySector
+                    BreakableWallEntity entitySector _ -> sector == entitySector
+            )
+        |> List.head
+
 
 cylinderCollisionSector : Level -> Length.Length -> Point3d Length.Meters WorldCoordinates -> Maybe (Int, Int)
 cylinderCollisionSector level radius center =
@@ -447,8 +508,12 @@ view sceneAssets (Level levelData) =
                                  |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters (-(toFloat x) - 0.5) ((toFloat y) + 1) 0))
                             , viewTile sceneAssets (x, y) BlackFloor
                             ]
-                    BreakableWallEntity sector _ ->
-                        Scene3d.nothing
+                    BreakableWallEntity (x, y) breakableWall ->
+                        Scene3d.group
+                            [ BreakableWall.view sceneAssets breakableWall
+                                |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters (-(toFloat x)) ((toFloat y) + 1) 0))
+                            , viewTile sceneAssets (x, y) Floor
+                            ]
             )
     ]
         |> List.concat
@@ -462,7 +527,8 @@ update delta (Level levelData) =
                     case dynamicEntity of
                         TermsEntity sector termsState ->
                             TermsEntity sector (Terms.update delta termsState)
-                        _ -> dynamicEntity
+                        BreakableWallEntity sector breakableWall ->
+                            BreakableWallEntity sector (BreakableWall.update delta breakableWall)
                 )
 
     })

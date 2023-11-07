@@ -127,18 +127,28 @@ update msg model =
 
                         v = (Player.getMovementVector model.player)
                             |> Vector3d.scaleBy delta
-                            |> Level.applyCollision Player.playerRadius model.level (Player.getPlayerPosition model.player)
+                            --|> Level.applyCollision Player.playerRadius model.level (Player.getPlayerPosition model.player)
+
+                        (interactionResult, interactionCmd) = Level.interactAsCylinder Player.playerRadius (Player.getPlayerPosition model.player) v modelToUpdate.level
                     in
-                        if playerCollides model.level newPlayer then
-                            ({ modelToUpdate | player = model.player }, Cmd.none)
-                        else
-                            let
-                                (modelAfterTriggers, cmd) = handleTriggers modelToUpdate newPlayer
-                            in
-                                if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
-                                    ({ modelToUpdate | player = newPlayer }, playerCmd)
-                                else
-                                    (modelAfterTriggers, Cmd.batch [cmd, playerCmd])
+                        case interactionResult of
+                            Level.LevelUpdated updatedLevel ->
+                                ({ modelToUpdate |  level = updatedLevel }, interactionCmd) --player = newPlayer,
+                            Level.LevelCollision adjustedVector ->
+                                let
+                                    (adjustedPlayer, adjustedCmd) = model.player
+                                       |> Player.updatePlayerPosition adjustedVector
+                                       |> Player.update delta
+                                in
+                                ({ modelToUpdate | player = adjustedPlayer }, Cmd.batch [adjustedCmd, interactionCmd])
+                            Level.NoInteraction ->
+                                let
+                                    (modelAfterTriggers, cmd) = handleTriggers modelToUpdate newPlayer
+                                in
+                                    if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
+                                        ({ modelToUpdate | player = newPlayer }, Cmd.batch [playerCmd, interactionCmd])
+                                    else
+                                        (modelAfterTriggers, Cmd.batch [cmd, playerCmd, interactionCmd])
 
                 FadingOutLevel timeLeft ->
                     let

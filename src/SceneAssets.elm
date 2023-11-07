@@ -18,8 +18,8 @@ module SceneAssets exposing
     , castleEntryVoid
     , chair
     , sandbox
-    , breakableWall
     , terms
+    , wallTexture
     )
 
 import Textures exposing (TextureToLoad(..), TexturesState(..))
@@ -31,11 +31,10 @@ import Obj.Decode exposing (ObjCoordinates)
 import Dict exposing (Dict)
 import Point3d
 import Luminance
-import Color
+import Color exposing (Color)
 import Axis3d
 import Angle
 import Block3d
-import BreakableWall
 import TriangularMesh
 import Scene3d.Mesh
 
@@ -60,7 +59,7 @@ type alias ReadyAssetsData =
     , castleEntryVoid : SceneEntity
     , chair : SceneEntity
     , sandbox : SceneEntity
-    , breakableWall : BreakableWall.Model
+    , wallTexture : (Scene3d.Material.Texture Color, Scene3d.Material.Texture Float)
     , terms: (SceneEntity, SceneEntity)
     }
 
@@ -312,10 +311,6 @@ initializeEntities model =
                                         (Textures.getTextureFloat textures "Ground054_1K-JPG_Roughness.jpg")
                                       |> Maybe.withDefault Scene3d.nothing
                                 ]
-                        , breakableWall =
-                            (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
-                                |> Maybe.map (\wallTexture -> BreakableWall.init (Scene3d.Material.texturedColor wallTexture))
-                                |> Maybe.withDefault (BreakableWall.init (Scene3d.Material.color (Color.brown)))
                         , terms =
                             (Textures.getTexture textures "toc.png")
                                 |> Maybe.map (\termsTexture ->
@@ -349,6 +344,10 @@ initializeEntities model =
                                         (leftQuad, rightQuad)
                                 )
                                 |> Maybe.withDefault (Scene3d.nothing, Scene3d.nothing)
+                        , wallTexture = Maybe.map2 Tuple.pair
+                            (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
+                            (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
+                            |> Maybe.withDefault (Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0)
                         }
 
                  _ -> model
@@ -537,14 +536,14 @@ sandbox model =
         ReadyAssets data -> data.sandbox
         _ -> Scene3d.nothing
 
-breakableWall : Model -> Maybe BreakableWall.Model
-breakableWall model =
-    case model of
-        ReadyAssets data -> Just data.breakableWall
-        _ -> Nothing
-
 terms : Model -> (SceneEntity, SceneEntity)
 terms model =
     case model of
         ReadyAssets data -> data.terms
         _ -> (Scene3d.nothing, Scene3d.nothing)
+
+wallTexture : Model -> (Scene3d.Material.Texture Color, Scene3d.Material.Texture Float)
+wallTexture model =
+    case model of
+        ReadyAssets data -> data.wallTexture
+        _ -> (Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0)

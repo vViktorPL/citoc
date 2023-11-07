@@ -1,6 +1,6 @@
 ######  #####
 #.|..#  #...#
-#.#######A#.####
+#.#*#####A#.####
 #.........#..X.#
 #.........####.#
 #..e......#  #.#
@@ -21,3 +21,4 @@ t BlackFloor [Nod] [OpenTerms, RemoveAllTriggersInSector @t, RemoveAllTriggersIn
 B BlackWall
 - Floor
 e Floor [LookAngle North] [ChangeTile @- Wall, RemoveAllTriggersInSector @e]
+* BreakableWall

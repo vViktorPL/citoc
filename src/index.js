@@ -9,7 +9,8 @@ const sfxFiles = [
   'step-3.mp3',
   'step-4.mp3',
   'step-5.mp3',
-  'elevator_door.mp3'
+  'elevator_door.mp3',
+  'glass-break.mp3'
 ];
 const musicFiles = [
   'menu.mp3',
