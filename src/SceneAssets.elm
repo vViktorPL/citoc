@@ -1,67 +1,72 @@
 module SceneAssets exposing
-    (Model
+    ( Model
     , Msg
-    , init
-    , update
-    , subscription
-    , ready
-    , wallBlock
     , blueWallBlock
-    , floorTile
-    , ceilingTile
-    , sign
-    , sandTile
-    , toyBucket
-    , castleWall
     , castleDoor
-    , castleWallTower
     , castleEntryVoid
+    , castleWall
+    , castleWallTower
+    , ceilingTile
     , chair
+    , floorTile
+    , init
+    , ready
+    , sandTile
     , sandbox
+    , sign
+    , subscription
     , terms
+    , toyBucket
+    , update
+    , wallBlock
     , wallTexture
     )
 
-import Textures exposing (TextureToLoad(..), TexturesState(..))
+import Angle
+import Axis3d
+import Block3d
+import Color exposing (Color)
+import Dict exposing (Dict)
+import Length exposing (Length, Meters)
+import Luminance
 import MeshCollection exposing (Model(..))
+import Obj.Decode exposing (ObjCoordinates)
+import Point3d
 import Scene3d
 import Scene3d.Material
-import Length exposing (Length, Meters)
-import Obj.Decode exposing (ObjCoordinates)
-import Dict exposing (Dict)
-import Point3d
-import Luminance
-import Color exposing (Color)
-import Axis3d
-import Angle
-import Block3d
-import TriangularMesh
 import Scene3d.Mesh
+import Textures exposing (TextureToLoad(..), TexturesState(..))
+import TriangularMesh
 
-type alias SceneEntity = Scene3d.Entity ObjCoordinates
+
+type alias SceneEntity =
+    Scene3d.Entity ObjCoordinates
+
 
 type alias LoadingAssetsData =
-     { textures: Textures.Model
-     , meshes: MeshCollection.Model
-     }
+    { textures : Textures.Model
+    , meshes : MeshCollection.Model
+    }
+
 
 type alias ReadyAssetsData =
-    { wallBlock: SceneEntity
-    , blueWallBlock: SceneEntity
-    , floorTile: SceneEntity
-    , ceilingTile: SceneEntity
-    , signs: Dict String SceneEntity
-    , sandTile: SceneEntity
-    , toyBucket: SceneEntity
+    { wallBlock : SceneEntity
+    , blueWallBlock : SceneEntity
+    , floorTile : SceneEntity
+    , ceilingTile : SceneEntity
+    , signs : Dict String SceneEntity
+    , sandTile : SceneEntity
+    , toyBucket : SceneEntity
     , castleWall : SceneEntity
-    , castleDoor: SceneEntity
+    , castleDoor : SceneEntity
     , castleWallTower : SceneEntity
     , castleEntryVoid : SceneEntity
     , chair : SceneEntity
     , sandbox : SceneEntity
-    , wallTexture : (Scene3d.Material.Texture Color, Scene3d.Material.Texture Float)
-    , terms: (SceneEntity, SceneEntity)
+    , wallTexture : ( Scene3d.Material.Texture Color, Scene3d.Material.Texture Float )
+    , terms : ( SceneEntity, SceneEntity )
     }
+
 
 type Model
     = LoadingAssets LoadingAssetsData
@@ -100,20 +105,26 @@ texturesToLoad =
     , TextureColor "toc.png"
     ]
 
+
 meshesToLoad =
     [ "ToyBucket.obj"
     , "wall.obj"
+
     --, "wallCorner.obj"
     , "wallDoor.obj"
     , "wallCornerHalfTower.obj"
     , "Chair.obj"
     ]
 
-init : (Model, Cmd Msg)
+
+init : ( Model, Cmd Msg )
 init =
     let
-        (textures, texturesCmd) = Textures.init texturesToLoad
-        (meshes, meshesCmd) = MeshCollection.init meshesToLoad
+        ( textures, texturesCmd ) =
+            Textures.init texturesToLoad
+
+        ( meshes, meshesCmd ) =
+            MeshCollection.init meshesToLoad
     in
     ( LoadingAssets
         { textures = textures
@@ -126,41 +137,51 @@ init =
     )
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        (updatedModel, cmd) =
-            case (msg, model) of
-                (TexturesMsg texturesMsg, LoadingAssets assetsData) ->
+        ( updatedModel, cmd ) =
+            case ( msg, model ) of
+                ( TexturesMsg texturesMsg, LoadingAssets assetsData ) ->
                     let
-                        (newTextures, texturesCmd) = Textures.update texturesMsg assetsData.textures
+                        ( newTextures, texturesCmd ) =
+                            Textures.update texturesMsg assetsData.textures
                     in
-                    (LoadingAssets { assetsData | textures = newTextures }, Cmd.map TexturesMsg texturesCmd)
+                    ( LoadingAssets { assetsData | textures = newTextures }, Cmd.map TexturesMsg texturesCmd )
 
-                (MeshesMsg meshesMsg, LoadingAssets assetsData) ->
+                ( MeshesMsg meshesMsg, LoadingAssets assetsData ) ->
                     let
-                        (newMeshes, meshesCmd) = MeshCollection.update meshesMsg assetsData.meshes
+                        ( newMeshes, meshesCmd ) =
+                            MeshCollection.update meshesMsg assetsData.meshes
                     in
-                    (LoadingAssets { assetsData | meshes = newMeshes }, Cmd.map MeshesMsg meshesCmd)
+                    ( LoadingAssets { assetsData | meshes = newMeshes }, Cmd.map MeshesMsg meshesCmd )
 
-                _ -> (model, Cmd.none)
+                _ ->
+                    ( model, Cmd.none )
     in
-        (initializeEntities updatedModel, cmd)
+    ( initializeEntities updatedModel, cmd )
+
 
 ready : Model -> Bool
 ready model =
     case model of
-        ReadyAssets _ -> True
-        _ -> False
+        ReadyAssets _ ->
+            True
+
+        _ ->
+            False
+
 
 initializeEntities : Model -> Model
 initializeEntities model =
     case model of
-        (ReadyAssets _) -> model
-        (LoadingAssets { textures, meshes }) ->
-            (case (Textures.getState textures, meshes) of
-                 (TexturesLoaded, MeshCollectionLoaded _) ->
-                     ReadyAssets
+        ReadyAssets _ ->
+            model
+
+        LoadingAssets { textures, meshes } ->
+            case ( Textures.getState textures, meshes ) of
+                ( TexturesLoaded, MeshCollectionLoaded _ ) ->
+                    ReadyAssets
                         { wallBlock =
                             Maybe.map2
                                 (\texture roughness ->
@@ -176,26 +197,24 @@ initializeEntities model =
                                 )
                                 (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
                                 (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
-                            |> Maybe.withDefault Scene3d.nothing
-
+                                |> Maybe.withDefault Scene3d.nothing
                         , blueWallBlock =
                             Maybe.map3
-                                    (\texture metalness roughness ->
-                                        createTexturedBlock
-                                            (Scene3d.Material.texturedPbr { baseColor = texture, metallic = metalness, roughness = roughness } )
-                                             { x1 = Length.meters -0.5
-                                             , x2 = Length.meters 0.5
-                                             , y1 = Length.meters -0.5
-                                             , y2 = Length.meters 0.5
-                                             , z1 = Length.meters 0
-                                             , z2 = Length.meters 1
-                                             }
-                                    )
-                                    (Textures.getTexture textures "CorrugatedSteel007B_1K-JPG_Color.jpg")
-                                    (Textures.getTextureFloat textures "CorrugatedSteel007B_1K-JPG_Metalness.jpg")
-                                    (Textures.getTextureFloat textures "CorrugatedSteel007B_1K-JPG_Roughness.jpg")
-                                    |> Maybe.withDefault Scene3d.nothing
-
+                                (\texture metalness roughness ->
+                                    createTexturedBlock
+                                        (Scene3d.Material.texturedPbr { baseColor = texture, metallic = metalness, roughness = roughness })
+                                        { x1 = Length.meters -0.5
+                                        , x2 = Length.meters 0.5
+                                        , y1 = Length.meters -0.5
+                                        , y2 = Length.meters 0.5
+                                        , z1 = Length.meters 0
+                                        , z2 = Length.meters 1
+                                        }
+                                )
+                                (Textures.getTexture textures "CorrugatedSteel007B_1K-JPG_Color.jpg")
+                                (Textures.getTextureFloat textures "CorrugatedSteel007B_1K-JPG_Metalness.jpg")
+                                (Textures.getTextureFloat textures "CorrugatedSteel007B_1K-JPG_Roughness.jpg")
+                                |> Maybe.withDefault Scene3d.nothing
                         , floorTile =
                             Maybe.map
                                 (\floorTexture ->
@@ -206,11 +225,11 @@ initializeEntities model =
                                 (Textures.getTexture textures "CheckerFloor.jpg")
                                 |> Maybe.withDefault Scene3d.nothing
                         , ceilingTile =
-                             Maybe.map
+                            Maybe.map
                                 (\ceilingTexture ->
                                     createTexturedFloor
                                         (Length.meters 1)
-                                        (Scene3d.Material.texturedEmissive ceilingTexture (Luminance.footLamberts 100 ))
+                                        (Scene3d.Material.texturedEmissive ceilingTexture (Luminance.footLamberts 100))
                                 )
                                 (Textures.getTexture textures "OfficeCeiling005_4K_Color.jpg")
                                 |> Maybe.withDefault Scene3d.nothing
@@ -221,16 +240,17 @@ initializeEntities model =
                                         Maybe.map
                                             (\texture ->
                                                 let
-                                                    material = Scene3d.Material.texturedMatte texture
+                                                    material =
+                                                        Scene3d.Material.texturedMatte texture
                                                 in
-                                                    (textureName, createSignQuad material)
+                                                ( textureName, createSignQuad material )
                                             )
                                             (Textures.getTexture textures textureName)
-                                        |> Maybe.withDefault (textureName, Scene3d.nothing)
+                                            |> Maybe.withDefault ( textureName, Scene3d.nothing )
                                     )
                                 |> Dict.fromList
                         , sandTile =
-                            (Maybe.map2
+                            Maybe.map2
                                 (\sandTexture roughnessTexture ->
                                     createTexturedFloor
                                         (Length.meters 0)
@@ -238,20 +258,19 @@ initializeEntities model =
                                 )
                                 (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
                                 (Textures.getTextureFloat textures "Ground054_1K-JPG_Roughness.jpg")
-                            )
                                 |> Maybe.withDefault Scene3d.nothing
                         , toyBucket =
-                            (MeshCollection.getMeshEntity meshes "ToyBucket.obj" (Textures.getTexture textures "ToyBucket.png"))
-                                 |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.3)
-                                 |> Maybe.withDefault Scene3d.nothing
+                            MeshCollection.getMeshEntity meshes "ToyBucket.obj" (Textures.getTexture textures "ToyBucket.png")
+                                |> Maybe.map (Scene3d.scaleAbout (Point3d.meters 0 0 0) 0.3)
+                                |> Maybe.withDefault Scene3d.nothing
                         , castleWall =
-                            (MeshCollection.getMeshEntity meshes "wall.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
-                            |> Maybe.withDefault Scene3d.nothing
+                            MeshCollection.getMeshEntity meshes "wall.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
+                                |> Maybe.withDefault Scene3d.nothing
                         , castleDoor =
-                            (MeshCollection.getMeshEntity meshes "wallDoor.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
-                            |> Maybe.withDefault Scene3d.nothing
+                            MeshCollection.getMeshEntity meshes "wallDoor.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
+                                |> Maybe.withDefault Scene3d.nothing
                         , castleWallTower =
-                            (MeshCollection.getMeshEntity meshes "wallCornerHalfTower.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg"))
+                            MeshCollection.getMeshEntity meshes "wallCornerHalfTower.obj" (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
                                 |> Maybe.withDefault Scene3d.nothing
                         , castleEntryVoid =
                             Scene3d.quad
@@ -261,8 +280,8 @@ initializeEntities model =
                                 (Point3d.unsafe { x = 0, y = -1, z = 1 })
                                 (Point3d.unsafe { x = 0, y = 0, z = 1 })
                         , chair =
-                            (MeshCollection.getMeshEntity meshes "Chair.obj" (Textures.getTexture textures "SofaChairTexture.jpg"))
-                                |> Maybe.map (Scene3d.rotateAround (Axis3d.z) (Angle.degrees 90))
+                            MeshCollection.getMeshEntity meshes "Chair.obj" (Textures.getTexture textures "SofaChairTexture.jpg")
+                                |> Maybe.map (Scene3d.rotateAround Axis3d.z (Angle.degrees 90))
                                 |> Maybe.map (Scene3d.scaleAbout Point3d.origin 0.6)
                                 |> Maybe.withDefault Scene3d.nothing
                         , sandbox =
@@ -276,174 +295,223 @@ initializeEntities model =
                                 , Scene3d.block
                                     (Scene3d.Material.color Color.darkRed)
                                     (Block3d.from
-                                      (Point3d.unsafe { x = -0.5, y = -0.5, z = 0 })
-                                      (Point3d.unsafe { x = -0.45, y = 0.5, z = 0.12 })
+                                        (Point3d.unsafe { x = -0.5, y = -0.5, z = 0 })
+                                        (Point3d.unsafe { x = -0.45, y = 0.5, z = 0.12 })
                                     )
                                 , Scene3d.block
                                     (Scene3d.Material.color Color.darkRed)
                                     (Block3d.from
-                                      (Point3d.unsafe { x = -0.5, y = 0.45, z = 0 })
-                                      (Point3d.unsafe { x = 0.5, y = 0.5, z = 0.12 })
+                                        (Point3d.unsafe { x = -0.5, y = 0.45, z = 0 })
+                                        (Point3d.unsafe { x = 0.5, y = 0.5, z = 0.12 })
                                     )
                                 , Scene3d.block
                                     (Scene3d.Material.color Color.darkRed)
                                     (Block3d.from
-                                      (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
-                                      (Point3d.unsafe { x = 0.45, y = 0.5, z = 0.12 })
+                                        (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
+                                        (Point3d.unsafe { x = 0.45, y = 0.5, z = 0.12 })
                                     )
-                                ,
-                                    let
-                                          x1 = Length.meters 0.45
-                                          y1 = Length.meters 0.45
-                                          x2 = Length.meters -0.45
-                                          y2 = Length.meters -0.45
-                                          z = Length.meters 0.08
-                                    in
-                                      Maybe.map2
-                                        (\sandTexture roughnessTexture ->
-                                          Scene3d.quad (Scene3d.Material.texturedNonmetal { baseColor = sandTexture, roughness = roughnessTexture })
-                                               (Point3d.xyz x1 y1 z)
-                                               (Point3d.xyz x2 y1 z)
-                                               (Point3d.xyz x2 y2 z)
-                                               (Point3d.xyz x1 y2 z)
-                                        )
-                                        (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
-                                        (Textures.getTextureFloat textures "Ground054_1K-JPG_Roughness.jpg")
-                                      |> Maybe.withDefault Scene3d.nothing
+                                , let
+                                    x1 =
+                                        Length.meters 0.45
+
+                                    y1 =
+                                        Length.meters 0.45
+
+                                    x2 =
+                                        Length.meters -0.45
+
+                                    y2 =
+                                        Length.meters -0.45
+
+                                    z =
+                                        Length.meters 0.08
+                                  in
+                                  Maybe.map2
+                                    (\sandTexture roughnessTexture ->
+                                        Scene3d.quad (Scene3d.Material.texturedNonmetal { baseColor = sandTexture, roughness = roughnessTexture })
+                                            (Point3d.xyz x1 y1 z)
+                                            (Point3d.xyz x2 y1 z)
+                                            (Point3d.xyz x2 y2 z)
+                                            (Point3d.xyz x1 y2 z)
+                                    )
+                                    (Textures.getTexture textures "Ground054_1K-JPG_Color.jpg")
+                                    (Textures.getTextureFloat textures "Ground054_1K-JPG_Roughness.jpg")
+                                    |> Maybe.withDefault Scene3d.nothing
                                 ]
                         , terms =
-                            (Textures.getTexture textures "toc.png")
-                                |> Maybe.map (\termsTexture ->
-                                    let
-                                        material = Scene3d.Material.texturedColor termsTexture
-                                        leftQuad = TriangularMesh.triangles
-                                            [( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = (0, 0) }
-                                             , { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = (0.5, 0) }
-                                             , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = (0.5, 1) }
-                                             )
-                                            ,( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = (0, 0) }
-                                             , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = (0.5, 1) }
-                                             , { position = Point3d.unsafe { x = 0.5, y = 0, z = 1}, uv = (0, 1) }
-                                             )
-                                            ]
-                                            |> Scene3d.Mesh.texturedTriangles
-                                            |> Scene3d.mesh material
-                                        rightQuad = TriangularMesh.triangles
-                                            [ ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = (0.5, 0) }
-                                              , { position = Point3d.unsafe { x = -0.5, y = 0, z = 0 }, uv = (1, 0) }
-                                              , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = (1, 1) }
-                                              )
-                                            , ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = (0.5, 0) }
-                                              , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = (1, 1) }
-                                              , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = (0.5, 1) }
-                                              )
-                                            ]
-                                            |> Scene3d.Mesh.texturedTriangles
-                                            |> Scene3d.mesh material
-                                    in
-                                        (leftQuad, rightQuad)
-                                )
-                                |> Maybe.withDefault (Scene3d.nothing, Scene3d.nothing)
-                        , wallTexture = Maybe.map2 Tuple.pair
-                            (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
-                            (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
-                            |> Maybe.withDefault (Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0)
+                            Textures.getTexture textures "toc.png"
+                                |> Maybe.map
+                                    (\termsTexture ->
+                                        let
+                                            material =
+                                                Scene3d.Material.texturedColor termsTexture
+
+                                            leftQuad =
+                                                TriangularMesh.triangles
+                                                    [ ( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = ( 0, 0 ) }
+                                                      , { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = ( 0.5, 0 ) }
+                                                      , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = ( 0.5, 1 ) }
+                                                      )
+                                                    , ( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = ( 0, 0 ) }
+                                                      , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = ( 0.5, 1 ) }
+                                                      , { position = Point3d.unsafe { x = 0.5, y = 0, z = 1 }, uv = ( 0, 1 ) }
+                                                      )
+                                                    ]
+                                                    |> Scene3d.Mesh.texturedTriangles
+                                                    |> Scene3d.mesh material
+
+                                            rightQuad =
+                                                TriangularMesh.triangles
+                                                    [ ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = ( 0.5, 0 ) }
+                                                      , { position = Point3d.unsafe { x = -0.5, y = 0, z = 0 }, uv = ( 1, 0 ) }
+                                                      , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = ( 1, 1 ) }
+                                                      )
+                                                    , ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = ( 0.5, 0 ) }
+                                                      , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = ( 1, 1 ) }
+                                                      , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = ( 0.5, 1 ) }
+                                                      )
+                                                    ]
+                                                    |> Scene3d.Mesh.texturedTriangles
+                                                    |> Scene3d.mesh material
+                                        in
+                                        ( leftQuad, rightQuad )
+                                    )
+                                |> Maybe.withDefault ( Scene3d.nothing, Scene3d.nothing )
+                        , wallTexture =
+                            Maybe.map2 Tuple.pair
+                                (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
+                                (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
+                                |> Maybe.withDefault ( Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0 )
                         }
 
-                 _ -> model
-            )
+                _ ->
+                    model
 
 
-signTextureIds = List.filterMap
-    (\textureToLoad -> case textureToLoad of
-        GenerateSign signId _ ->
-            Just signId
+signTextureIds =
+    List.filterMap
+        (\textureToLoad ->
+            case textureToLoad of
+                GenerateSign signId _ ->
+                    Just signId
 
-        _ -> Nothing
-    ) texturesToLoad
+                _ ->
+                    Nothing
+        )
+        texturesToLoad
 
 
 createTexturedBlock material { x1, x2, y1, y2, z1, z2 } =
     let
-        leftQuad = Scene3d.quad material
-            (Point3d.xyz x1 y1 z1)
-            (Point3d.xyz x1 y2 z1)
-            (Point3d.xyz x1 y2 z2)
-            (Point3d.xyz x1 y1 z2)
-
-        frontQuad = Scene3d.quad material
-            (Point3d.xyz x1 y2 z1)
-            (Point3d.xyz x2 y2 z1)
-            (Point3d.xyz x2 y2 z2)
-            (Point3d.xyz x1 y2 z2)
-
-        behindQuad = Scene3d.quad material
-            (Point3d.xyz x1 y1 z1)
-            (Point3d.xyz x2 y1 z1)
-            (Point3d.xyz x2 y1 z2)
-            (Point3d.xyz x1 y1 z2)
-
-        rightQuad = Scene3d.quad material
-            (Point3d.xyz x2 y2 z1)
-            (Point3d.xyz x2 y1 z1)
-            (Point3d.xyz x2 y1 z2)
-            (Point3d.xyz x2 y2 z2)
-    in
-        Scene3d.group [leftQuad, frontQuad, behindQuad, rightQuad]
-
-
-createSkybox { x1, x2, y1, y2, z1, z2 } matLeft matFront matRight  =
-     let
-            leftQuad = Scene3d.quad matLeft
+        leftQuad =
+            Scene3d.quad material
                 (Point3d.xyz x1 y1 z1)
                 (Point3d.xyz x1 y2 z1)
                 (Point3d.xyz x1 y2 z2)
                 (Point3d.xyz x1 y1 z2)
 
-            frontQuad = Scene3d.quad matFront
+        frontQuad =
+            Scene3d.quad material
                 (Point3d.xyz x1 y2 z1)
                 (Point3d.xyz x2 y2 z1)
                 (Point3d.xyz x2 y2 z2)
                 (Point3d.xyz x1 y2 z2)
 
-            rightQuad = Scene3d.quad matRight
+        behindQuad =
+            Scene3d.quad material
+                (Point3d.xyz x1 y1 z1)
+                (Point3d.xyz x2 y1 z1)
+                (Point3d.xyz x2 y1 z2)
+                (Point3d.xyz x1 y1 z2)
+
+        rightQuad =
+            Scene3d.quad material
                 (Point3d.xyz x2 y2 z1)
                 (Point3d.xyz x2 y1 z1)
                 (Point3d.xyz x2 y1 z2)
                 (Point3d.xyz x2 y2 z2)
-        in
-            Scene3d.group [leftQuad, frontQuad, rightQuad]
+    in
+    Scene3d.group [ leftQuad, frontQuad, behindQuad, rightQuad ]
+
+
+createSkybox { x1, x2, y1, y2, z1, z2 } matLeft matFront matRight =
+    let
+        leftQuad =
+            Scene3d.quad matLeft
+                (Point3d.xyz x1 y1 z1)
+                (Point3d.xyz x1 y2 z1)
+                (Point3d.xyz x1 y2 z2)
+                (Point3d.xyz x1 y1 z2)
+
+        frontQuad =
+            Scene3d.quad matFront
+                (Point3d.xyz x1 y2 z1)
+                (Point3d.xyz x2 y2 z1)
+                (Point3d.xyz x2 y2 z2)
+                (Point3d.xyz x1 y2 z2)
+
+        rightQuad =
+            Scene3d.quad matRight
+                (Point3d.xyz x2 y2 z1)
+                (Point3d.xyz x2 y1 z1)
+                (Point3d.xyz x2 y1 z2)
+                (Point3d.xyz x2 y2 z2)
+    in
+    Scene3d.group [ leftQuad, frontQuad, rightQuad ]
+
 
 createTexturedFloor z material =
     let
-        x1 = Length.meters 0.5
-        y1 = Length.meters 0.5
-        x2 = Length.meters -0.5
-        y2 = Length.meters -0.5
+        x1 =
+            Length.meters 0.5
+
+        y1 =
+            Length.meters 0.5
+
+        x2 =
+            Length.meters -0.5
+
+        y2 =
+            Length.meters -0.5
     in
     Scene3d.quad material
-         (Point3d.xyz x1 y1 z)
-         (Point3d.xyz x2 y1 z)
-         (Point3d.xyz x2 y2 z)
-         (Point3d.xyz x1 y2 z)
+        (Point3d.xyz x1 y1 z)
+        (Point3d.xyz x2 y1 z)
+        (Point3d.xyz x2 y2 z)
+        (Point3d.xyz x1 y2 z)
+
 
 createSignQuad material =
-     let
-        xMargin = 0.2
-        topMargin = 0.2
-        bottomMargin = 0.5
+    let
+        xMargin =
+            0.2
 
-        x1 = Length.meters (0.5 - xMargin)
-        x2 = Length.meters (-0.5 + xMargin)
-        y = Length.meters 0
-        z1 = Length.meters bottomMargin
-        z2 = Length.meters (1 - topMargin)
+        topMargin =
+            0.2
+
+        bottomMargin =
+            0.5
+
+        x1 =
+            Length.meters (0.5 - xMargin)
+
+        x2 =
+            Length.meters (-0.5 + xMargin)
+
+        y =
+            Length.meters 0
+
+        z1 =
+            Length.meters bottomMargin
+
+        z2 =
+            Length.meters (1 - topMargin)
     in
-        Scene3d.quad material
-           (Point3d.xyz x1 y z1)
-           (Point3d.xyz x2 y z1)
-           (Point3d.xyz x2 y z2)
-           (Point3d.xyz x1 y z2)
+    Scene3d.quad material
+        (Point3d.xyz x1 y z1)
+        (Point3d.xyz x2 y z1)
+        (Point3d.xyz x2 y z2)
+        (Point3d.xyz x1 y z2)
 
 
 subscription : Model -> Sub Msg
@@ -452,32 +520,49 @@ subscription model =
         LoadingAssets { textures } ->
             Sub.map TexturesMsg Textures.subscription
 
-        _ -> Sub.none
+        _ ->
+            Sub.none
 
 
 wallBlock : Model -> SceneEntity
 wallBlock model =
     case model of
-        ReadyAssets data -> data.wallBlock
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.wallBlock
+
+        _ ->
+            Scene3d.nothing
+
 
 blueWallBlock : Model -> SceneEntity
 blueWallBlock model =
     case model of
-        ReadyAssets data -> data.blueWallBlock
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.blueWallBlock
+
+        _ ->
+            Scene3d.nothing
+
 
 floorTile : Model -> SceneEntity
 floorTile model =
     case model of
-        ReadyAssets data -> data.floorTile
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.floorTile
+
+        _ ->
+            Scene3d.nothing
+
 
 ceilingTile : Model -> SceneEntity
 ceilingTile model =
     case model of
-        ReadyAssets data -> data.ceilingTile
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.ceilingTile
+
+        _ ->
+            Scene3d.nothing
+
 
 sign : Model -> String -> SceneEntity
 sign model signId =
@@ -485,65 +570,106 @@ sign model signId =
         ReadyAssets data ->
             Dict.get signId data.signs
                 |> Maybe.withDefault Scene3d.nothing
-        _ -> Scene3d.nothing
+
+        _ ->
+            Scene3d.nothing
+
 
 sandTile : Model -> SceneEntity
 sandTile model =
-     case model of
-        ReadyAssets data -> data.sandTile
-        _ -> Scene3d.nothing
+    case model of
+        ReadyAssets data ->
+            data.sandTile
+
+        _ ->
+            Scene3d.nothing
+
 
 toyBucket : Model -> SceneEntity
 toyBucket model =
     case model of
-        ReadyAssets data -> data.toyBucket
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.toyBucket
+
+        _ ->
+            Scene3d.nothing
+
 
 castleWall : Model -> SceneEntity
 castleWall model =
     case model of
-        ReadyAssets data -> data.castleWall
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.castleWall
+
+        _ ->
+            Scene3d.nothing
+
 
 castleDoor : Model -> SceneEntity
 castleDoor model =
     case model of
-        ReadyAssets data -> data.castleDoor
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.castleDoor
+
+        _ ->
+            Scene3d.nothing
+
 
 castleWallTower : Model -> SceneEntity
 castleWallTower model =
     case model of
-        ReadyAssets data -> data.castleWallTower
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.castleWallTower
+
+        _ ->
+            Scene3d.nothing
+
 
 castleEntryVoid : Model -> SceneEntity
 castleEntryVoid model =
     case model of
-        ReadyAssets data -> data.castleEntryVoid
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.castleEntryVoid
+
+        _ ->
+            Scene3d.nothing
+
 
 chair : Model -> SceneEntity
 chair model =
     case model of
-        ReadyAssets data -> data.chair
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.chair
+
+        _ ->
+            Scene3d.nothing
 
 
 sandbox : Model -> SceneEntity
 sandbox model =
     case model of
-        ReadyAssets data -> data.sandbox
-        _ -> Scene3d.nothing
+        ReadyAssets data ->
+            data.sandbox
 
-terms : Model -> (SceneEntity, SceneEntity)
+        _ ->
+            Scene3d.nothing
+
+
+terms : Model -> ( SceneEntity, SceneEntity )
 terms model =
     case model of
-        ReadyAssets data -> data.terms
-        _ -> (Scene3d.nothing, Scene3d.nothing)
+        ReadyAssets data ->
+            data.terms
 
-wallTexture : Model -> (Scene3d.Material.Texture Color, Scene3d.Material.Texture Float)
+        _ ->
+            ( Scene3d.nothing, Scene3d.nothing )
+
+
+wallTexture : Model -> ( Scene3d.Material.Texture Color, Scene3d.Material.Texture Float )
 wallTexture model =
     case model of
-        ReadyAssets data -> data.wallTexture
-        _ -> (Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0)
+        ReadyAssets data ->
+            data.wallTexture
+
+        _ ->
+            ( Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0 )

@@ -1,14 +1,14 @@
-module MeshCollection exposing (Model(..), Msg, init, getMeshEntity, update)
+module MeshCollection exposing (Model(..), Msg, getMeshEntity, init, update)
 
 import Color exposing (Color)
+import Dict exposing (Dict)
+import Http
 import Length exposing (Meters)
 import Obj.Decode exposing (Decoder, ObjCoordinates)
 import Scene3d
 import Scene3d.Material exposing (Texture)
 import Scene3d.Mesh exposing (Textured, Uniform)
 import Task exposing (Task)
-import Dict exposing (Dict)
-import Http
 
 
 type ViewMesh
@@ -25,15 +25,18 @@ meshDecoder =
         , Obj.Decode.triangles |> Obj.Decode.map (Scene3d.Mesh.indexedFacets >> UniformMesh)
         ]
 
+
 type Model
     = MeshCollectionInitializing
     | MeshCollectionLoaded (Dict String ViewMesh)
     | MeshCollectionFailed
 
-type Msg
-    = LoadedMeshes (Result String (List (String, ViewMesh)))
 
-init : List String -> (Model, Cmd Msg)
+type Msg
+    = LoadedMeshes (Result String (List ( String, ViewMesh )))
+
+
+init : List String -> ( Model, Cmd Msg )
 init fileNames =
     ( MeshCollectionInitializing
     , fileNames
@@ -41,6 +44,7 @@ init fileNames =
         |> Task.sequence
         |> Task.attempt LoadedMeshes
     )
+
 
 getMesh : String -> Task String ViewMesh
 getMesh fileName =
@@ -51,7 +55,7 @@ getMesh fileName =
         , body = Http.emptyBody
         , resolver =
             Http.stringResolver
-                ( \response ->
+                (\response ->
                     case response of
                         Http.BadUrl_ url ->
                             Err "Bad URL"
@@ -66,14 +70,14 @@ getMesh fileName =
                             Err "Network error"
 
                         Http.GoodStatus_ _ body ->
-                                (Obj.Decode.decodeString
-                                   Length.meters
-                                   meshDecoder
-                                   body
-                                )
+                            Obj.Decode.decodeString
+                                Length.meters
+                                meshDecoder
+                                body
                 )
         , timeout = Nothing
         }
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -85,6 +89,7 @@ update msg model =
             , Cmd.none
             )
 
+
 getMeshEntity : Model -> String -> Maybe (Texture Color) -> Maybe (Scene3d.Entity ObjCoordinates)
 getMeshEntity model meshFileName texture =
     case model of
@@ -92,7 +97,8 @@ getMeshEntity model meshFileName texture =
             Dict.get meshFileName dict
                 |> Maybe.map (viewMesh texture)
 
-        _ -> Nothing
+        _ ->
+            Nothing
 
 
 viewMesh : Maybe (Texture Color) -> ViewMesh -> Scene3d.Entity ObjCoordinates
@@ -108,4 +114,3 @@ viewMesh loadingTexture mesh =
 
         UniformMesh uniformMesh ->
             Scene3d.mesh (Scene3d.Material.matte Color.blue) uniformMesh
-

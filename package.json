@@ -5,7 +5,7 @@
   "source": "src/index.html",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm run build:levels && parcel build --no-source-maps --public-url ./ && npm run build:assets && bestzip build.zip dist",
+    "build": "NODE_ENV=production npm run build:levels && parcel build --no-source-maps --public-url ./ && npm run build:assets && bestzip build.zip dist",
     "build:levels": "node tools/map-compiler.js",
     "build:assets": "ncp assets dist/assets",
     "dev": "rm -Rf .parcel-cache && npm run build:levels && npm run build:assets && PARCEL_ELM_NO_DEBUG=1 parcel"
@@ -25,6 +25,7 @@
     "@parcel/transformer-elm": "^2.9.3",
     "bestzip": "^2.2.1",
     "elm": "^0.19.1-5",
+    "elm-format": "^0.8.7",
     "ncp": "^2.0.0",
     "parcel": "^2.9.3"
   }
