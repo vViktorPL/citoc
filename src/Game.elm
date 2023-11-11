@@ -12,6 +12,7 @@ import Json.Decode as Decode
 import Length
 import Level exposing (Level, TriggerCondition(..), TriggerEffect(..))
 import Level.Index as LevelIndex
+import Narration
 import Orientation exposing (Orientation(..))
 import Pixels
 import Player exposing (Player)
@@ -51,6 +52,7 @@ type alias Model =
     , fadeColor : String
     , backgroundColor : Color
     , visibility : Scene3d.Visibility
+    , narration : Narration.Model
     }
 
 
@@ -81,6 +83,7 @@ init =
       , fadeColor = "black"
       , backgroundColor = Color.white
       , visibility = Scene3d.clearView
+      , narration = Narration.init
       }
     , Cmd.batch
         [ Task.perform
@@ -121,6 +124,98 @@ playerCollides level player =
             False
 
 
+playerTriggerInteraction : Model -> Player -> ( Model, Cmd Msg )
+playerTriggerInteraction model player =
+    let
+        ( modelAfterTriggers, cmd ) =
+            handleTriggers model player
+    in
+    if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
+        ( { model | player = player }, cmd )
+
+    else
+        ( modelAfterTriggers, cmd )
+
+
+updateAnimation : Float -> Model -> ( Model, Cmd Msg )
+updateAnimation delta model =
+    case model.state of
+        Initializing ->
+            ( { model | state = FadingInLevel initFadeInTime }, Cmd.none )
+
+        Playing ->
+            let
+                modelToUpdate =
+                    { model | level = Level.update delta model.level }
+
+                ( newPlayer, playerCmd ) =
+                    model.player
+                        |> Player.updatePlayerPosition v
+                        |> Player.update delta
+
+                v =
+                    Player.getMovementVector model.player
+                        |> Vector3d.scaleBy delta
+
+                ( interactionResult, interactionCmd ) =
+                    Level.interactAsCylinder Player.playerRadius (Player.getPlayerPosition model.player) v modelToUpdate.level
+            in
+            case interactionResult of
+                Level.LevelUpdated updatedLevel ->
+                    ( { modelToUpdate | level = updatedLevel }, interactionCmd )
+
+                --player = newPlayer,
+                Level.LevelCollision adjustedVector ->
+                    let
+                        ( adjustedPlayer, adjustedCmd ) =
+                            model.player
+                                |> Player.updatePlayerPosition adjustedVector
+                                |> Player.update delta
+
+                        ( postTriggerModel, triggerCmd ) =
+                            playerTriggerInteraction modelToUpdate adjustedPlayer
+                    in
+                    ( { postTriggerModel | player = adjustedPlayer }, Cmd.batch [ adjustedCmd, interactionCmd, triggerCmd ] )
+
+                Level.NoInteraction ->
+                    playerTriggerInteraction modelToUpdate newPlayer
+                        |> Tuple.mapSecond (\triggerCmd -> Cmd.batch [ playerCmd, interactionCmd, triggerCmd ])
+
+        FadingOutLevel timeLeft ->
+            let
+                newTimeLeft =
+                    max (timeLeft - delta) 0
+
+                nextLevel =
+                    model.levelsLeft
+                        |> List.head
+                        |> Maybe.withDefault model.level
+            in
+            if newTimeLeft == 0 then
+                ( { model
+                    | level = nextLevel
+                    , levelsLeft = List.drop 1 model.levelsLeft
+                    , player = Player.initOnLevel nextLevel
+                    , state = FadingInLevel levelFadeInTime
+                  }
+                , Cmd.none
+                )
+
+            else
+                ( { model | state = FadingOutLevel newTimeLeft, counters = Dict.empty }, Cmd.none )
+
+        FadingInLevel timeLeft ->
+            let
+                newTimeLeft =
+                    max (timeLeft - delta) 0
+            in
+            if newTimeLeft == 0 then
+                ( { model | state = Playing, fadeColor = "white" }, Cmd.none )
+
+            else
+                ( { model | state = FadingInLevel newTimeLeft }, Cmd.none )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -128,85 +223,8 @@ update msg model =
             ( { model | canvasSize = ( width, height ) }, Cmd.none )
 
         AnimationTick delta ->
-            case model.state of
-                Initializing ->
-                    ( { model | state = FadingInLevel initFadeInTime }, Cmd.none )
-
-                Playing ->
-                    let
-                        modelToUpdate =
-                            { model | level = Level.update delta model.level }
-
-                        ( newPlayer, playerCmd ) =
-                            model.player
-                                |> Player.updatePlayerPosition v
-                                |> Player.update delta
-
-                        v =
-                            Player.getMovementVector model.player
-                                |> Vector3d.scaleBy delta
-
-                        ( interactionResult, interactionCmd ) =
-                            Level.interactAsCylinder Player.playerRadius (Player.getPlayerPosition model.player) v modelToUpdate.level
-                    in
-                    case interactionResult of
-                        Level.LevelUpdated updatedLevel ->
-                            ( { modelToUpdate | level = updatedLevel }, interactionCmd )
-
-                        --player = newPlayer,
-                        Level.LevelCollision adjustedVector ->
-                            let
-                                ( adjustedPlayer, adjustedCmd ) =
-                                    model.player
-                                        |> Player.updatePlayerPosition adjustedVector
-                                        |> Player.update delta
-                            in
-                            ( { modelToUpdate | player = adjustedPlayer }, Cmd.batch [ adjustedCmd, interactionCmd ] )
-
-                        Level.NoInteraction ->
-                            let
-                                ( modelAfterTriggers, cmd ) =
-                                    handleTriggers modelToUpdate newPlayer
-                            in
-                            if playerCollides modelAfterTriggers.level modelAfterTriggers.player then
-                                ( { modelToUpdate | player = newPlayer }, Cmd.batch [ playerCmd, interactionCmd ] )
-
-                            else
-                                ( modelAfterTriggers, Cmd.batch [ cmd, playerCmd, interactionCmd ] )
-
-                FadingOutLevel timeLeft ->
-                    let
-                        newTimeLeft =
-                            max (timeLeft - delta) 0
-
-                        nextLevel =
-                            model.levelsLeft
-                                |> List.head
-                                |> Maybe.withDefault model.level
-                    in
-                    if newTimeLeft == 0 then
-                        ( { model
-                            | level = nextLevel
-                            , levelsLeft = List.drop 1 model.levelsLeft
-                            , player = Player.initOnLevel nextLevel
-                            , state = FadingInLevel levelFadeInTime
-                          }
-                        , Cmd.none
-                        )
-
-                    else
-                        ( { model | state = FadingOutLevel newTimeLeft, counters = Dict.empty }, Cmd.none )
-
-                FadingInLevel timeLeft ->
-                    let
-                        newTimeLeft =
-                            max (timeLeft - delta) 0
-                    in
-                    if newTimeLeft == 0 then
-                        ( { model | state = Playing, fadeColor = "white" }, Cmd.none )
-
-                    else
-                        ( { model | state = FadingInLevel newTimeLeft }, Cmd.none )
+            updateAnimation delta model
+                |> Tuple.mapFirst (\updatedModel -> { updatedModel | narration = Narration.update delta updatedModel.narration })
 
         KeyDown key ->
             ( { model
@@ -478,6 +496,9 @@ handleTriggers model newPlayer =
                     RemoveAllTriggersInSector sector ->
                         ( { modelAcc | level = Level.removeAllTriggersAtSector sector modelAcc.level }, cmdAcc )
 
+                    RemoveAllTriggersInSectors sectors ->
+                        ( { modelAcc | level = Level.removeAllTriggersAtSectors sectors modelAcc.level }, cmdAcc )
+
                     IncrementCounter counterName ->
                         ( { modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
                         , Cmd.batch [ cmdAcc, Sound.playSound "notify-up.mp3" ]
@@ -502,6 +523,13 @@ handleTriggers model newPlayer =
 
                     PlayMusic fileName ->
                         ( modelAcc, Cmd.batch [ cmdAcc, Sound.playMusic fileName ] )
+
+                    StartNarration narrationNumber ->
+                        let
+                            ( narration, narrationCmd ) =
+                                Narration.playNarration modelAcc.narration narrationNumber
+                        in
+                        ( { modelAcc | narration = narration }, Cmd.batch [ cmdAcc, narrationCmd ] )
             )
             ( { model
                 | player = newPlayer
@@ -556,4 +584,5 @@ view sceneAssets model =
                 , visibility = model.visibility
                 }
             ]
+        , Narration.view model.narration
         ]

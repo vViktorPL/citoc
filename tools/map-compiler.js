@@ -17,9 +17,28 @@ fs.readdir(path.join(__dirname, '../levels')).then(
           const legendSeparator = lines.indexOf('---');
           const rows = legendSeparator !== -1 ? lines.slice(0, legendSeparator) : lines;
 
-          const uniqueTilePositions = Object.fromEntries(rows.flatMap(
-            (row, y) => [...row].map((char, x) => [char, `(${x}, ${y})`])
-          ));
+          // const uniqueTilePositions = Object.fromEntries(rows.flatMap(
+          //   (row, y) => [...row].map((char, x) => [char, `(${x}, ${y})`])
+          // ));
+          const uniqueTilePositions = {};
+
+          rows.forEach(
+            (row, y) =>
+                [...row].forEach(
+                  (char, x) => {
+                    if (char in uniqueTilePositions) {
+                      if (!Array.isArray(uniqueTilePositions[char])) {
+                        uniqueTilePositions[char] = [uniqueTilePositions[char]]
+                      }
+
+                      uniqueTilePositions[char].push(`(${x}, ${y})`);
+                      return;
+                    }
+
+                    uniqueTilePositions[char] = `(${x}, ${y})`;
+                  }
+                )
+          );
 
           const triggers = [];
 
@@ -29,14 +48,28 @@ fs.readdir(path.join(__dirname, '../levels')).then(
                 return acc;
               }
 
-              const legendData = line.substring(2).replace(/@(.)/g, match => uniqueTilePositions[match[1]]);
+              const legendData = line.substring(2)
+                .replace(/@(.)/g, match => {
+                  const position = uniqueTilePositions[match[1]];
+
+                  return Array.isArray(position) ?
+                    `[${position.join(',')}]` : position;
+                });
 
               const legendTile = line.substring(0, 1);
               const levelTile = /^\(([^)]+)\)/.exec(legendData)?.[0] ?? legendData.split(' ')[0];
               const triggerData = legendData.substring(levelTile.length + 1);
 
               if (triggerData) {
-                triggers.push(`Trigger ${uniqueTilePositions[legendTile]} ${triggerData}`)
+                if (Array.isArray(uniqueTilePositions[legendTile])) {
+                  uniqueTilePositions[legendTile].forEach(
+                    position => {
+                      triggers.push(`Trigger ${position} ${triggerData}`)
+                    }
+                  )
+                } else {
+                  triggers.push(`Trigger ${uniqueTilePositions[legendTile]} ${triggerData}`)
+                }
               }
 
               acc[line.substring(0, 1)] = levelTile;
@@ -66,8 +99,6 @@ fs.readdir(path.join(__dirname, '../levels')).then(
             'import Orientation exposing (Orientation(..))',
             'import Color',
             'import Length',
-            // 'import Screen.Game.Direction exposing (..)',
-            // 'import Color exposing (Color)',
             '',
             'data : Level',
             `data = fromData ${tiles} [${triggers.join(',')}] (${startingPosX}, ${startingPosY}) ${startingOrientation}`,

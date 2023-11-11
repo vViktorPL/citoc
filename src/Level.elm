@@ -97,6 +97,7 @@ type TriggerEffect
     | ChangeTile ( Int, Int ) LevelTile
     | CreateTrigger Trigger
     | RemoveAllTriggersInSector ( Int, Int )
+    | RemoveAllTriggersInSectors (List ( Int, Int ))
     | IncrementCounter String
     | DecrementCounter String
     | PlaySound String
@@ -104,6 +105,7 @@ type TriggerEffect
     | SitDown
     | OpenTerms
     | PlayMusic String
+    | StartNarration Int
 
 
 
@@ -498,6 +500,11 @@ removeAllTriggersAtSector sector (Level levelData) =
     Level { levelData | triggers = List.filter (\trigger -> trigger.sector /= sector) levelData.triggers }
 
 
+removeAllTriggersAtSectors : List ( Int, Int ) -> Level -> Level
+removeAllTriggersAtSectors sectors (Level levelData) =
+    Level { levelData | triggers = List.filter (\trigger -> List.all ((/=) trigger.sector) sectors) levelData.triggers }
+
+
 
 --sectorCenter : (Int, Int) -> Point3d Length.Meters WorldCoordinates
 
@@ -569,6 +576,10 @@ viewTile sceneAssets ( x, y ) tile =
                 ]
                 |> Scene3d.placeIn tileCenter
 
+        OpenFloor ->
+            SceneAssets.floorTile sceneAssets
+                |> Scene3d.placeIn tileCenter
+
         Sand ->
             SceneAssets.sandTile sceneAssets
                 |> Scene3d.placeIn tileCenter
@@ -624,6 +635,8 @@ viewTile sceneAssets ( x, y ) tile =
                     |> Scene3d.rotateAround Axis3d.z (Angle.degrees 90)
                     |> Scene3d.scaleAbout Point3d.origin 0.05
                     |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX worldY 0.08))
+                , SceneAssets.ceilingTile sceneAssets
+                    |> Scene3d.placeIn tileCenter
                 ]
 
         Chair ->

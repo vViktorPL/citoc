@@ -1,0 +1,140 @@
+  ########################
+  #%%%%%%1%#%%%I.....#...#
+  #%######%#%#######.#.#.#
+  #%#    #%#%%%%%# #.#.#.#
+  #%#    #%#####%# #.#.#.#
+  #%#    #%%%%%%%# #.#.#.#
+###%###  ######### #...#^#
+#%%%%%#            #######
+#%%T%%#
+#%%%%%#
+#%%%%%#
+#######
+
+
+
+
+
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%!!!!!!!!!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%t%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!3333333!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!4444444!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!!!!%!!!!%%%%%%%%
+ %%%%%%%%%%!C!%%%%%%%%%%%
+ %%%%%%%%%%%g%%%%%%%%%%%%
+
+
+
+
+
+
+
+
+       #########
+       #...#...#
+       #.#.#.#.#
+   #####.#.#.#.#
+   #.....#9..#.#
+   #.#########.##.#
+   #.#       #..d.#
+   #.#       ######
+ ###_###
+ #..8..#
+ #..s..#
+ #..X..#
+ ###)###
+#.##.#
+#..D.#
+######
+
+
+
+
++++         #######
++G+         #.....#
++ +         #..s..#
++5+         #..x..#
++ +         +++F+++
++ +           +++
++ +
++ +
++ +
++ +
++o+
++o+
++o+
++o+
++o+
++f+
+
+---
+^ Floor [StepIn] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
+% Sand
+o OpenFloor
+3 Sand [StepIn] [StartNarration 3, RemoveAllTriggersInSectors @3]
+4 Sand [StepIn] [StartNarration 4, RemoveAllTriggersInSectors @4]
+5 Empty [StepIn] [StartNarration 5, RemoveAllTriggersInSector @5]
+1 Sand [StepIn] [StartNarration 1, RemoveAllTriggersInSector @1]
+I Sand [StepIn] [PlayMusic "ending_loop1.mp3", InitFog Color.white (Length.meters 10), RemoveAllTriggersInSector @I]
+T ToyBucket [LookingAtGround] [StartNarration 2, InitFog Color.white (Length.meters 5), Teleport @t, PlayMusic "ending_loop2.mp3"]
+t ToyBucket
+! (InvisibleWall Sand)
++ (InvisibleWall Empty)
+C BigCastle
+g Sand [StepIn] [PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), Teleport @G]
+f Chair [StepIn, LookAngle South] [StartNarration 6, Teleport @F, SitDown, RemoveAllTriggersInSector @f]
+F Chair
+p Empty
+s Sandbox
+x Floor [StepIn] [Teleport @X]
+X Floor [StepIn] [StartNarration 7, RemoveAllTriggersInSector @X]
+_ Wall
+8 Floor [LookAngle South] [StartNarration 8, ChangeTile @_ Floor, RemoveAllTriggersInSector @8]
+) Wall
+D Floor
+9 Floor [StepIn] [StartNarration 9, RemoveAllTriggersInSector @9]
+d Floor [StepIn] [ ChangeTile @) Floor, Teleport @D]

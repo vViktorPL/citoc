@@ -10,11 +10,30 @@ const sfxFiles = [
   'step-4.mp3',
   'step-5.mp3',
   'elevator_door.mp3',
-  'glass-break.mp3'
+  'glass-break.mp3',
+  'narration_1.mp3',
+  'narration_2.mp3',
+  'narration_3.mp3',
+  'narration_4.mp3',
+  'narration_5.mp3',
+  'narration_6.mp3',
+  'narration_7.mp3',
+  'narration_8.mp3',
+  'narration_9.mp3',
+  'narration_10.mp3',
+  'narration_11.mp3',
+  'narration_12.mp3',
+  'narration_13.mp3',
+  'narration_14.mp3'
 ];
 const musicFiles = [
   'menu.mp3',
   'first-level.mp3',
+  'ending_loop0.mp3',
+  'ending_loop1.mp3',
+  'ending_loop2.mp3',
+  'ending_loop3.mp3',
+  'ending_loop4.mp3'
 ];
 
 import { generateSignTexture } from './texture-generator';
@@ -38,7 +57,7 @@ function startAudioContext() {
 
   if (audioContext) {
     for (const file of sfxFiles) {
-      const url = `assets/sfx/${file}`;
+      const url = file.startsWith('narration') ? `assets/narration/${file}` : `assets/sfx/${file}`;
       await window.fetch(url)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioContext.decodeAudioData(
@@ -124,8 +143,20 @@ let currentGainNode = null;
 let musicLoop = false;
 
 async function playMusic(filename) {
-  await fadeoutMusic();
+  if (filename.startsWith('ending')) {
+    await stopMusic();
+  } else {
+    await fadeoutMusic();
+  }
   startNewMusic(filename);
+}
+
+async function stopMusic() {
+  if (currentMusicSource && currentGainNode) {
+    musicLoop = false;
+    currentMusicSource.onended = null;
+    currentMusicSource.stop();
+  }
 }
 
 async function fadeoutMusic() {
@@ -144,7 +175,7 @@ async function fadeoutMusic() {
   }
 }
 
-function startNewMusic(filename) {
+function startNewMusic(filename, fadeInDuration = 0) {
   musicLoop = true;
   startAudioContext();
 
