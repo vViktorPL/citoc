@@ -66,7 +66,7 @@ type LevelTile
     | InvisibleWall LevelTile
     | BigCastle
     | Chair
-    | Sandbox
+    | Sandbox Bool
     | Terms
     | BreakableWall
     | BlackWall
@@ -465,7 +465,7 @@ tileCollides levelTile =
         InvisibleWall _ ->
             True
 
-        Sandbox ->
+        Sandbox _ ->
             True
 
         _ ->
@@ -627,17 +627,24 @@ viewTile sceneAssets ( x, y ) tile =
                 , viewTile sceneAssets ( x, y ) Sand
                 ]
 
-        Sandbox ->
+        Sandbox withCastle ->
             Scene3d.group
-                [ SceneAssets.sandbox sceneAssets
+                ([ SceneAssets.sandbox sceneAssets
                     |> Scene3d.placeIn tileCenter
-                , Castle.view sceneAssets False
-                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees 90)
-                    |> Scene3d.scaleAbout Point3d.origin 0.05
-                    |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX worldY 0.08))
-                , SceneAssets.ceilingTile sceneAssets
+                 , SceneAssets.ceilingTile sceneAssets
                     |> Scene3d.placeIn tileCenter
-                ]
+                 ]
+                    ++ (if withCastle then
+                            [ Castle.view sceneAssets False
+                                |> Scene3d.rotateAround Axis3d.z (Angle.degrees 90)
+                                |> Scene3d.scaleAbout Point3d.origin 0.05
+                                |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters worldX worldY 0.08))
+                            ]
+
+                        else
+                            []
+                       )
+                )
 
         Chair ->
             SceneAssets.chair sceneAssets

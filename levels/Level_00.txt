@@ -72,28 +72,6 @@
 
 
 
-
-
-       #########
-       #...#...#
-       #.#.#.#.#
-   #####.#.#.#.#
-   #.....#9..#.#
-   #.#########.##.#
-   #.#       #..d.#
-   #.#       ######
- ###_###
- #..8..#
- #..s..#
- #..X..#
- ###)###
-#.##.#
-#..D.#
-######
-
-
-
-
 +++         #######
 +G+         #.....#
 + +         #..s..#
@@ -109,7 +87,116 @@
 +o+
 +o+
 +o+
++o+
++o+
++o+
++o+
++o+
++o+
 +f+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       ##########
+       #...#...##
+       #.#.#.#.##
+   #####.#.#.#.##
+   #.....#9..#.##
+   #.#########.##.#
+   #.#       #..d.#
+   #.#       ######
+ ###_###
+ #..8..#
+ #..s..#
+ #..X..#
+ ###)###
+#.##.#
+#..D.#
+######
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%!!!!!!!!!!!!!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+       ?    #b#    ?
+       ?    #.#    ?
+       ?    #.#    ?
+       ?    #.#    ?
+       ?LLLL#.#LLLL?
+       ?    #.#    ?
+       ?    #b#    ?
+       ?    #.#    ?
+       ?????#.#?????
+            #.#
+            #b#
+            #.#
+            #.#???????????????????????#################
+            #.looooooooooooooooooooooo.................
+            #.#???????????????????????#################
+            #.#
+            #.#
+            #.#
+            #b#
+            #.#
+            #.#
+            #.#
+            #.#
+            #.#
+            #.#
+        #####B#
+        #ś#Ś#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#ć#Ć#
+   ######.#####
+   #....#.#
+   #.##.#.#
+   #.##.#.#
+   #.##...#
+ ###.######
+ #.....#
+ #..S..#
+ #..0..#
+ ###.###
+#.##.#
+#..A.#
+######
+
+
 
 ---
 ^ Floor [StepIn] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
@@ -129,7 +216,8 @@ g Sand [StepIn] [PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meter
 f Chair [StepIn, LookAngle South] [StartNarration 6, Teleport @F, SitDown, RemoveAllTriggersInSector @f]
 F Chair
 p Empty
-s Sandbox
+s (Sandbox True)
+S (Sandbox False)
 x Floor [StepIn] [Teleport @X]
 X Floor [StepIn] [StartNarration 7, RemoveAllTriggersInSector @X]
 _ Wall
@@ -137,4 +225,15 @@ _ Wall
 ) Wall
 D Floor
 9 Floor [StepIn] [StartNarration 9, RemoveAllTriggersInSector @9]
-d Floor [StepIn] [ ChangeTile @) Floor, Teleport @D]
+d Floor [StepIn] [ChangeTile @) Floor, Teleport @D, RemoveAllTriggersInSector @d, CreateTrigger (Trigger @d [StepIn] [Teleport @A])]
+0 Floor [StepIn] [StartNarration 10, RemoveAllTriggersInSector @0]
+A Floor
+ś Floor [LookAngle North] [Teleport @Ś]
+Ś Floor
+b BreakableWall
+B BreakableWall [StepIn] [InitFog Color.white (Length.meters 0.5), PlayMusic "ending_loop4.mp3", StartNarration 12, RemoveAllTriggersInSector @B]
+ć Floor [StepIn] [StartNarration 11, Teleport @Ć, RemoveAllTriggersInSector @ć]
+Ć Floor
+L Empty [StepIn] [StartNarration 13, ChangeTile @l Floor, RemoveAllTriggersInSectors @L]
+l Wall
+? (InvisibleWall Empty)

@@ -223,8 +223,14 @@ update msg model =
             ( { model | canvasSize = ( width, height ) }, Cmd.none )
 
         AnimationTick delta ->
-            updateAnimation delta model
-                |> Tuple.mapFirst (\updatedModel -> { updatedModel | narration = Narration.update delta updatedModel.narration })
+            let
+                ( animatedModel, animationCmd ) =
+                    updateAnimation delta model
+
+                ( updatedNarration, narrationCmd ) =
+                    Narration.update delta animatedModel.narration
+            in
+            ( { animatedModel | narration = updatedNarration }, Cmd.batch [ animationCmd, narrationCmd ] )
 
         KeyDown key ->
             ( { model
