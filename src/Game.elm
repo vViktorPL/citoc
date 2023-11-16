@@ -6,6 +6,7 @@ import Browser.Events
 import Color exposing (..)
 import Dict exposing (Dict)
 import Direction3d
+import Ending
 import Html exposing (Html)
 import Html.Attributes
 import Json.Decode as Decode
@@ -39,6 +40,7 @@ type GameState
     | Playing
     | FadingOutLevel Float
     | FadingInLevel Float
+    | GameEnding
 
 
 type alias Model =
@@ -53,6 +55,7 @@ type alias Model =
     , backgroundColor : Color
     , visibility : Scene3d.Visibility
     , narration : Narration.Model
+    , ending : Maybe Ending.Model
     }
 
 
@@ -84,6 +87,7 @@ init =
       , backgroundColor = Color.white
       , visibility = Scene3d.clearView
       , narration = Narration.init
+      , ending = Nothing
       }
     , Cmd.batch
         [ Task.perform
@@ -214,6 +218,15 @@ updateAnimation delta model =
 
             else
                 ( { model | state = FadingInLevel newTimeLeft }, Cmd.none )
+
+        GameEnding ->
+            let
+                ( updatedEnding, endingCmd ) =
+                    model.ending
+                        |> Maybe.map (Ending.update delta >> Tuple.mapFirst Just)
+                        |> Maybe.withDefault ( Nothing, Cmd.none )
+            in
+            ( { model | ending = updatedEnding }, endingCmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -536,6 +549,9 @@ handleTriggers model newPlayer =
                                 Narration.playNarration modelAcc.narration narrationNumber
                         in
                         ( { modelAcc | narration = narration }, Cmd.batch [ cmdAcc, narrationCmd ] )
+
+                    ShowGameEndingScreen ->
+                        ( { modelAcc | state = GameEnding, ending = Just Ending.init }, Cmd.batch [ cmdAcc, Sound.stopMusic () ] )
             )
             ( { model
                 | player = newPlayer
@@ -566,9 +582,12 @@ view sceneAssets model =
 
                 Initializing ->
                     0
+
+                GameEnding ->
+                    1
     in
     Html.div [ Html.Attributes.style "background" model.fadeColor ]
-        [ Html.div
+        ([ Html.div
             [ Html.Attributes.style "opacity" (String.fromFloat opacity)
             , Html.Attributes.style "visibility"
                 (if model.state == Initializing then
@@ -590,5 +609,13 @@ view sceneAssets model =
                 , visibility = model.visibility
                 }
             ]
-        , Narration.view model.narration
-        ]
+         , Narration.view model.narration
+         ]
+            ++ (case model.ending of
+                    Just ending ->
+                        [ Ending.view ending ]
+
+                    Nothing ->
+                        []
+               )
+        )

@@ -106,6 +106,7 @@ type TriggerEffect
     | OpenTerms
     | PlayMusic String
     | StartNarration Int
+    | ShowGameEndingScreen
 
 
 

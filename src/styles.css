@@ -95,3 +95,77 @@ body {
     87.5% {background-position:left 1px top 1px,0 0,100% 100%,0 0}
     100%  {background-position:left 1px bottom 1px,100% 0,0 100%,0 0}
 }
+
+.endingTextContainer {
+    opacity: 0;
+    transition: opacity 3s ease-in-out;
+    background: black;
+    color: white;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.endingTextContainer.visible {
+    opacity: 1;
+}
+
+.endingTextContainer.fadeOut > div {
+    transition: opacity 5s ease-out;
+    opacity: 0;
+}
+.endingTextContainer .becauseText {
+    padding: 0 5vw;
+    font-size: 5vh;
+    opacity: 0;
+    transition: opacity 200ms ease-in-out;
+}
+.endingTextContainer .becauseText.visible {
+    opacity: 1;
+}
+.endingTextContainer .citoc {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-evenly;
+    flex-direction: column;
+    font-size: 10vh;
+    text-orientation: upright;
+    writing-mode: vertical-lr;
+    letter-spacing: -1.5vh;
+    transition: color 2s ease-out;
+    text-transform: uppercase;
+}
+.endingTextContainer .citoc > div.visible {
+    opacity: 1;
+}
+.endingTextContainer .citoc > div {
+    opacity: 0;
+    transition:
+            opacity 200ms ease-in-out,
+            transform 1s ease-in-out,
+            margin 3s ease-in-out;
+    transition-delay: 0s, 4.5s, 3s;
+    margin: 0 -3vw;
+}
+
+.endingTextContainer .citoc.acronymOnly > div:last-child {
+    transform: scaleX(-1);
+}
+
+.endingTextContainer .citoc.acronymOnly {
+    color: transparent;
+}
+
+.endingTextContainer .citoc.acronymOnly > div {
+    margin: 0 -25vw;
+}
+
+.endingTextContainer .citoc > div::first-letter {
+    color: white;
+}

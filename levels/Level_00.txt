@@ -158,7 +158,7 @@
             #b#
             #.#
             #.#???????????????????????#################
-            #.looooooooooooooooooooooo.................
+            #.loooooooooooooąooooooooo.................ó
             #.#???????????????????????#################
             #.#
             #.#
@@ -237,3 +237,5 @@ B BreakableWall [StepIn] [InitFog Color.white (Length.meters 0.5), PlayMusic "en
 L Empty [StepIn] [StartNarration 13, ChangeTile @l Floor, RemoveAllTriggersInSectors @L]
 l Wall
 ? (InvisibleWall Empty)
+ą OpenFloor [StepIn] [PlayMusic "ending_loop2.mp3", RemoveAllTriggersInSector @ą]
+ó Empty [StepIn] [ShowGameEndingScreen]
