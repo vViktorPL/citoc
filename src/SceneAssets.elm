@@ -15,6 +15,7 @@ module SceneAssets exposing
     , sandbox
     , sign
     , subscription
+    , tangram
     , terms
     , toyBucket
     , update
@@ -29,8 +30,11 @@ import Color exposing (Color)
 import Dict exposing (Dict)
 import Length exposing (Length, Meters)
 import Luminance
+import Mass
 import MeshCollection exposing (Model(..))
 import Obj.Decode exposing (ObjCoordinates)
+import Physics.Body
+import Physics.Shape
 import Point3d
 import Scene3d
 import Scene3d.Material
@@ -65,6 +69,7 @@ type alias ReadyAssetsData =
     , sandbox : SceneEntity
     , wallTexture : ( Scene3d.Material.Texture Color, Scene3d.Material.Texture Float )
     , terms : ( SceneEntity, SceneEntity )
+    , tangram : List (Physics.Body.Body (Scene3d.Entity ObjCoordinates))
     }
 
 
@@ -107,13 +112,14 @@ texturesToLoad =
 
 
 meshesToLoad =
-    [ "ToyBucket.obj"
-    , "wall.obj"
+    [ ( "ToyBucket.obj", MeshCollection.SingleEntity )
+    , ( "wall.obj", MeshCollection.SingleEntity )
 
     --, "wallCorner.obj"
-    , "wallDoor.obj"
-    , "wallCornerHalfTower.obj"
-    , "Chair.obj"
+    , ( "wallDoor.obj", MeshCollection.SingleEntity )
+    , ( "wallCornerHalfTower.obj", MeshCollection.SingleEntity )
+    , ( "Chair.obj", MeshCollection.SingleEntity )
+    , ( "tangram.obj", MeshCollection.Subentities )
     ]
 
 
@@ -382,10 +388,27 @@ initializeEntities model =
                                 (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
                                 (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
                                 |> Maybe.withDefault ( Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0 )
+                        , tangram =
+                            List.map2
+                                (\entity vertices ->
+                                    let
+                                        bodyVertices =
+                                            TriangularMesh.mapVertices (Point3d.unwrap >> Point3d.unsafe) vertices
+                                    in
+                                    Physics.Body.compound [ Physics.Shape.unsafeConvex bodyVertices ] entity
+                                        |> Physics.Body.withBehavior (Physics.Body.dynamic (Mass.grams 10))
+                                )
+                                (MeshCollection.getMeshSubentities meshes "tangram.obj" (Just (Scene3d.Material.constant Color.white)))
+                                (MeshCollection.getMeshVertices meshes "tangram.obj")
                         }
 
                 _ ->
                     model
+
+
+
+--Physics.Body.compound [ Physics.Shape.unsafeConvex triangleForPhysics ] (WallTriangle ( position, texturedTriangle ))
+--                                |> Physics.Body.withBehavior (Physics.Body.dynamic (Mass.kilograms 1))
 
 
 signTextureIds =
@@ -673,3 +696,13 @@ wallTexture model =
 
         _ ->
             ( Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0 )
+
+
+tangram : Model -> List (Physics.Body.Body SceneEntity)
+tangram model =
+    case model of
+        ReadyAssets data ->
+            data.tangram
+
+        _ ->
+            []

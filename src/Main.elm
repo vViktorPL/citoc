@@ -105,7 +105,7 @@ update msg model =
                 Menu.StartNewGame ->
                     let
                         ( initializedGameModel, gameCmd ) =
-                            Game.init
+                            Game.init model.sceneAssets
                     in
                     ( { model | screen = Playing initializedGameModel }, Cmd.map GameMsg gameCmd )
 

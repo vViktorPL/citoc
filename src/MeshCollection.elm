@@ -1,29 +1,42 @@
-module MeshCollection exposing (Model(..), Msg, getMeshEntity, init, update)
+module MeshCollection exposing (MeshLoadMode(..), Model(..), Msg, getMeshEntity, getMeshSubentities, getMeshVertices, init, update)
 
 import Color exposing (Color)
 import Dict exposing (Dict)
 import Http
 import Length exposing (Meters)
 import Obj.Decode exposing (Decoder, ObjCoordinates)
+import Point3d exposing (Point3d)
 import Scene3d
 import Scene3d.Material exposing (Texture)
 import Scene3d.Mesh exposing (Textured, Uniform)
 import Task exposing (Task)
+import TriangularMesh exposing (TriangularMesh)
 
 
 type ViewMesh
-    = TexturedMesh (Textured ObjCoordinates)
-    | UniformMesh (Uniform ObjCoordinates)
+    = TexturedMesh (TriangularMesh (Point3d Length.Meters ObjCoordinates)) (Textured ObjCoordinates)
+    | UniformMesh (TriangularMesh (Point3d Length.Meters ObjCoordinates)) (Uniform ObjCoordinates)
+    | MeshGroup (List ViewMesh)
 
 
 meshDecoder : Decoder ViewMesh
 meshDecoder =
     Obj.Decode.oneOf
-        [ Obj.Decode.texturedFaces |> Obj.Decode.map (Scene3d.Mesh.texturedFaces >> TexturedMesh)
-        , Obj.Decode.faces |> Obj.Decode.map (Scene3d.Mesh.indexedFaces >> UniformMesh)
-        , Obj.Decode.texturedTriangles |> Obj.Decode.map (Scene3d.Mesh.texturedFacets >> TexturedMesh)
-        , Obj.Decode.triangles |> Obj.Decode.map (Scene3d.Mesh.indexedFacets >> UniformMesh)
+        [ Obj.Decode.texturedFaces
+            |> Obj.Decode.map (\decodedMesh -> TexturedMesh (TriangularMesh.mapVertices .position decodedMesh) (Scene3d.Mesh.texturedFaces decodedMesh))
+        , Obj.Decode.faces
+            |> Obj.Decode.map (\decodedMesh -> UniformMesh (TriangularMesh.mapVertices .position decodedMesh) (Scene3d.Mesh.indexedFaces decodedMesh))
+        , Obj.Decode.texturedTriangles
+            |> Obj.Decode.map (\decodedMesh -> TexturedMesh (TriangularMesh.mapVertices .position decodedMesh) (Scene3d.Mesh.texturedFacets decodedMesh))
+        , Obj.Decode.triangles
+            |> Obj.Decode.map (\decodedMesh -> UniformMesh decodedMesh (Scene3d.Mesh.indexedFacets decodedMesh))
         ]
+
+
+groupedMeshDecoder : Decoder ViewMesh
+groupedMeshDecoder =
+    Obj.Decode.objectNames
+        |> Obj.Decode.andThen (List.map (\objName -> Obj.Decode.object objName meshDecoder) >> Obj.Decode.combine >> Obj.Decode.map MeshGroup)
 
 
 type Model
@@ -36,11 +49,26 @@ type Msg
     = LoadedMeshes (Result String (List ( String, ViewMesh )))
 
 
-init : List String -> ( Model, Cmd Msg )
+type MeshLoadMode
+    = SingleEntity
+    | Subentities
+
+
+init : List ( String, MeshLoadMode ) -> ( Model, Cmd Msg )
 init fileNames =
     ( MeshCollectionInitializing
     , fileNames
-        |> List.map (\fileName -> Task.map (Tuple.pair fileName) (getMesh fileName))
+        |> List.map
+            (\( fileName, loadMode ) ->
+                Task.map (Tuple.pair fileName)
+                    (case loadMode of
+                        SingleEntity ->
+                            getMesh fileName
+
+                        Subentities ->
+                            getGroupedMesh fileName
+                    )
+            )
         |> Task.sequence
         |> Task.attempt LoadedMeshes
     )
@@ -48,6 +76,16 @@ init fileNames =
 
 getMesh : String -> Task String ViewMesh
 getMesh fileName =
+    getMeshHelp fileName meshDecoder
+
+
+getGroupedMesh : String -> Task String ViewMesh
+getGroupedMesh fileName =
+    getMeshHelp fileName groupedMeshDecoder
+
+
+getMeshHelp : String -> Obj.Decode.Decoder a -> Task String a
+getMeshHelp fileName decoder =
     Http.task
         { method = "GET"
         , headers = []
@@ -72,7 +110,7 @@ getMesh fileName =
                         Http.GoodStatus_ _ body ->
                             Obj.Decode.decodeString
                                 Length.meters
-                                meshDecoder
+                                decoder
                                 body
                 )
         , timeout = Nothing
@@ -101,10 +139,59 @@ getMeshEntity model meshFileName texture =
             Nothing
 
 
+getMeshSubentities : Model -> String -> Maybe (Texture Color) -> List (Scene3d.Entity ObjCoordinates)
+getMeshSubentities model meshFileName texture =
+    case model of
+        MeshCollectionLoaded dict ->
+            Dict.get meshFileName dict
+                |> Maybe.map meshToSubmeshesList
+                |> Maybe.map (List.map (viewMesh texture))
+                |> Maybe.withDefault []
+
+        _ ->
+            []
+
+
+getMeshVertices : Model -> String -> List (TriangularMesh (Point3d Length.Meters ObjCoordinates))
+getMeshVertices model meshFileName =
+    case model of
+        MeshCollectionLoaded dict ->
+            Dict.get meshFileName dict
+                |> Maybe.map getMeshVerticesHelp
+                |> Maybe.withDefault []
+
+        _ ->
+            []
+
+
+getMeshVerticesHelp : ViewMesh -> List (TriangularMesh (Point3d Length.Meters ObjCoordinates))
+getMeshVerticesHelp mesh =
+    case mesh of
+        TexturedMesh vertices _ ->
+            [ vertices ]
+
+        UniformMesh vertices _ ->
+            [ vertices ]
+
+        MeshGroup meshes ->
+            meshes
+                |> List.concatMap getMeshVerticesHelp
+
+
+meshToSubmeshesList : ViewMesh -> List ViewMesh
+meshToSubmeshesList mesh =
+    case mesh of
+        MeshGroup submeshes ->
+            List.concatMap meshToSubmeshesList submeshes
+
+        singleMesh ->
+            List.singleton singleMesh
+
+
 viewMesh : Maybe (Texture Color) -> ViewMesh -> Scene3d.Entity ObjCoordinates
 viewMesh loadingTexture mesh =
     case mesh of
-        TexturedMesh texturedMesh ->
+        TexturedMesh _ texturedMesh ->
             case loadingTexture of
                 Just texture ->
                     Scene3d.mesh (Scene3d.Material.texturedMatte texture) texturedMesh
@@ -112,5 +199,10 @@ viewMesh loadingTexture mesh =
                 Nothing ->
                     Scene3d.mesh (Scene3d.Material.matte Color.red) texturedMesh
 
-        UniformMesh uniformMesh ->
+        UniformMesh _ uniformMesh ->
             Scene3d.mesh (Scene3d.Material.matte Color.blue) uniformMesh
+
+        MeshGroup meshes ->
+            meshes
+                |> List.map (viewMesh loadingTexture)
+                |> Scene3d.group

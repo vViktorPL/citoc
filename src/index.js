@@ -33,7 +33,8 @@ const musicFiles = [
   'ending_loop1.mp3',
   'ending_loop2.mp3',
   'ending_loop3.mp3',
-  'ending_loop4.mp3'
+  'ending_loop4.mp3',
+  'thx-song.mp3'
 ];
 
 import { generateSignTexture } from './texture-generator';

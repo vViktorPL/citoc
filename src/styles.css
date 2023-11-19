@@ -97,8 +97,8 @@ body {
 }
 
 .endingTextContainer {
-    opacity: 0;
-    transition: opacity 3s ease-in-out;
+    opacity: 1;
+    transition: opacity 2s ease-in-out;
     background: black;
     color: white;
     font-family: sans-serif;
@@ -112,12 +112,8 @@ body {
     height: 100%;
 }
 
-.endingTextContainer.visible {
-    opacity: 1;
-}
-
 .endingTextContainer.fadeOut > div {
-    transition: opacity 5s ease-out;
+    transition: opacity 1.5s ease-out;
     opacity: 0;
 }
 .endingTextContainer .becauseText {
@@ -168,4 +164,72 @@ body {
 
 .endingTextContainer .citoc > div::first-letter {
     color: white;
+}
+
+.credits {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+}
+
+.credits-text {
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 1;
+    font-family: Verdana;
+}
+
+.credits-text > div:not(:first-child) {
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    font-size: 32px;
+    margin-top: 1.1em;
+    max-width: 500px;
+}
+.credits-text.visible > div:not(:first-child) {
+    opacity: 1;
+}
+
+.credits-text > div:nth-child(2) {
+    transition-delay: 300ms;
+}
+
+/* Author */
+.credits-text:first-child > div:first-child {
+    font-size: 32px;
+}
+.credits-text:first-child > div:nth-child(2) {
+    font-size: 50px;
+}
+
+.credits-text > div:nth-child(3) {
+    transition-delay: 800ms;
+}
+
+
+.credits-text.visible {
+    opacity: 1;
+}
+
+.credits-3d-scene {
+    position: absolute;
+    transition: opacity 3s ease-in-out;
+    opacity: 0;
+}
+
+.credits-3d-scene.visible {
+    opacity: 1;
 }
