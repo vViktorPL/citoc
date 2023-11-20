@@ -11,10 +11,6 @@
 #%%%%%#
 #######
 
-
-
-
-
  %%%%%%%%%%%%%%%%%%%%%%%%
  %%%%%%%%%%%%%%%%%%%%%%%%
  %%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,10 +64,6 @@
  %%%%%%%%%%%g%%%%%%%%%%%%
 
 
-
-
-
-
 +++         #######
 +G+         #.....#
 + +         #..s..#
@@ -95,19 +87,6 @@
 +o+
 +f+
 
-
-
-
-
-
-
-
-
-
-
-
-
-
        ##########
        #...#...##
        #.#.#.#.##
@@ -124,13 +103,6 @@
 #.##.#
 #..D.#
 ######
-
-
-
-
-
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -196,8 +168,6 @@
 #..A.#
 ######
 
-
-
 ---
 ^ Floor [StepIn] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
 % Sand
@@ -212,7 +182,7 @@ t ToyBucket
 ! (InvisibleWall Sand)
 + (InvisibleWall Empty)
 C BigCastle
-g Sand [StepIn] [PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), Teleport @G]
+g Sand [StepIn] [PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), Teleport @G, RemoveAllTriggersInSector @g]
 f Chair [StepIn, LookAngle South] [StartNarration 6, Teleport @F, SitDown, RemoveAllTriggersInSector @f]
 F Chair
 p Empty

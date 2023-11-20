@@ -547,8 +547,8 @@ handleTriggers model newPlayer =
                     SitDown ->
                         ( { modelAcc | player = Player.sitDown modelAcc.player }, cmdAcc )
 
-                    OpenTerms ->
-                        ( { modelAcc | level = Level.openTerms modelAcc.level }, Cmd.batch [ cmdAcc, Sound.playSound "elevator_door.mp3" ] )
+                    OpenTerms sector ->
+                        ( { modelAcc | level = Level.openTerms modelAcc.level sector }, Cmd.batch [ cmdAcc, Sound.playSound "elevator_door.mp3" ] )
 
                     PlayMusic fileName ->
                         ( modelAcc, Cmd.batch [ cmdAcc, Sound.playMusic fileName ] )
@@ -612,7 +612,7 @@ viewGame sceneAssets model opacity =
             ]
             [ Scene3d.cloudy
                 { entities =
-                    [ Level.view sceneAssets model.level
+                    [ Level.view sceneAssets (Player.getSector model.player) model.level
                     ]
                 , camera = Player.view model.player
                 , upDirection = Direction3d.z

@@ -1,6 +1,7 @@
 module Level exposing (..)
 
 import Angle
+import Array exposing (Array)
 import Axis3d
 import Block3d
 import BreakableWall
@@ -24,14 +25,20 @@ import Vector3d exposing (Vector3d)
 
 type Level
     = Level
-        { staticEntities : List StaticEntity
-        , dynamicEntities : List DynamicEntity
+        { partitions : Array Partition
         , collisions : Dict ( Int, Int ) Bool
         , dynamicCollisions : List ( Int, Int )
         , triggers : List Trigger
+        , sectorYToPartitionIndex : Dict Int Int
         , startingPosition : ( Int, Int )
         , startingOrientation : Orientation
         }
+
+
+type alias Partition =
+    { staticEntities : List StaticEntity
+    , dynamicEntities : List DynamicEntity
+    }
 
 
 type alias StaticEntity =
@@ -103,7 +110,7 @@ type TriggerEffect
     | PlaySound String
     | InitFog Color Length
     | SitDown
-    | OpenTerms
+    | OpenTerms ( Int, Int )
     | PlayMusic String
     | StartNarration Int
     | ShowGameEndingScreen
@@ -137,40 +144,56 @@ getStartingOrientation (Level levelData) =
 fromData : List (List LevelTile) -> List Trigger -> ( Int, Int ) -> Orientation -> Level
 fromData tiles triggers startingPosition startingOrientation =
     let
-        sectorTilePairs =
+        partitioningData =
             tiles
                 |> List.indexedMap Tuple.pair
-                |> List.concatMap
-                    (\( y, row ) ->
-                        row
-                            |> List.indexedMap
-                                (\x tile -> ( ( x, y ), tile ))
+                |> List.foldl
+                    (\( y, row ) { tilePartitions, currentPartition, yDict, partitionYOffset, partitionIndex } ->
+                        if List.all ((==) Empty) row then
+                            { tilePartitions = tilePartitions ++ [ currentPartition ]
+                            , currentPartition = []
+                            , yDict = yDict
+                            , partitionYOffset = y + 1
+                            , partitionIndex = partitionIndex + 1
+                            }
+
+                        else
+                            { tilePartitions = tilePartitions
+                            , currentPartition = currentPartition ++ List.indexedMap (\x tile -> ( ( x, y ), tile )) row
+                            , yDict = Dict.insert y partitionIndex yDict
+                            , partitionYOffset = partitionYOffset
+                            , partitionIndex = partitionIndex
+                            }
                     )
+                    { tilePartitions = [], currentPartition = [], yDict = Dict.empty, partitionYOffset = 0, partitionIndex = 0 }
 
-        ( staticEntities, dynamicEntities ) =
-            sectorTilePairs
-                |> List.foldr
-                    (\( sector, tile ) ( staticEntitiesAcc, dynamicEntitiesAcc ) ->
-                        case tile of
-                            Terms ->
-                                ( staticEntitiesAcc, TermsEntity sector Terms.init :: dynamicEntitiesAcc )
+        partitions =
+            partitioningData.tilePartitions
+                |> List.map
+                    (List.foldl
+                        (\( sector, tile ) { staticEntities, dynamicEntities } ->
+                            case tile of
+                                Terms ->
+                                    { staticEntities = staticEntities, dynamicEntities = TermsEntity sector Terms.init :: dynamicEntities }
 
-                            BreakableWall ->
-                                ( staticEntitiesAcc, BreakableWallEntity sector BreakableWall.init :: dynamicEntitiesAcc )
+                                BreakableWall ->
+                                    { staticEntities = staticEntities, dynamicEntities = BreakableWallEntity sector BreakableWall.init :: dynamicEntities }
 
-                            Empty ->
-                                ( staticEntitiesAcc, dynamicEntitiesAcc )
+                                Empty ->
+                                    { staticEntities = staticEntities, dynamicEntities = dynamicEntities }
 
-                            _ ->
-                                ( { sector = sector, tile = tile } :: staticEntitiesAcc, dynamicEntitiesAcc )
+                                _ ->
+                                    { staticEntities = { sector = sector, tile = tile } :: staticEntities, dynamicEntities = dynamicEntities }
+                        )
+                        { staticEntities = [], dynamicEntities = [] }
                     )
-                    ( [], [] )
     in
     Level
-        { staticEntities = staticEntities
-        , dynamicEntities = dynamicEntities
+        { partitions = Array.fromList partitions
+        , sectorYToPartitionIndex = partitioningData.yDict
         , dynamicCollisions =
-            dynamicEntities
+            partitions
+                |> List.concatMap .dynamicEntities
                 |> List.map
                     (\dynamicEntity ->
                         case dynamicEntity of
@@ -181,7 +204,8 @@ fromData tiles triggers startingPosition startingOrientation =
                                 sector
                     )
         , collisions =
-            staticEntities
+            partitions
+                |> List.concatMap .staticEntities
                 |> List.map (\tileEntity -> ( tileEntity.sector, tileCollides tileEntity.tile ))
                 |> Dict.fromList
         , triggers = triggers
@@ -190,10 +214,18 @@ fromData tiles triggers startingPosition startingOrientation =
         }
 
 
+partitionForSector ( x, y ) { partitions, sectorYToPartitionIndex } =
+    Dict.get y sectorYToPartitionIndex
+        |> Maybe.andThen (\partitionIndex -> Array.get partitionIndex partitions)
+        |> Maybe.withDefault { staticEntities = [], dynamicEntities = [] }
+
+
 collisionOnSector : Level -> ( Int, Int ) -> Bool
 collisionOnSector (Level levelData) sector =
     if List.any ((==) sector) levelData.dynamicCollisions then
-        levelData.dynamicEntities
+        levelData
+            |> partitionForSector sector
+            |> .dynamicEntities
             |> List.any
                 (\dynamicEntity ->
                     case dynamicEntity of
@@ -255,38 +287,112 @@ interactAsCylinder radius center v level =
             ( NoInteraction, Cmd.none )
 
 
+mapDynamicEntity : (DynamicEntity -> DynamicEntity) -> ( Int, Int ) -> Level -> Level
+mapDynamicEntity f sector level =
+    let
+        (Level { sectorYToPartitionIndex }) =
+            level
+    in
+    case Dict.get (Tuple.second sector) sectorYToPartitionIndex of
+        Just partitionIndex ->
+            mapPartition
+                (\partition ->
+                    { partition
+                        | dynamicEntities =
+                            List.map
+                                (\entity ->
+                                    if getDynamicEntitySector entity == sector then
+                                        f entity
+
+                                    else
+                                        entity
+                                )
+                                partition.dynamicEntities
+                    }
+                )
+                partitionIndex
+                level
+
+        Nothing ->
+            level
+
+
+mapStaticEntity : (StaticEntity -> StaticEntity) -> ( Int, Int ) -> Level -> Level
+mapStaticEntity f sector level =
+    let
+        (Level { sectorYToPartitionIndex }) =
+            level
+    in
+    case Dict.get (Tuple.second sector) sectorYToPartitionIndex of
+        Just partitionIndex ->
+            mapPartition
+                (\partition ->
+                    { partition
+                        | staticEntities =
+                            List.map
+                                (\entity ->
+                                    if entity.sector == sector then
+                                        f entity
+
+                                    else
+                                        entity
+                                )
+                                partition.staticEntities
+                    }
+                )
+                partitionIndex
+                level
+
+        Nothing ->
+            level
+
+
+getDynamicEntitySector : DynamicEntity -> ( Int, Int )
+getDynamicEntitySector dynamicEntity =
+    case dynamicEntity of
+        BreakableWallEntity sector _ ->
+            sector
+
+        TermsEntity sector _ ->
+            sector
+
+
+mapPartition : (Partition -> Partition) -> Int -> Level -> Level
+mapPartition f index (Level levelData) =
+    case Array.get index levelData.partitions of
+        Just partition ->
+            Level { levelData | partitions = Array.set index (f partition) levelData.partitions }
+
+        Nothing ->
+            Level levelData
+
+
 breakWall : Level -> ( Int, Int ) -> Point3d.Point3d Length.Meters WorldCoordinates -> Vector3d.Vector3d Length.Meters WorldCoordinates -> Level
-breakWall (Level level) sector collisionPoint speedVector =
-    Level
-        { level
-            | dynamicEntities =
-                List.map
-                    (\dynamicEntity ->
-                        case dynamicEntity of
-                            BreakableWallEntity entitySector breakableWall ->
-                                if entitySector == sector then
-                                    let
-                                        { x, y, z } =
-                                            Point3d.toMeters collisionPoint
+breakWall level sector collisionPoint speedVector =
+    mapDynamicEntity
+        (\dynamicEntity ->
+            case dynamicEntity of
+                BreakableWallEntity entitySector breakableWall ->
+                    let
+                        { x, y, z } =
+                            Point3d.toMeters collisionPoint
 
-                                        offsetX =
-                                            -x - toFloat (floor -x) - 0.5
-                                    in
-                                    BreakableWallEntity entitySector (BreakableWall.break (Point2d.fromMeters { x = offsetX, y = 1 - z }) speedVector breakableWall)
+                        offsetX =
+                            -x - toFloat (floor -x) - 0.5
+                    in
+                    BreakableWallEntity entitySector (BreakableWall.break (Point2d.fromMeters { x = offsetX, y = 1 - z }) speedVector breakableWall)
 
-                                else
-                                    BreakableWallEntity entitySector breakableWall
-
-                            _ ->
-                                dynamicEntity
-                    )
-                    level.dynamicEntities
-        }
+                _ ->
+                    dynamicEntity
+        )
+        sector
+        level
 
 
 dynamicEntityAtSector : Level -> ( Int, Int ) -> Maybe DynamicEntity
 dynamicEntityAtSector (Level level) sector =
-    level.dynamicEntities
+    partitionForSector sector level
+        |> .dynamicEntities
         |> List.filter
             (\dynamicEntity ->
                 case dynamicEntity of
@@ -474,21 +580,12 @@ tileCollides levelTile =
 
 
 updateTile : ( Int, Int ) -> LevelTile -> Level -> Level
-updateTile sector newTile (Level levelData) =
-    Level
-        { levelData
-            | staticEntities =
-                levelData.staticEntities
-                    |> List.map
-                        (\tileEntity ->
-                            if tileEntity.sector == sector then
-                                { sector = sector, tile = newTile }
-
-                            else
-                                tileEntity
-                        )
-            , collisions = Dict.insert sector (tileCollides newTile) levelData.collisions
-        }
+updateTile sector newTile level =
+    let
+        (Level levelData) =
+            mapStaticEntity (always { sector = sector, tile = newTile }) sector level
+    in
+    Level { levelData | collisions = Dict.insert sector (tileCollides newTile) levelData.collisions }
 
 
 addTrigger : Trigger -> Level -> Level
@@ -655,11 +752,15 @@ viewTile sceneAssets ( x, y ) tile =
             Scene3d.nothing
 
 
-view : SceneAssets.Model -> Level -> Scene3d.Entity WorldCoordinates
-view sceneAssets (Level levelData) =
-    [ levelData.staticEntities
+view : SceneAssets.Model -> ( Int, Int ) -> Level -> Scene3d.Entity WorldCoordinates
+view sceneAssets sector (Level levelData) =
+    let
+        { staticEntities, dynamicEntities } =
+            partitionForSector sector levelData
+    in
+    [ staticEntities
         |> List.map (\tileEntity -> viewTile sceneAssets tileEntity.sector tileEntity.tile)
-    , levelData.dynamicEntities
+    , dynamicEntities
         |> List.map
             (\dynamicEntity ->
                 case dynamicEntity of
@@ -686,33 +787,37 @@ update : Float -> Level -> Level
 update delta (Level levelData) =
     Level
         { levelData
-            | dynamicEntities =
-                levelData.dynamicEntities
-                    |> List.map
-                        (\dynamicEntity ->
-                            case dynamicEntity of
-                                TermsEntity sector termsState ->
-                                    TermsEntity sector (Terms.update delta termsState)
+            | partitions =
+                levelData.partitions
+                    |> Array.map
+                        (\partition ->
+                            { partition
+                                | dynamicEntities =
+                                    List.map
+                                        (\dynamicEntity ->
+                                            case dynamicEntity of
+                                                TermsEntity sector termsState ->
+                                                    TermsEntity sector (Terms.update delta termsState)
 
-                                BreakableWallEntity sector breakableWall ->
-                                    BreakableWallEntity sector (BreakableWall.update delta breakableWall)
+                                                BreakableWallEntity sector breakableWall ->
+                                                    BreakableWallEntity sector (BreakableWall.update delta breakableWall)
+                                        )
+                                        partition.dynamicEntities
+                            }
                         )
         }
 
 
-openTerms : Level -> Level
-openTerms (Level levelData) =
-    Level
-        { levelData
-            | dynamicEntities =
-                List.map
-                    (\dynamicEntity ->
-                        case dynamicEntity of
-                            TermsEntity sector termsState ->
-                                TermsEntity sector (Terms.open termsState)
+openTerms : Level -> ( Int, Int ) -> Level
+openTerms level sector =
+    mapDynamicEntity
+        (\dynamicEntity ->
+            case dynamicEntity of
+                TermsEntity entitySector termsState ->
+                    TermsEntity entitySector (Terms.open termsState)
 
-                            _ ->
-                                dynamicEntity
-                    )
-                    levelData.dynamicEntities
-        }
+                _ ->
+                    dynamicEntity
+        )
+        sector
+        level

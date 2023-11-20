@@ -16,8 +16,8 @@ X Floor [StepIn] [NextLevel]
 A Wall
 | Wall
 T Terms [StepIn] [PlayMusic "first-level.mp3", RemoveAllTriggersInSector @T]
-t BlackFloor [Nod] [OpenTerms, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
-^ BlackFloor [Nod] [OpenTerms, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+t BlackFloor [Nod] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+^ BlackFloor [Nod] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
 B BlackWall
 - Floor
 e Floor [LookAngle North] [ChangeTile @- Wall, RemoveAllTriggersInSector @e]
