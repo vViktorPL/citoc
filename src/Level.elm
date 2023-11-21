@@ -26,6 +26,7 @@ import Vector3d exposing (Vector3d)
 type Level
     = Level
         { partitions : Array Partition
+        , groundSounds : Dict ( Int, Int ) GroundSound
         , collisions : Dict ( Int, Int ) Bool
         , dynamicCollisions : List ( Int, Int )
         , triggers : List Trigger
@@ -81,6 +82,12 @@ type LevelTile
     | Empty
 
 
+type GroundSound
+    = SolidFloor
+    | SandGround
+    | VoidGround
+
+
 type alias Trigger =
     { sector : ( Int, Int )
     , conditions : List TriggerCondition
@@ -116,8 +123,10 @@ type TriggerEffect
     | ShowGameEndingScreen
 
 
-
---| Timeout (List TriggerEffect) Float
+getGroundSound : Level -> ( Int, Int ) -> GroundSound
+getGroundSound (Level levelData) sector =
+    Dict.get sector levelData.groundSounds
+        |> Maybe.withDefault VoidGround
 
 
 pointOnLevel : Float -> Float -> Float -> Point3d.Point3d Length.Meters WorldCoordinates
@@ -167,6 +176,37 @@ fromData tiles triggers startingPosition startingOrientation =
                     )
                     { tilePartitions = [], currentPartition = [], yDict = Dict.empty, partitionYOffset = 0, partitionIndex = 0 }
 
+        groundSounds =
+            partitioningData.tilePartitions
+                |> List.concatMap identity
+                |> List.map
+                    (\( sector, tile ) ->
+                        ( sector
+                        , case tile of
+                            OpenFloor ->
+                                SolidFloor
+
+                            Floor ->
+                                SolidFloor
+
+                            BlackFloor ->
+                                SolidFloor
+
+                            Terms ->
+                                SolidFloor
+
+                            Sand ->
+                                SandGround
+
+                            ToyBucket ->
+                                SandGround
+
+                            _ ->
+                                VoidGround
+                        )
+                    )
+                |> Dict.fromList
+
         partitions =
             partitioningData.tilePartitions
                 |> List.map
@@ -209,6 +249,7 @@ fromData tiles triggers startingPosition startingOrientation =
                 |> List.map (\tileEntity -> ( tileEntity.sector, tileCollides tileEntity.tile ))
                 |> Dict.fromList
         , triggers = triggers
+        , groundSounds = groundSounds
         , startingPosition = startingPosition
         , startingOrientation = startingOrientation
         }

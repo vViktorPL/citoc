@@ -1,5 +1,6 @@
 module Player exposing
-    ( Player
+    ( OutMsg(..)
+    , Player
     , getHorizontalOrientation
     , getMovementVector
     , getPlayerPosition
@@ -51,6 +52,11 @@ type Player
         , lastStepSoundNumber : Int
         , will : PlayerWill
         }
+
+
+type OutMsg
+    = Noop
+    | EmitStepSound Int
 
 
 type PlayerWill
@@ -308,7 +314,7 @@ standStill (Player playerData) =
     Player { playerData | movementX = Nothing, movementY = Nothing, remainingTimeToStepSound = Nothing }
 
 
-update : Float -> Player -> ( Player, Cmd msg )
+update : Float -> Player -> ( Player, OutMsg )
 update delta player =
     player
         |> animatePlayerTurning delta
@@ -377,7 +383,7 @@ animatePlayer delta (Player playerData) =
                 Player { playerData | will = StandingUp newZPositionOffset }
 
 
-updatePlayerSteps : Float -> Player -> ( Player, Cmd msg )
+updatePlayerSteps : Float -> Player -> ( Player, OutMsg )
 updatePlayerSteps delta (Player playerData) =
     case playerData.remainingTimeToStepSound of
         Just previousTime ->
@@ -394,14 +400,16 @@ updatePlayerSteps delta (Player playerData) =
                         | remainingTimeToStepSound = Just millisecondsPerStep
                         , lastStepSoundNumber = newStepSoundNumber
                     }
-                , Sound.playSound ("step-" ++ String.fromInt newStepSoundNumber ++ ".mp3")
+                , EmitStepSound newStepSoundNumber
                 )
+                --, Sound.playSound ("step-" ++ String.fromInt newStepSoundNumber ++ ".mp3")
+                --)
 
             else
-                ( Player { playerData | remainingTimeToStepSound = Just newTime }, Cmd.none )
+                ( Player { playerData | remainingTimeToStepSound = Just newTime }, Noop )
 
         Nothing ->
-            ( Player playerData, Cmd.none )
+            ( Player playerData, Noop )
 
 
 calculateStepSoundNumber : Float -> Int -> Int

@@ -142,6 +142,24 @@ playerTriggerInteraction model player =
         ( modelAfterTriggers, cmd )
 
 
+handleStepSounds : Level.Level -> Player.Player -> Player.OutMsg -> Cmd msg
+handleStepSounds level player outmsg =
+    case outmsg of
+        Player.EmitStepSound soundNumber ->
+            case Level.getGroundSound level (Player.getSector player) of
+                Level.SolidFloor ->
+                    Sound.playSound ("step-" ++ String.fromInt soundNumber ++ ".mp3")
+
+                Level.SandGround ->
+                    Sound.playSound "sand-step.mp3"
+
+                _ ->
+                    Cmd.none
+
+        _ ->
+            Cmd.none
+
+
 updateAnimation : Float -> Model -> ( Model, Cmd Msg )
 updateAnimation delta model =
     case model.state of
@@ -153,10 +171,13 @@ updateAnimation delta model =
                 modelToUpdate =
                     { model | level = Level.update delta model.level }
 
-                ( newPlayer, playerCmd ) =
+                ( newPlayer, playerOutMsg ) =
                     model.player
                         |> Player.updatePlayerPosition v
                         |> Player.update delta
+
+                playerCmd =
+                    handleStepSounds modelToUpdate.level newPlayer playerOutMsg
 
                 v =
                     Player.getMovementVector model.player
@@ -172,10 +193,13 @@ updateAnimation delta model =
                 --player = newPlayer,
                 Level.LevelCollision adjustedVector ->
                     let
-                        ( adjustedPlayer, adjustedCmd ) =
+                        ( adjustedPlayer, adjustedOutMsg ) =
                             model.player
                                 |> Player.updatePlayerPosition adjustedVector
                                 |> Player.update delta
+
+                        adjustedCmd =
+                            handleStepSounds postTriggerModel.level adjustedPlayer adjustedOutMsg
 
                         ( postTriggerModel, triggerCmd ) =
                             playerTriggerInteraction modelToUpdate adjustedPlayer
