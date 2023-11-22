@@ -19,6 +19,7 @@
            #.##
            #...
            ####
+
 ---
 1 Floor [EnteredFrom North] [Teleport @v]
 2 Floor [StepIn] [Teleport @W]

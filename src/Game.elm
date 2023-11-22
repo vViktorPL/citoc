@@ -17,11 +17,13 @@ import Narration
 import Orientation exposing (Orientation(..))
 import Pixels
 import Player exposing (Player)
+import Point3d
 import Scene3d
 import SceneAssets
 import Sound
 import Task
 import Vector3d
+import WebBrowser
 
 
 subscriptions : Model -> Sub Msg
@@ -32,6 +34,7 @@ subscriptions _ =
         , Browser.Events.onKeyUp (Decode.map KeyUp keyDecoder)
         , Browser.Events.onMouseMove (Decode.map MouseMove lockedMouseMovementDecoder)
         , Browser.Events.onResize WindowResize
+        , WebBrowser.windowShake BrowserWindowShaken
         ]
 
 
@@ -75,6 +78,10 @@ init : SceneAssets.Model -> ( Model, Cmd Msg )
 init sceneAssets =
     let
         level =
+            --LevelIndex.restLevels
+            --    |> List.drop 1
+            --    |> List.head
+            --    |> Maybe.withDefault
             LevelIndex.firstLevel
     in
     ( { state = Initializing
@@ -105,6 +112,7 @@ type Msg
     | KeyUp ControlKey
     | MouseMove ( Int, Int )
     | WindowResize Int Int
+    | BrowserWindowShaken
 
 
 initFadeInTime =
@@ -353,6 +361,30 @@ update msg model =
             , Cmd.none
             )
 
+        BrowserWindowShaken ->
+            case model.state of
+                Playing ->
+                    let
+                        effectsToExecute =
+                            Level.getAllTriggers model.level
+                                |> List.concatMap
+                                    (\{ conditions, effects } ->
+                                        if conditions == [ Level.WindowShake ] then
+                                            effects
+
+                                        else
+                                            []
+                                    )
+                    in
+                    if List.length effectsToExecute > 0 then
+                        executeEffects model effectsToExecute
+
+                    else
+                        ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 controlKeyToPlayerAction : ControlKey -> (Player -> Player)
 controlKeyToPlayerAction key =
@@ -527,10 +559,28 @@ handleTriggers model newPlayer =
                                         Maybe.withDefault 0 (Dict.get counterName model.counters)
                                 in
                                 desiredNumber == counterState
+
+                            WindowShake ->
+                                False
                     )
                     trigger.conditions
             )
         |> List.concatMap .effects
+        |> executeEffects
+            { model
+                | player = newPlayer
+                , gestureHistory =
+                    if newX /= prevX || newY /= prevY then
+                        []
+
+                    else
+                        model.gestureHistory
+            }
+
+
+executeEffects : Model -> List TriggerEffect -> ( Model, Cmd Msg )
+executeEffects model effects =
+    effects
         |> List.foldl
             (\effect ( modelAcc, cmdAcc ) ->
                 case effect of
@@ -586,18 +636,11 @@ handleTriggers model newPlayer =
 
                     ShowGameEndingScreen ->
                         ( { modelAcc | state = FinalFadeOut levelFadeOutTime, fadeColor = "black" }, Cmd.batch [ cmdAcc, Sound.stopMusic () ] )
-            )
-            ( { model
-                | player = newPlayer
-                , gestureHistory =
-                    if newX /= prevX || newY /= prevY then
-                        []
 
-                    else
-                        model.gestureHistory
-              }
-            , Cmd.none
+                    BreakWall sector ->
+                        ( { modelAcc | level = Level.breakWall modelAcc.level sector Point3d.origin Vector3d.zero }, cmdAcc )
             )
+            ( model, Cmd.none )
 
 
 view : SceneAssets.Model -> Model -> Html Msg

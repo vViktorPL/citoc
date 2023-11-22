@@ -50,7 +50,12 @@ type alias StaticEntity =
 
 type DynamicEntity
     = TermsEntity ( Int, Int ) Terms.Model
-    | BreakableWallEntity ( Int, Int ) BreakableWall.Model
+    | BreakableWallEntity ( Int, Int ) BreakableWallType BreakableWall.Model
+
+
+type BreakableWallType
+    = Glass
+    | HeavyWall
 
 
 type alias WorldCoordinates =
@@ -76,7 +81,7 @@ type LevelTile
     | Chair
     | Sandbox Bool
     | Terms
-    | BreakableWall
+    | BreakableWall BreakableWallType
     | BlackWall
     | BlackFloor
     | Empty
@@ -103,6 +108,7 @@ type TriggerCondition
     | Nod
     | StepIn
     | CounterEquals String Int
+    | WindowShake
 
 
 type TriggerEffect
@@ -121,6 +127,7 @@ type TriggerEffect
     | PlayMusic String
     | StartNarration Int
     | ShowGameEndingScreen
+    | BreakWall ( Int, Int )
 
 
 getGroundSound : Level -> ( Int, Int ) -> GroundSound
@@ -138,6 +145,11 @@ getTriggersAt : Level -> ( Int, Int ) -> List Trigger
 getTriggersAt (Level levelData) sector =
     levelData.triggers
         |> List.filter (\trigger -> trigger.sector == sector)
+
+
+getAllTriggers : Level -> List Trigger
+getAllTriggers (Level levelData) =
+    levelData.triggers
 
 
 getStartingPosition : Level -> ( Int, Int )
@@ -216,8 +228,17 @@ fromData tiles triggers startingPosition startingOrientation =
                                 Terms ->
                                     { staticEntities = staticEntities, dynamicEntities = TermsEntity sector Terms.init :: dynamicEntities }
 
-                                BreakableWall ->
-                                    { staticEntities = staticEntities, dynamicEntities = BreakableWallEntity sector BreakableWall.init :: dynamicEntities }
+                                BreakableWall wallType ->
+                                    let
+                                        thickness =
+                                            case wallType of
+                                                Glass ->
+                                                    0.01
+
+                                                HeavyWall ->
+                                                    0.05
+                                    in
+                                    { staticEntities = staticEntities, dynamicEntities = BreakableWallEntity sector wallType (BreakableWall.init thickness) :: dynamicEntities }
 
                                 Empty ->
                                     { staticEntities = staticEntities, dynamicEntities = dynamicEntities }
@@ -240,7 +261,7 @@ fromData tiles triggers startingPosition startingOrientation =
                             TermsEntity sector _ ->
                                 sector
 
-                            BreakableWallEntity sector _ ->
+                            BreakableWallEntity sector _ _ ->
                                 sector
                     )
         , collisions =
@@ -273,7 +294,7 @@ collisionOnSector (Level levelData) sector =
                         TermsEntity entitySector terms ->
                             entitySector == sector && Terms.doesCollide terms
 
-                        BreakableWallEntity entitySector breakableWall ->
+                        BreakableWallEntity entitySector _ breakableWall ->
                             entitySector == sector && not (BreakableWall.isBroken breakableWall)
                 )
 
@@ -315,7 +336,7 @@ interactAsCylinder radius center v level =
     case targetSectorCollision of
         Just sector ->
             case ( dynamicEntityAtSector level sector, adjustedSectorCollision ) of
-                ( Just (BreakableWallEntity _ _), _ ) ->
+                ( Just (BreakableWallEntity _ Glass _), _ ) ->
                     ( LevelUpdated (breakWall level sector center v), Sound.playSound "glass-break.mp3" )
 
                 ( _, Just _ ) ->
@@ -391,7 +412,7 @@ mapStaticEntity f sector level =
 getDynamicEntitySector : DynamicEntity -> ( Int, Int )
 getDynamicEntitySector dynamicEntity =
     case dynamicEntity of
-        BreakableWallEntity sector _ ->
+        BreakableWallEntity sector _ _ ->
             sector
 
         TermsEntity sector _ ->
@@ -413,7 +434,7 @@ breakWall level sector collisionPoint speedVector =
     mapDynamicEntity
         (\dynamicEntity ->
             case dynamicEntity of
-                BreakableWallEntity entitySector breakableWall ->
+                BreakableWallEntity entitySector wallType breakableWall ->
                     let
                         { x, y, z } =
                             Point3d.toMeters collisionPoint
@@ -421,7 +442,7 @@ breakWall level sector collisionPoint speedVector =
                         offsetX =
                             -x - toFloat (floor -x) - 0.5
                     in
-                    BreakableWallEntity entitySector (BreakableWall.break (Point2d.fromMeters { x = offsetX, y = 1 - z }) speedVector breakableWall)
+                    BreakableWallEntity entitySector wallType (BreakableWall.break (Point2d.fromMeters { x = offsetX, y = 1 - z }) speedVector breakableWall)
 
                 _ ->
                     dynamicEntity
@@ -440,7 +461,7 @@ dynamicEntityAtSector (Level level) sector =
                     TermsEntity entitySector _ ->
                         sector == entitySector
 
-                    BreakableWallEntity entitySector _ ->
+                    BreakableWallEntity entitySector _ _ ->
                         sector == entitySector
             )
         |> List.head
@@ -812,7 +833,7 @@ view sceneAssets sector (Level levelData) =
                             , viewTile sceneAssets ( x, y ) BlackFloor
                             ]
 
-                    BreakableWallEntity ( x, y ) breakableWall ->
+                    BreakableWallEntity ( x, y ) _ breakableWall ->
                         Scene3d.group
                             [ BreakableWall.view sceneAssets breakableWall
                                 |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -(toFloat x) (toFloat y + 1) 0))
@@ -840,8 +861,8 @@ update delta (Level levelData) =
                                                 TermsEntity sector termsState ->
                                                     TermsEntity sector (Terms.update delta termsState)
 
-                                                BreakableWallEntity sector breakableWall ->
-                                                    BreakableWallEntity sector (BreakableWall.update delta breakableWall)
+                                                BreakableWallEntity sector wallType breakableWall ->
+                                                    BreakableWallEntity sector wallType (BreakableWall.update delta breakableWall)
                                         )
                                         partition.dynamicEntities
                             }

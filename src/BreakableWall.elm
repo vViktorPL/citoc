@@ -49,7 +49,7 @@ random2DPointGenerator =
 
 random2DPoints =
     Random.step
-        (Random.list 50 random2DPointGenerator)
+        (Random.list 20 random2DPointGenerator)
         (Random.initialSeed 777)
         |> Tuple.first
         |> List.append [ ( 0, 0 ), ( 1, 0 ), ( 0, 1 ), ( 1, 1 ) ]
@@ -57,11 +57,13 @@ random2DPoints =
         |> Array.fromList
 
 
-thickness =
-    0.01
+
+--thickness =
+--    0.01
 
 
-init =
+init : Float -> Model
+init thickness =
     let
         vertexesWithUvs =
             DelaunayTriangulation2d.fromPoints random2DPoints

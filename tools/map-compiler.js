@@ -95,7 +95,7 @@ fs.readdir(path.join(__dirname, '../levels')).then(
 
           const code = [
             `module Level.${filename.replace(".txt", "")} exposing (data)`,
-            'import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), fromData)',
+            'import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), BreakableWallType(..), fromData)',
             'import Orientation exposing (Orientation(..))',
             'import Color',
             'import Length',

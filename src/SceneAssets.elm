@@ -102,6 +102,7 @@ texturesToLoad =
     , GenerateSign "Sign-JustKiddin" "Just kidding"
     , GenerateSign "Sign-Moonwalk" "MOONWALKERS\nONLY"
     , GenerateSign "Sign-Minus1" "-1"
+    , GenerateSign "Sign-ShakeTip" "Sometimes, a digital window\nneeds a nudge to respond."
     , TextureColor "ConeColor.jpg"
     , TextureColor "Ground054_1K-JPG_Color.jpg"
     , TextureFloat "Ground054_1K-JPG_Roughness.jpg"

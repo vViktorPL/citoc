@@ -30,6 +30,7 @@ const sfxFiles = [
 const musicFiles = [
   'menu.mp3',
   'first-level.mp3',
+  'weird-level.mp3',
   'ending_loop0.mp3',
   'ending_loop1.mp3',
   'ending_loop2.mp3',
@@ -39,6 +40,7 @@ const musicFiles = [
 ];
 
 import { generateSignTexture } from './texture-generator';
+import { subscribeToWindowShaking } from './browser-extra';
 
 const soundBuffers = {};
 const musicBuffers = {};
@@ -137,6 +139,8 @@ function startAudioContext() {
   document.addEventListener('click', () => {
     startAudioContext();
   });
+
+  subscribeToWindowShaking(() => app.ports.windowShakeInternal.send(null))
 })();
 
 // MUSIC

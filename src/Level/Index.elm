@@ -9,11 +9,12 @@ import Level.Level_08
 import Level.Level_12
 import Level.Level_13
 import Level.Level_14
-import Level.Level_18
+import Level.Level_20
+import Level.Level_21
 
 
 firstLevel : Level
 firstLevel = Level.Level_00.data
 
 restLevels : List Level
-restLevels = [Level.Level_01.data, Level.Level_02.data, Level.Level_04.data, Level.Level_08.data, Level.Level_12.data, Level.Level_13.data, Level.Level_14.data, Level.Level_18.data]
+restLevels = [Level.Level_01.data, Level.Level_02.data, Level.Level_04.data, Level.Level_08.data, Level.Level_12.data, Level.Level_13.data, Level.Level_14.data, Level.Level_20.data, Level.Level_21.data]

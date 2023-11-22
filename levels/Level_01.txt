@@ -9,6 +9,7 @@
   BtB #.#.#
   B^B #...#
   BBB #####
+
 ---
 Q Floor [StepIn] [PlaySound "rumble.mp3", ChangeTile @A Floor, RemoveAllTriggersInSector @Q]
 A Floor
@@ -21,4 +22,4 @@ t BlackFloor [Nod] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTrigger
 B BlackWall
 - Floor
 e Floor [LookAngle North] [ChangeTile @- Wall, RemoveAllTriggersInSector @e]
-* BreakableWall
+* (BreakableWall HeavyWall)

@@ -11,10 +11,11 @@ E4D#.........# ER.....K
  #####
 
 ---
+v Floor [StepIn] [PlayMusic "weird-level.mp3", RemoveAllTriggersInSector @v]
 0 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-CountTo3" South), Teleport @v, RemoveAllTriggersInSector @0, ChangeTile @A Floor]
 1 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-1" South), Teleport @v, RemoveAllTriggersInSector @1, ChangeTile @B Floor]
 2 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-2" South), Teleport @v, RemoveAllTriggersInSector @2, ChangeTile @C Floor]
-3 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-3" South), Teleport @v, RemoveAllTriggersInSector @3, ChangeTile @D Floor]
+3 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-3" South), RemoveAllTriggersInSector @3, ChangeTile @D Floor, Teleport @v]
 4 Floor [LookAngle West] [Teleport @R]
 A (Sign "Sign-CountTo3" South)
 B (Sign "Sign-1" South)
