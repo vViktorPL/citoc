@@ -1,28 +1,39 @@
-############## ########
-E4D#.........# ER.....K
-##3#.#######.# ######.#
- #C#.#.....#.#     ##X#
- #2#.#.#S#.#.#     ...#
- #B#.#.#v#.#.#     ####
- #1#.#.#...#.#
- #A#.#.#####.#
- #0#.#.......#
- #...#########
- #####
+    ####
+    ...#
+    ##f#####
+     #E3dc.#
+    ####.#.#
+    ...#.#.#
+    ##X#.#.#
+     #.#.#.#####
+     #.#.#.D...#
+ #####B#Csb###.###
+ #.Gv#.......#...#
+ #.#.#.......###F#####
+ #.#.........h.#e....#
+ #.###########.###.#.#
+ #...........H.# #.#.#
+ ###############
+
+
+
 
 ---
-v Floor [StepIn] [PlayMusic "weird-level.mp3", RemoveAllTriggersInSector @v]
-0 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-CountTo3" South), Teleport @v, RemoveAllTriggersInSector @0, ChangeTile @A Floor]
-1 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-1" South), Teleport @v, RemoveAllTriggersInSector @1, ChangeTile @B Floor]
-2 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-2" South), Teleport @v, RemoveAllTriggersInSector @2, ChangeTile @C Floor]
-3 Floor [LookAngle North] [ChangeTile @S (Sign "Sign-3" South), RemoveAllTriggersInSector @3, ChangeTile @D Floor, Teleport @v]
-4 Floor [LookAngle West] [Teleport @R]
-A (Sign "Sign-CountTo3" South)
-B (Sign "Sign-1" South)
-C (Sign "Sign-2" South)
-D (Sign "Sign-3" South)
-E (Sign "Sign-ProgrammerZero" East)
-K (Sign "Sign-JustKiddin" West)
-S Wall
-R Floor
+v Floor [StepIn] [PlayMusic "funky.mp3", RemoveAllTriggersInSector @v]
+s (Sign "Sign-ShakeTip" South)
+b (BreakableWall HeavyWall) [WindowShake] [PlaySound "rumble.mp3", BreakWall @b, RemoveAllTriggersInSector @b]
+C Wall [StepIn] [CreateTrigger (Trigger @d [StepIn] [ChangeTile @D Floor, ChangeTile @b Wall, RemoveAllTriggersInSector @d])]
+c Floor [StepIn] [ChangeTile @C Floor, RemoveAllTriggersInSector @c]
+d Floor
+D Wall
+e Floor [StepIn] [ChangeTile @3 Floor, Teleport @E]
+f Floor [StepIn] [Teleport @F]
+E Floor [StepIn] [ChangeTile @G Floor]
+F Floor
+3 Wall
++ (InvisibleWall Floor)
+B (BreakableWall HeavyWall)
+G Wall
+H Floor [StepIn] [ChangeTile @h Floor, ChangeTile @s (Sign "Sign-ShakeAgain" South), CreateTrigger (Trigger @B [WindowShake] [PlaySound "rumble.mp3", BreakWall @B, RemoveAllTriggersInSector @B]), RemoveAllTriggersInSector @H]
+h Wall
 X Floor [StepIn] [NextLevel]
