@@ -212,7 +212,7 @@ updateAnimation delta model =
                         ( postTriggerModel, triggerCmd ) =
                             playerTriggerInteraction modelToUpdate adjustedPlayer
                     in
-                    ( { postTriggerModel | player = adjustedPlayer }, Cmd.batch [ adjustedCmd, interactionCmd, triggerCmd ] )
+                    ( postTriggerModel, Cmd.batch [ adjustedCmd, interactionCmd, triggerCmd ] )
 
                 Level.NoInteraction ->
                     playerTriggerInteraction modelToUpdate newPlayer
