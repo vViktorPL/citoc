@@ -8,6 +8,8 @@ module Player exposing
     , getVerticalLookAngle
     , initOnLevel
     , playerRadius
+    , safeTeleport
+    , seamlessTeleport
     , sitDown
     , standStill
     , stopStrafingLeft
@@ -17,7 +19,6 @@ module Player exposing
     , stopWalkingForward
     , strafeLeft
     , strafeRight
-    , teleport
     , turnLeft
     , turnRight
     , update
@@ -51,6 +52,8 @@ type Player
         , remainingTimeToStepSound : Maybe Float
         , lastStepSoundNumber : Int
         , will : PlayerWill
+
+        --, upsideDownAvailable : Bool
         }
 
 
@@ -125,8 +128,8 @@ init ( x, y ) orientation =
         }
 
 
-teleport : Player -> ( Int, Int ) -> Player
-teleport (Player playerData) ( x, y ) =
+seamlessTeleport : Player -> ( Int, Int ) -> Player
+seamlessTeleport (Player playerData) ( x, y ) =
     let
         oldPosition3d =
             Point3d.toMeters playerData.position
@@ -140,6 +143,14 @@ teleport (Player playerData) ( x, y ) =
     Player
         { playerData
             | position = pointOnLevel (toFloat x + offsetX) (toFloat y + offsetY) 0.5
+        }
+
+
+safeTeleport : Player -> ( Int, Int ) -> Player
+safeTeleport (Player playerData) ( x, y ) =
+    Player
+        { playerData
+            | position = pointOnLevel (toFloat x + 0.5) (toFloat y + 0.5) 0.5
         }
 
 

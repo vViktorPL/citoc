@@ -551,7 +551,7 @@ handleTriggers model newPlayer =
                                     == [ LookDown, LookUp, LookDown ]
 
                             StepIn ->
-                                True
+                                dX /= 0 || dY /= 0
 
                             CounterEquals counterName desiredNumber ->
                                 let
@@ -585,7 +585,7 @@ executeEffects model effects =
             (\effect ( modelAcc, cmdAcc ) ->
                 case effect of
                     Teleport targetSector ->
-                        ( { modelAcc | player = Player.teleport modelAcc.player targetSector }, cmdAcc )
+                        ( { modelAcc | player = Player.seamlessTeleport modelAcc.player targetSector }, cmdAcc )
 
                     NextLevel ->
                         ( transitionToNextLevel modelAcc, Cmd.batch [ cmdAcc, Sound.playSound "success.mp3" ] )

@@ -31,7 +31,7 @@ view sceneAssets withVoidEntry =
             |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -1 -2 0))
         , if withVoidEntry then
             SceneAssets.castleEntryVoid sceneAssets
-                |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -0.5 0 0))
+                |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters -0.25 0 0))
 
           else
             Scene3d.nothing

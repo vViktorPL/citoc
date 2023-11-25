@@ -63,13 +63,12 @@
  %%%%%%%%%%!C!%%%%%%%%%%%
  %%%%%%%%%%%g%%%%%%%%%%%%
 
-
-+++         #######
-+G+         #.....#
-+ +         #..s..#
-+5+         #..x..#
-+ +         +++F+++
-+ +           +++
++++
++G+
++ +
++5+
++ +
++ +
 + +
 + +
 + +
@@ -86,6 +85,13 @@
 +o+
 +o+
 +f+
+
+#######
+#.....#
+#..s..#
+#..x..#
++++F+++
+  +++
 
        ##########
        #...#...##
@@ -169,7 +175,7 @@
 ######
 
 ---
-^ Floor [StepIn] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
+^ Floor [] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
 % Sand
 o OpenFloor
 3 Sand [StepIn] [StartNarration 3, RemoveAllTriggersInSectors @3]
@@ -182,14 +188,15 @@ t ToyBucket
 ! (InvisibleWall Sand)
 + (InvisibleWall Empty)
 C BigCastle
-g Sand [StepIn] [PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), Teleport @G, RemoveAllTriggersInSector @g]
+g Sand [] [Teleport @G]
+G Empty [] [PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), RemoveAllTriggersInSector @G]
 f Chair [StepIn, LookAngle South] [StartNarration 6, Teleport @F, SitDown, RemoveAllTriggersInSector @f]
 F Chair
 p Empty
 s (Sandbox True)
 S (Sandbox False)
-x Floor [StepIn] [Teleport @X]
-X Floor [StepIn] [StartNarration 7, RemoveAllTriggersInSector @X]
+x Floor [] [Teleport @X]
+X Floor [] [StartNarration 7, RemoveAllTriggersInSector @X]
 _ Wall
 8 Floor [LookAngle South] [StartNarration 8, ChangeTile @_ Floor, RemoveAllTriggersInSector @8]
 ) Wall
