@@ -1,0 +1,19 @@
+#######S#
+#......1#
+#.#####Q#
+#^#   #.#
+###   #.#
+      #.#
+  #.# #.#
+  #.###.#
+  #.X...#
+  #######
+
+---
+^ Floor [] [PlayMusic "funky.mp3", RemoveAllTriggersInSector @^]
+1 Floor [LookAngle North] [ChangeTile @Q Floor]
+1 Floor [LookAngle West] [ChangeTile @Q Wall]
+1 Floor [LookAngle East] [ChangeTile @Q Wall]
+Q Wall [StepIn] [RemoveAllTriggersInSector @1]
+S (Sign "Sign-Moonwalk" South)
+X Floor [StepIn] [NextLevel]

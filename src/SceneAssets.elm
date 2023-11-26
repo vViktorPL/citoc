@@ -1,6 +1,7 @@
 module SceneAssets exposing
     ( Model
     , Msg
+    , barrier
     , blueWallBlock
     , castleDoor
     , castleEntryVoid
@@ -8,6 +9,7 @@ module SceneAssets exposing
     , castleWallTower
     , ceilingTile
     , chair
+    , concreteWall
     , floorTile
     , init
     , ready
@@ -69,6 +71,8 @@ type alias ReadyAssetsData =
     , sandbox : SceneEntity
     , wallTexture : ( Scene3d.Material.Texture Color, Scene3d.Material.Texture Float )
     , terms : ( SceneEntity, SceneEntity )
+    , concreteWall : SceneEntity
+    , barrier : SceneEntity
     , tangram : List (Physics.Body.Body (Scene3d.Entity ObjCoordinates))
     }
 
@@ -110,14 +114,19 @@ texturesToLoad =
     , TextureColor "ToyBucket.png"
     , TextureColor "SofaChairTexture.jpg"
     , TextureColor "toc.png"
+    , TextureColor "Concrete032_4K_Color.jpg"
+    , TextureFloat "Concrete032_4K_Roughness.jpg"
+    , TextureColor "Street_barrier_fence_1_2m_BaseColor.jpg"
+    , TextureFloat "Street_barrier_fence_1_2m_Roughness.jpg"
+    , GenerateSign "Sign-LookHigh" "Look high,\ndon't be shy;\nflip your view,\nnew clues to try!"
+    , GenerateSign "Sign-UpsideDownNotAllowed" "Defying the laws of physics\nis not allowed\nbefore entering next level."
     ]
 
 
 meshesToLoad =
     [ ( "ToyBucket.obj", MeshCollection.SingleEntity )
     , ( "wall.obj", MeshCollection.SingleEntity )
-
-    --, "wallCorner.obj"
+    , ( "Street_barrier_fence_1_2m.obj", MeshCollection.SingleEntity )
     , ( "wallDoor.obj", MeshCollection.SingleEntity )
     , ( "wallCornerHalfTower.obj", MeshCollection.SingleEntity )
     , ( "Chair.obj", MeshCollection.SingleEntity )
@@ -390,6 +399,26 @@ initializeEntities model =
                                 (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
                                 (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
                                 |> Maybe.withDefault ( Scene3d.Material.constant Color.brown, Scene3d.Material.constant 1.0 )
+                        , concreteWall =
+                            Maybe.map2
+                                (\concreteTexture concreteRoughness ->
+                                    let
+                                        material =
+                                            Scene3d.Material.texturedNonmetal { baseColor = concreteTexture, roughness = concreteRoughness }
+                                    in
+                                    Scene3d.quad
+                                        material
+                                        (Point3d.meters 0.5 0 0)
+                                        (Point3d.meters -0.5 0 0)
+                                        (Point3d.meters -0.5 0 1)
+                                        (Point3d.meters 0.5 0 1)
+                                )
+                                (Textures.getTexture textures "Concrete032_4K_Color.jpg")
+                                (Textures.getTextureFloat textures "Concrete032_4K_Roughness.jpg")
+                                |> Maybe.withDefault Scene3d.nothing
+                        , barrier =
+                            MeshCollection.getMeshEntity meshes "Street_barrier_fence_1_2m.obj" (Textures.getTexture textures "Street_barrier_fence_1_2m_BaseColor.jpg")
+                                |> Maybe.withDefault Scene3d.nothing
                         , tangram =
                             List.map2
                                 (\entity vertices ->
@@ -708,3 +737,25 @@ tangram model =
 
         _ ->
             []
+
+
+concreteWall : Model -> SceneEntity
+concreteWall model =
+    case model of
+        ReadyAssets data ->
+            data.concreteWall
+
+        _ ->
+            Scene3d.nothing
+
+
+barrier : Model -> SceneEntity
+barrier model =
+    case model of
+        ReadyAssets data ->
+            data.barrier
+                |> Scene3d.rotateAround Axis3d.x (Angle.degrees 90)
+                |> Scene3d.scaleAbout Point3d.origin 0.43
+
+        _ ->
+            Scene3d.nothing

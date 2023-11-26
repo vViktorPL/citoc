@@ -32,6 +32,7 @@ const musicFiles = [
   'first-level.mp3',
   'weird-level.mp3',
   'funky.mp3',
+  'funky-piano.mp3',
   'ending_loop0.mp3',
   'ending_loop1.mp3',
   'ending_loop2.mp3',

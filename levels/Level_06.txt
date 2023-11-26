@@ -1,0 +1,39 @@
+    ####
+    ...#
+    ##f#####
+     #E3dc.#
+    ####.#.#
+    ...#.#.#
+    ##X#.#.#
+     #.#.#.#####
+     #.#.#.D...#
+ #####B#Csb###.###
+ #.Gv#.......#...#
+ #.#.#.......###F#####
+ #.#.........h.#e....#
+ #.###########.###.#.#
+ #...........H.# #.#.#
+ ###############
+
+
+
+
+---
+v Floor [StepIn] [PlayMusic "funky.mp3", RemoveAllTriggersInSector @v]
+s (Sign "Sign-ShakeTip" South)
+b (BreakableWall HeavyWall) [WindowShake] [PlaySound "rumble.mp3", BreakWall @b, RemoveAllTriggersInSector @b]
+C Wall [StepIn] [CreateTrigger (Trigger @d [StepIn] [ChangeTile @D Floor, ChangeTile @b Wall, RemoveAllTriggersInSector @d])]
+c Floor [StepIn] [ChangeTile @C Floor, RemoveAllTriggersInSector @c]
+d Floor
+D Wall
+e Floor [StepIn] [ChangeTile @3 Floor, Teleport @E]
+f Floor [StepIn] [Teleport @F]
+E Floor [StepIn] [ChangeTile @G Floor]
+F Floor
+3 Wall
++ (InvisibleWall Floor)
+B (BreakableWall HeavyWall)
+G Wall
+H Floor [StepIn] [ChangeTile @h Floor, ChangeTile @s (Sign "Sign-ShakeAgain" South), CreateTrigger (Trigger @B [WindowShake] [PlaySound "rumble.mp3", BreakWall @B, RemoveAllTriggersInSector @B]), RemoveAllTriggersInSector @H]
+h Wall
+X Floor [StepIn] [NextLevel]

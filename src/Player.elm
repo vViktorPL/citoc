@@ -1,12 +1,15 @@
 module Player exposing
     ( OutMsg(..)
     , Player
+    , comeBackDown
+    , enableUpsideDownWalking
     , getHorizontalOrientation
     , getMovementVector
     , getPlayerPosition
     , getSector
     , getVerticalLookAngle
     , initOnLevel
+    , isUpsideDown
     , playerRadius
     , safeTeleport
     , seamlessTeleport
@@ -36,25 +39,33 @@ import Length exposing (Length)
 import Level exposing (WorldCoordinates, pointOnLevel)
 import Orientation exposing (Orientation(..))
 import Point3d exposing (Point3d)
-import Sound
 import Vector3d exposing (Vector3d)
 import Viewpoint3d
 
 
 type Player
-    = Player
-        { position : Point3d Length.Meters WorldCoordinates
-        , horizontalAngle : Angle
-        , verticalAngle : Angle
-        , horizontalTurning : HorizontalTurning
-        , movementX : Maybe MovementX
-        , movementY : Maybe MovementY
-        , remainingTimeToStepSound : Maybe Float
-        , lastStepSoundNumber : Int
-        , will : PlayerWill
+    = Player PlayerData
 
-        --, upsideDownAvailable : Bool
-        }
+
+type alias PlayerData =
+    { position : Point3d Length.Meters WorldCoordinates
+    , horizontalAngle : Angle
+    , verticalAngle : Angle
+    , horizontalTurning : HorizontalTurning
+    , movementX : Maybe MovementX
+    , movementY : Maybe MovementY
+    , remainingTimeToStepSound : Maybe Float
+    , lastStepSoundNumber : Int
+    , will : PlayerWill
+    , upsideDownMode : UpsideDownMode
+    }
+
+
+type UpsideDownMode
+    = WalkOnFloor
+    | EnableUpsideDown
+    | EnableOnFloorWalking
+    | WalkOnCeiling
 
 
 type OutMsg
@@ -71,6 +82,7 @@ type PlayerWill
         , completed : Bool
         }
     | StandingUp Length
+    | ComingBackDown
 
 
 type HorizontalTurning
@@ -125,6 +137,7 @@ init ( x, y ) orientation =
         , remainingTimeToStepSound = Nothing
         , lastStepSoundNumber = 1
         , will = FreeWill
+        , upsideDownMode = WalkOnFloor
         }
 
 
@@ -152,6 +165,11 @@ safeTeleport (Player playerData) ( x, y ) =
         { playerData
             | position = pointOnLevel (toFloat x + 0.5) (toFloat y + 0.5) 0.5
         }
+
+
+isUpsideDown : Player -> Bool
+isUpsideDown (Player playerData) =
+    abs (Angle.inDegrees playerData.verticalAngle) >= 90
 
 
 getHorizontalOrientation : Player -> Orientation
@@ -204,6 +222,9 @@ view (Player playerData) =
     Camera3d.perspective
         { viewpoint =
             let
+                upsideDown =
+                    isUpsideDown (Player playerData)
+
                 horizontalAngle =
                     Angle.degrees (90 - Angle.inDegrees playerData.horizontalAngle)
 
@@ -216,7 +237,12 @@ view (Player playerData) =
             Viewpoint3d.lookAt
                 { eyePoint = playerPos
                 , focalPoint = Point3d.translateIn direction Length.meter playerPos
-                , upDirection = Direction3d.positiveZ
+                , upDirection =
+                    if upsideDown then
+                        Direction3d.negativeZ
+
+                    else
+                        Direction3d.positiveZ
                 }
         , verticalFieldOfView = Angle.degrees 45
         }
@@ -240,14 +266,80 @@ updateLookByMouseMovement : ( Int, Int ) -> Player -> Player
 updateLookByMouseMovement ( dx, dy ) (Player playerData) =
     case playerData.will of
         FreeWill ->
-            Player
-                { playerData
-                    | horizontalAngle = Angle.normalize (Angle.degrees (Angle.inDegrees playerData.horizontalAngle + toFloat dx * mouseSensitivity))
-                    , verticalAngle = Angle.degrees (clamp -89.9 89.9 (Angle.inDegrees playerData.verticalAngle - toFloat dy * mouseSensitivity * 0.5))
-                }
+            let
+                horizontalAngleDelta =
+                    toFloat dx
+                        * mouseSensitivity
+                        * (if isUpsideDown (Player playerData) then
+                            -1
+
+                           else
+                            1
+                          )
+
+                newPlayerData =
+                    { playerData
+                        | horizontalAngle = Angle.normalize (Angle.degrees (Angle.inDegrees playerData.horizontalAngle + horizontalAngleDelta))
+                        , verticalAngle =
+                            playerData.verticalAngle
+                                |> Angle.inDegrees
+                                |> (\deg -> deg - toFloat dy * mouseSensitivity * 0.5)
+                                |> Angle.degrees
+                                |> limitVerticalAngle playerData
+                    }
+
+                wasUpsideDownBefore =
+                    isUpsideDown (Player playerData)
+
+                isUpsideDownAfter =
+                    isUpsideDown (Player newPlayerData)
+            in
+            case ( newPlayerData.upsideDownMode, wasUpsideDownBefore, isUpsideDownAfter ) of
+                ( EnableUpsideDown, False, True ) ->
+                    Player
+                        { newPlayerData
+                            | upsideDownMode = WalkOnCeiling
+                        }
+
+                ( EnableOnFloorWalking, True, False ) ->
+                    Player
+                        { newPlayerData
+                            | upsideDownMode = WalkOnFloor
+                        }
+
+                _ ->
+                    Player newPlayerData
 
         _ ->
             Player playerData
+
+
+limitVerticalAngle : PlayerData -> Angle -> Angle
+limitVerticalAngle { upsideDownMode } newAngle =
+    case upsideDownMode of
+        WalkOnFloor ->
+            newAngle
+                |> Angle.inDegrees
+                |> clamp -89.9 89.9
+                |> Angle.degrees
+
+        EnableUpsideDown ->
+            newAngle
+                |> Angle.inDegrees
+                |> clamp -89.9 269.9
+                |> Angle.degrees
+
+        EnableOnFloorWalking ->
+            newAngle
+                |> Angle.inDegrees
+                |> clamp -269.9 269.9
+                |> Angle.degrees
+
+        WalkOnCeiling ->
+            newAngle
+                |> Angle.inDegrees
+                |> clamp 90.1 269.9
+                |> Angle.degrees
 
 
 stopTurning : Player -> Player
@@ -393,6 +485,26 @@ animatePlayer delta (Player playerData) =
             else
                 Player { playerData | will = StandingUp newZPositionOffset }
 
+        ComingBackDown ->
+            let
+                newPlayerVerticalAngleDeg =
+                    Angle.inDegrees playerData.verticalAngle + delta * 0.3
+
+                updatedPlayerData =
+                    { playerData | verticalAngle = Angle.degrees newPlayerVerticalAngleDeg }
+            in
+            Player
+                (if newPlayerVerticalAngleDeg < 270 then
+                    updatedPlayerData
+
+                 else
+                    { updatedPlayerData
+                        | verticalAngle = Angle.degrees -89.9
+                        , upsideDownMode = WalkOnFloor
+                        , will = FreeWill
+                    }
+                )
+
 
 updatePlayerSteps : Float -> Player -> ( Player, OutMsg )
 updatePlayerSteps delta (Player playerData) =
@@ -522,8 +634,15 @@ getPlayerPosition (Player playerData) =
 getMovementVector : Player -> Vector3d Length.Meters WorldCoordinates
 getMovementVector (Player playerData) =
     let
+        upsideDown =
+            isUpsideDown (Player playerData)
+
         forwardAngle =
-            playerData.horizontalAngle
+            if upsideDown then
+                addAngle playerData.horizontalAngle 180
+
+            else
+                playerData.horizontalAngle
 
         strafeLeftAngle =
             addAngle playerData.horizontalAngle -90
@@ -598,6 +717,26 @@ tryToStandUp (Player playerData) =
 
             else
                 Player playerData
+
+        _ ->
+            Player playerData
+
+
+enableUpsideDownWalking : Player -> Player
+enableUpsideDownWalking (Player playerData) =
+    case playerData.upsideDownMode of
+        WalkOnFloor ->
+            Player { playerData | upsideDownMode = EnableUpsideDown }
+
+        _ ->
+            Player playerData
+
+
+comeBackDown : Player -> Player
+comeBackDown (Player playerData) =
+    case playerData.upsideDownMode of
+        WalkOnCeiling ->
+            Player { playerData | will = ComingBackDown }
 
         _ ->
             Player playerData

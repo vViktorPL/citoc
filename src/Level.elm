@@ -27,7 +27,7 @@ type Level
     = Level
         { partitions : Array Partition
         , groundSounds : Dict ( Int, Int ) GroundSound
-        , collisions : Dict ( Int, Int ) Bool
+        , collisions : Dict ( Int, Int ) CollisionType
         , dynamicCollisions : List ( Int, Int )
         , triggers : List Trigger
         , sectorYToPartitionIndex : Dict Int Int
@@ -68,6 +68,12 @@ type LevelInteractionResult
     | LevelUpdated Level
 
 
+type CollisionType
+    = NoCollision
+    | Collision
+    | FloorCollision
+
+
 type LevelTile
     = Floor
     | OpenFloor
@@ -84,7 +90,14 @@ type LevelTile
     | BreakableWall BreakableWallType
     | BlackWall
     | BlackFloor
+    | Hole HoleTileData
     | Empty
+
+
+type alias HoleTileData =
+    { walls : List Orientation
+    , barriers : List Orientation
+    }
 
 
 type GroundSound
@@ -107,6 +120,7 @@ type TriggerCondition
     | NegativeHeadshake
     | Nod
     | StepIn
+    | CameBackToFloor
     | CounterEquals String Int
     | WindowShake
 
@@ -128,6 +142,8 @@ type TriggerEffect
     | StartNarration Int
     | ShowGameEndingScreen
     | BreakWall ( Int, Int )
+    | EnableUpsideDownWalking
+    | ComeBackDown
 
 
 getGroundSound : Level -> ( Int, Int ) -> GroundSound
@@ -282,8 +298,8 @@ partitionForSector ( x, y ) { partitions, sectorYToPartitionIndex } =
         |> Maybe.withDefault { staticEntities = [], dynamicEntities = [] }
 
 
-collisionOnSector : Level -> ( Int, Int ) -> Bool
-collisionOnSector (Level levelData) sector =
+collisionOnSector : Level -> Bool -> ( Int, Int ) -> Bool
+collisionOnSector (Level levelData) upsideDown sector =
     if List.any ((==) sector) levelData.dynamicCollisions then
         levelData
             |> partitionForSector sector
@@ -301,6 +317,18 @@ collisionOnSector (Level levelData) sector =
     else
         levelData.collisions
             |> Dict.get sector
+            |> Maybe.map
+                (\collisionType ->
+                    case collisionType of
+                        NoCollision ->
+                            False
+
+                        Collision ->
+                            True
+
+                        FloorCollision ->
+                            not upsideDown
+                )
             |> Maybe.withDefault False
 
 
@@ -317,21 +345,21 @@ worldCoordinateToSector point =
 -- ceiling for negativeX ?
 
 
-interactAsCylinder : Length.Length -> Point3d Length.Meters WorldCoordinates -> Vector3d.Vector3d Length.Meters WorldCoordinates -> Level -> ( LevelInteractionResult, Cmd msg )
-interactAsCylinder radius center v level =
+interactAsCylinder : Bool -> Length.Length -> Point3d Length.Meters WorldCoordinates -> Vector3d.Vector3d Length.Meters WorldCoordinates -> Level -> ( LevelInteractionResult, Cmd msg )
+interactAsCylinder upsideDown radius center v level =
     let
         adjustedVector =
-            applyCollision radius level center v
+            applyCollision upsideDown radius level center v
 
         targetSectorCollision =
             center
                 |> Point3d.translateBy v
-                |> cylinderCollisionSector level radius
+                |> cylinderCollisionSector level upsideDown radius
 
         adjustedSectorCollision =
             center
                 |> Point3d.translateBy adjustedVector
-                |> cylinderCollisionSector level radius
+                |> cylinderCollisionSector level upsideDown radius
     in
     case targetSectorCollision of
         Just sector ->
@@ -467,14 +495,14 @@ dynamicEntityAtSector (Level level) sector =
         |> List.head
 
 
-cylinderCollisionSector : Level -> Length.Length -> Point3d Length.Meters WorldCoordinates -> Maybe ( Int, Int )
-cylinderCollisionSector level radius center =
-    cylinderCollisionSectors level (Length.inMeters radius) center
+cylinderCollisionSector : Level -> Bool -> Length.Length -> Point3d Length.Meters WorldCoordinates -> Maybe ( Int, Int )
+cylinderCollisionSector level upsideDown radius center =
+    cylinderCollisionSectors level upsideDown (Length.inMeters radius) center
         |> List.head
 
 
-cylinderCollisionSectors : Level -> Float -> Point3d Length.Meters WorldCoordinates -> List ( Int, Int )
-cylinderCollisionSectors (Level levelData) radius center =
+cylinderCollisionSectors : Level -> Bool -> Float -> Point3d Length.Meters WorldCoordinates -> List ( Int, Int )
+cylinderCollisionSectors (Level levelData) upsideDown radius center =
     let
         ( centerSectorX, centerSectorY ) =
             worldCoordinateToSector center
@@ -494,7 +522,7 @@ cylinderCollisionSectors (Level levelData) radius center =
             ]
     in
     neighborSectors
-        |> List.filter (collisionOnSector (Level levelData))
+        |> List.filter (collisionOnSector (Level levelData) upsideDown)
         |> List.filter
             (\( x, y ) ->
                 let
@@ -542,8 +570,8 @@ sqrt2 =
     sqrt 2
 
 
-applyCollision : Length.Length -> Level -> Point3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates
-applyCollision bodyRadius (Level levelData) position v =
+applyCollision : Bool -> Length.Length -> Level -> Point3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates
+applyCollision upsideDown bodyRadius (Level levelData) position v =
     let
         ( cx, cy ) =
             worldCoordinateToSector position
@@ -552,7 +580,7 @@ applyCollision bodyRadius (Level levelData) position v =
             translatePointByVector position v
 
         sectorCollisionsAfterMove =
-            cylinderCollisionSectors (Level levelData) (Length.inMeters bodyRadius) desiredPosition
+            cylinderCollisionSectors (Level levelData) upsideDown (Length.inMeters bodyRadius) desiredPosition
 
         nearestCollidingSector =
             sectorCollisionsAfterMove
@@ -616,29 +644,32 @@ applyCollision bodyRadius (Level levelData) position v =
             Vector3d.minus (Vector3d.scaleBy velocityProjection collisionNormal) v
 
 
-tileCollides : LevelTile -> Bool
+tileCollides : LevelTile -> CollisionType
 tileCollides levelTile =
     case levelTile of
         Wall ->
-            True
+            Collision
 
         Sign _ _ ->
-            True
+            Collision
 
         BlueWall ->
-            True
+            Collision
 
         BlackWall ->
-            True
+            Collision
 
         InvisibleWall _ ->
-            True
+            Collision
+
+        Hole _ ->
+            FloorCollision
 
         Sandbox _ ->
-            True
+            Collision
 
         _ ->
-            False
+            NoCollision
 
 
 updateTile : ( Int, Int ) -> LevelTile -> Level -> Level
@@ -669,6 +700,21 @@ removeAllTriggersAtSectors sectors (Level levelData) =
 --sectorCenter : (Int, Int) -> Point3d Length.Meters WorldCoordinates
 
 
+orientationToRotationAngle orientation =
+    case orientation of
+        South ->
+            0
+
+        West ->
+            -90
+
+        North ->
+            180
+
+        East ->
+            90
+
+
 sectorCenter ( x, y ) =
     let
         worldX =
@@ -693,6 +739,32 @@ viewTile sceneAssets ( x, y ) tile =
             Frame3d.atPoint (Point3d.meters worldX worldY 0)
     in
     case tile of
+        Hole { walls, barriers } ->
+            Scene3d.group
+                ([ SceneAssets.ceilingTile sceneAssets ]
+                    ++ (List.map
+                            (\wallOrientation ->
+                                List.range 1 2
+                                    |> List.map
+                                        (\level ->
+                                            SceneAssets.concreteWall sceneAssets
+                                                |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.5, z = toFloat -level })
+                                                |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle wallOrientation))
+                                        )
+                                    |> Scene3d.group
+                            )
+                            walls
+                            ++ List.map
+                                (\barrierOrientation ->
+                                    SceneAssets.barrier sceneAssets
+                                        |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.62, z = 0 })
+                                        |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle barrierOrientation))
+                                )
+                                barriers
+                       )
+                )
+                |> Scene3d.placeIn tileCenter
+
         Wall ->
             SceneAssets.wallBlock sceneAssets
                 |> Scene3d.placeIn tileCenter
@@ -745,25 +817,10 @@ viewTile sceneAssets ( x, y ) tile =
                 |> Scene3d.placeIn tileCenter
 
         Sign signName orientation ->
-            let
-                rotationAngle =
-                    case orientation of
-                        South ->
-                            0
-
-                        West ->
-                            -90
-
-                        North ->
-                            180
-
-                        East ->
-                            90
-            in
             Scene3d.group
                 [ SceneAssets.sign sceneAssets signName
                     |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.51, z = 0 })
-                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees rotationAngle)
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle orientation))
                 , SceneAssets.wallBlock sceneAssets
                 ]
                 |> Scene3d.placeIn tileCenter

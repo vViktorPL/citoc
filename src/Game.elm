@@ -129,7 +129,7 @@ levelFadeInTime =
 
 playerCollides : Level -> Player -> Bool
 playerCollides level player =
-    case Level.cylinderCollisionSector level Player.playerRadius (Player.getPlayerPosition player) of
+    case Level.cylinderCollisionSector level (Player.isUpsideDown player) Player.playerRadius (Player.getPlayerPosition player) of
         Just _ ->
             True
 
@@ -192,7 +192,7 @@ updateAnimation delta model =
                         |> Vector3d.scaleBy delta
 
                 ( interactionResult, interactionCmd ) =
-                    Level.interactAsCylinder Player.playerRadius (Player.getPlayerPosition model.player) v modelToUpdate.level
+                    Level.interactAsCylinder (Player.isUpsideDown model.player) Player.playerRadius (Player.getPlayerPosition model.player) v modelToUpdate.level
             in
             case interactionResult of
                 Level.LevelUpdated updatedLevel ->
@@ -553,6 +553,9 @@ handleTriggers model newPlayer =
                             StepIn ->
                                 dX /= 0 || dY /= 0
 
+                            CameBackToFloor ->
+                                Player.isUpsideDown model.player && not (Player.isUpsideDown newPlayer)
+
                             CounterEquals counterName desiredNumber ->
                                 let
                                     counterState =
@@ -639,6 +642,12 @@ executeEffects model effects =
 
                     BreakWall sector ->
                         ( { modelAcc | level = Level.breakWall modelAcc.level sector Point3d.origin Vector3d.zero }, cmdAcc )
+
+                    EnableUpsideDownWalking ->
+                        ( { modelAcc | player = Player.enableUpsideDownWalking modelAcc.player }, cmdAcc )
+
+                    ComeBackDown ->
+                        ( { modelAcc | player = Player.comeBackDown modelAcc.player }, cmdAcc )
             )
             ( model, Cmd.none )
 

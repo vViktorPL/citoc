@@ -1,0 +1,28 @@
+###S###
+#v.U..#
+#.....#
+#.....#
+#LHHHR#
+#.....#
+#..u..#
+#.#s###
+#.#
+#.#
+#.####
+#.|X.#
+####.#
+   #.#
+   #.#
+
+
+---
+v Floor [] [PlayMusic "funky-piano.mp3", RemoveAllTriggersInSector @v]
+L (Hole { walls = [North, South, West], barriers = [North, South]})
+R (Hole { walls = [North, South, East], barriers = [North, South]})
+H (Hole { walls = [North, South], barriers = [North, South]})
+S (Sign "Sign-LookHigh" South)
+s (Sign "Sign-UpsideDownNotAllowed" North)
+U Floor [StepIn] [EnableUpsideDownWalking]
+u Floor [StepIn] [ComeBackDown, ChangeTile @| Floor]
+| (Sign "Sign-UpsideDownNotAllowed" West)
+X Floor [StepIn] [NextLevel]
