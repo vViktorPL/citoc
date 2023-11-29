@@ -79,7 +79,7 @@ type alias ReadyAssetsData =
 
 type Model
     = LoadingAssets LoadingAssetsData
-    | ReadyAssets ReadyAssetsData
+    | ReadyAssets ReadyAssetsData LoadingAssetsData
 
 
 type Msg
@@ -173,6 +173,36 @@ update msg model =
                     in
                     ( LoadingAssets { assetsData | meshes = newMeshes }, Cmd.map MeshesMsg meshesCmd )
 
+                ( TexturesMsg texturesMsg, ReadyAssets data loadingData ) ->
+                    let
+                        ( newTextures, texturesCmd ) =
+                            Textures.update texturesMsg loadingData.textures
+                    in
+                    case Textures.loadedSignTextureFileName texturesMsg of
+                        Just signTextureName ->
+                            ( ReadyAssets
+                                { data
+                                    | signs =
+                                        case Textures.getTexture loadingData.textures signTextureName of
+                                            Just loadedSignTexture ->
+                                                let
+                                                    newSign =
+                                                        loadedSignTexture
+                                                            |> Scene3d.Material.texturedMatte
+                                                            |> createSignQuad
+                                                in
+                                                Dict.insert signTextureName newSign data.signs
+
+                                            Nothing ->
+                                                data.signs
+                                }
+                                { loadingData | textures = newTextures }
+                            , Cmd.map TexturesMsg texturesCmd
+                            )
+
+                        Nothing ->
+                            ( ReadyAssets data { loadingData | textures = newTextures }, Cmd.map TexturesMsg texturesCmd )
+
                 _ ->
                     ( model, Cmd.none )
     in
@@ -182,7 +212,7 @@ update msg model =
 ready : Model -> Bool
 ready model =
     case model of
-        ReadyAssets _ ->
+        ReadyAssets _ _ ->
             True
 
         _ ->
@@ -192,7 +222,7 @@ ready model =
 initializeEntities : Model -> Model
 initializeEntities model =
     case model of
-        ReadyAssets _ ->
+        ReadyAssets _ _ ->
             model
 
         LoadingAssets { textures, meshes } ->
@@ -432,6 +462,9 @@ initializeEntities model =
                                 (MeshCollection.getMeshSubentities meshes "tangram.obj" (Just (Scene3d.Material.constant Color.white)))
                                 (MeshCollection.getMeshVertices meshes "tangram.obj")
                         }
+                        { textures = Tuple.first (Textures.init [])
+                        , meshes = Tuple.first (MeshCollection.init [])
+                        }
 
                 _ ->
                     model
@@ -581,7 +614,7 @@ subscription model =
 wallBlock : Model -> SceneEntity
 wallBlock model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.wallBlock
 
         _ ->
@@ -591,7 +624,7 @@ wallBlock model =
 blueWallBlock : Model -> SceneEntity
 blueWallBlock model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.blueWallBlock
 
         _ ->
@@ -601,7 +634,7 @@ blueWallBlock model =
 floorTile : Model -> SceneEntity
 floorTile model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.floorTile
 
         _ ->
@@ -611,7 +644,7 @@ floorTile model =
 ceilingTile : Model -> SceneEntity
 ceilingTile model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.ceilingTile
 
         _ ->
@@ -621,7 +654,7 @@ ceilingTile model =
 sign : Model -> String -> SceneEntity
 sign model signId =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             Dict.get signId data.signs
                 |> Maybe.withDefault Scene3d.nothing
 
@@ -632,7 +665,7 @@ sign model signId =
 sandTile : Model -> SceneEntity
 sandTile model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.sandTile
 
         _ ->
@@ -642,7 +675,7 @@ sandTile model =
 toyBucket : Model -> SceneEntity
 toyBucket model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.toyBucket
 
         _ ->
@@ -652,7 +685,7 @@ toyBucket model =
 castleWall : Model -> SceneEntity
 castleWall model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.castleWall
 
         _ ->
@@ -662,7 +695,7 @@ castleWall model =
 castleDoor : Model -> SceneEntity
 castleDoor model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.castleDoor
 
         _ ->
@@ -672,7 +705,7 @@ castleDoor model =
 castleWallTower : Model -> SceneEntity
 castleWallTower model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.castleWallTower
 
         _ ->
@@ -682,7 +715,7 @@ castleWallTower model =
 castleEntryVoid : Model -> SceneEntity
 castleEntryVoid model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.castleEntryVoid
 
         _ ->
@@ -692,7 +725,7 @@ castleEntryVoid model =
 chair : Model -> SceneEntity
 chair model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.chair
 
         _ ->
@@ -702,7 +735,7 @@ chair model =
 sandbox : Model -> SceneEntity
 sandbox model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.sandbox
 
         _ ->
@@ -712,7 +745,7 @@ sandbox model =
 terms : Model -> ( SceneEntity, SceneEntity )
 terms model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.terms
 
         _ ->
@@ -722,7 +755,7 @@ terms model =
 wallTexture : Model -> ( Scene3d.Material.Texture Color, Scene3d.Material.Texture Float )
 wallTexture model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.wallTexture
 
         _ ->
@@ -732,7 +765,7 @@ wallTexture model =
 tangram : Model -> List (Physics.Body.Body SceneEntity)
 tangram model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.tangram
 
         _ ->
@@ -742,7 +775,7 @@ tangram model =
 concreteWall : Model -> SceneEntity
 concreteWall model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.concreteWall
 
         _ ->
@@ -752,10 +785,24 @@ concreteWall model =
 barrier : Model -> SceneEntity
 barrier model =
     case model of
-        ReadyAssets data ->
+        ReadyAssets data _ ->
             data.barrier
                 |> Scene3d.rotateAround Axis3d.x (Angle.degrees 90)
                 |> Scene3d.scaleAbout Point3d.origin 0.43
 
         _ ->
             Scene3d.nothing
+
+
+generateSign : Model -> String -> ( Model, Cmd Msg )
+generateSign model signContent =
+    case model of
+        ReadyAssets data loadingData ->
+            let
+                ( newTextures, texturesCmd ) =
+                    Textures.load loadingData.textures (GenerateSign ("custom-sign-" ++ signContent) signContent)
+            in
+            ( ReadyAssets data { loadingData | textures = newTextures }, Cmd.map TexturesMsg texturesCmd )
+
+        _ ->
+            ( model, Cmd.none )

@@ -1,4 +1,18 @@
-port module Textures exposing (LoadedTexture, Model, Msg, TextureToLoad(..), TexturesState(..), getState, getTexture, getTextureFloat, init, subscription, update)
+port module Textures exposing
+    ( LoadedTexture
+    , Model
+    , Msg
+    , TextureToLoad(..)
+    , TexturesState(..)
+    , getState
+    , getTexture
+    , getTextureFloat
+    , init
+    , load
+    , loadedSignTextureFileName
+    , subscription
+    , update
+    )
 
 import Color exposing (Color)
 import Dict exposing (Dict)
@@ -43,6 +57,16 @@ type Msg
     | SignTextureGenerated String String
     | SignTextureLoaded String LoadedTexture
     | TextureLoadingError
+
+
+loadedSignTextureFileName : Msg -> Maybe String
+loadedSignTextureFileName msg =
+    case msg of
+        SignTextureLoaded fileName _ ->
+            Just fileName
+
+        _ ->
+            Nothing
 
 
 getTexture : Model -> String -> Maybe (Material.Texture Color)
@@ -132,57 +156,119 @@ init texturesToLoad =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg (Textures state prevTextures) =
-    case ( msg, state ) of
-        ( StandardTexturesLoaded textures, RemainingTextures remaining ) ->
-            let
-                newRemaining =
-                    remaining - Dict.size textures
+update msg model =
+    case msg of
+        StandardTexturesLoaded textures ->
+            updateStandardTexturesLoaded textures model
 
-                newTextures =
-                    Dict.union prevTextures textures
-            in
-            if newRemaining <= 0 then
-                ( Textures TexturesLoaded newTextures, Cmd.none )
+        SignTextureGenerated fileName url ->
+            updateSignTextureGenerated fileName url model
 
-            else
-                ( Textures (RemainingTextures newRemaining) newTextures, Cmd.none )
+        SignTextureLoaded fileName texture ->
+            updateSignTextureLoaded fileName texture model
 
-        ( SignTextureGenerated fileName url, RemainingTextures _ ) ->
-            ( Textures state prevTextures
-            , loadTextureFromUrl url
-                |> Task.attempt
-                    (\result ->
-                        case result of
-                            Ok loadedTexture ->
-                                SignTextureLoaded fileName (LoadedTextureColor loadedTexture)
-
-                            Err _ ->
-                                TextureLoadingError
-                    )
-            )
-
-        ( SignTextureLoaded fileName texture, RemainingTextures remaining ) ->
-            let
-                newRemaining =
-                    remaining - 1
-
-                newTextures =
-                    Dict.insert fileName texture prevTextures
-            in
-            if newRemaining <= 0 then
-                ( Textures TexturesLoaded newTextures, Cmd.none )
-
-            else
-                ( Textures (RemainingTextures newRemaining) newTextures, Cmd.none )
-
-        ( TextureLoadingError, _ ) ->
+        TextureLoadingError ->
             ( Textures TextureInitError Dict.empty, Cmd.none )
 
-        _ ->
-            ( Textures state prevTextures, Cmd.none )
+
+updateStandardTexturesLoaded : Dict String LoadedTexture -> Model -> ( Model, Cmd Msg )
+updateStandardTexturesLoaded newTextures (Textures state prevTextures) =
+    let
+        newRemaining =
+            case state of
+                RemainingTextures remaining ->
+                    remaining - Dict.size newTextures
+
+                _ ->
+                    0
+
+        combinedTextures =
+            Dict.union prevTextures newTextures
+    in
+    if newRemaining <= 0 then
+        ( Textures TexturesLoaded combinedTextures, Cmd.none )
+
+    else
+        ( Textures (RemainingTextures newRemaining) combinedTextures, Cmd.none )
+
+
+updateSignTextureGenerated : String -> String -> Model -> ( Model, Cmd Msg )
+updateSignTextureGenerated fileName url (Textures state textures) =
+    let
+        newRemaining =
+            case state of
+                RemainingTextures remaining ->
+                    remaining - 1
+
+                _ ->
+                    0
+
+        newState =
+            if newRemaining <= 0 then
+                TexturesLoaded
+
+            else
+                RemainingTextures newRemaining
+    in
+    ( Textures newState textures
+    , loadTextureFromUrl url
+        |> Task.attempt
+            (\result ->
+                case result of
+                    Ok loadedTexture ->
+                        SignTextureLoaded fileName (LoadedTextureColor loadedTexture)
+
+                    Err _ ->
+                        TextureLoadingError
+            )
+    )
+
+
+updateSignTextureLoaded : String -> LoadedTexture -> Model -> ( Model, Cmd Msg )
+updateSignTextureLoaded fileName loadedTexture (Textures state textures) =
+    let
+        newTextures =
+            Dict.insert fileName loadedTexture textures
+    in
+    ( Textures state newTextures, Cmd.none )
 
 
 subscription : Sub Msg
 subscription =
     generatedSignTextureSub (\( fileName, url ) -> SignTextureGenerated fileName url)
+
+
+load : Model -> TextureToLoad -> ( Model, Cmd Msg )
+load (Textures state textures) textureToLoad =
+    let
+        loadCmd toMsg textureTask =
+            textureTask
+                |> Task.attempt
+                    (\result ->
+                        case result of
+                            Ok loadedTexture ->
+                                toMsg loadedTexture
+
+                            Err _ ->
+                                TextureLoadingError
+                    )
+    in
+    case textureToLoad of
+        TextureColor fileName ->
+            ( Textures state textures
+            , loadTexture fileName
+                |> Task.map LoadedTextureColor
+                |> loadCmd (SignTextureLoaded fileName)
+            )
+
+        TextureFloat fileName ->
+            ( Textures state textures
+            , loadTexture fileName
+                |> Task.map LoadedTextureFloat
+                |> loadCmd (SignTextureLoaded fileName)
+            )
+
+        GenerateSign fileName text ->
+            ( Textures state textures
+            , generateTexturePort ( fileName, text )
+            )
