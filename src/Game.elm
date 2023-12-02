@@ -35,6 +35,7 @@ subscriptions _ =
         , Browser.Events.onMouseMove (Decode.map MouseMove lockedMouseMovementDecoder)
         , Browser.Events.onResize WindowResize
         , WebBrowser.windowShake BrowserWindowShaken
+        , WebBrowser.clipboardEvent Clipboard
         ]
 
 
@@ -113,6 +114,7 @@ type Msg
     | MouseMove ( Int, Int )
     | WindowResize Int Int
     | BrowserWindowShaken
+    | Clipboard WebBrowser.ClipboardEvent
 
 
 initFadeInTime =
@@ -286,6 +288,9 @@ update msg model =
                     Narration.update delta animatedModel.narration
             in
             ( { animatedModel | narration = updatedNarration }, Cmd.batch [ animationCmd, narrationCmd ] )
+
+        Clipboard _ ->
+            ( model, Cmd.none )
 
         KeyDown key ->
             ( { model

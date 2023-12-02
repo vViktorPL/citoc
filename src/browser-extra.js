@@ -1,7 +1,7 @@
 const SHAKE_THRESHOLD = 0.1;
 const SHAKE_DURATION_REQUIRED = 500;
 const PAUSE_TOLERANCE = 300;
-const DIRECTION_CHANGE_TOLERANCE = 10; // Mniejsza wartość dla większej czułości na zmianę kierunku
+const DIRECTION_CHANGE_TOLERANCE = 10;
 
 export function subscribeToWindowShaking(callback) {
   let lastTime = Date.now();
@@ -20,7 +20,6 @@ export function subscribeToWindowShaking(callback) {
     const deltaY = window.screenTop - lastScreenTop;
     const speed = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / deltaTime;
 
-    // Sprawdzenie zmiany kierunku
     if ((deltaX * lastDeltaX < 0 && Math.abs(deltaX) > DIRECTION_CHANGE_TOLERANCE) ||
       (deltaY * lastDeltaY < 0 && Math.abs(deltaY) > DIRECTION_CHANGE_TOLERANCE)) {
       directionChanges++;
@@ -51,3 +50,35 @@ export function subscribeToWindowShaking(callback) {
     lastScreenTop = window.screenTop;
   }, 100);
 }
+
+export function controlClipboard({ onCopy, onCut, onPaste }) {
+  let copyableText = '';
+
+  function onTextCopy(e) {
+    if (e.type === 'cut' && onCut) {
+      onCut();
+    } else if (e.type === 'copy' && onCopy) {
+      onCopy();
+    }
+
+    e.clipboardData.setData('text/plain', copyableText);
+    e.preventDefault();
+  }
+
+  document.addEventListener('copy', onTextCopy);
+  document.addEventListener('cut', onTextCopy);
+
+  if (onPaste) {
+    document.addEventListener('paste', (e) => {
+      const text = e.clipboardData.getData('text');
+      onPaste(text);
+    })
+  }
+
+  return {
+    setCurrentCopyableText(text) {
+      copyableText = text;
+    }
+  };
+}
+

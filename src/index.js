@@ -42,7 +42,7 @@ const musicFiles = [
 ];
 
 import { generateSignTexture } from './texture-generator';
-import { subscribeToWindowShaking } from './browser-extra';
+import { subscribeToWindowShaking, controlClipboard } from './browser-extra';
 
 const soundBuffers = {};
 const musicBuffers = {};
@@ -143,6 +143,24 @@ function startAudioContext() {
   });
 
   subscribeToWindowShaking(() => app.ports.windowShakeInternal.send(null))
+
+  const clipboardController = controlClipboard({
+    onCopy() {
+      app.ports.clipboardEventInternal.send(['copy', null]);
+    },
+    onCut() {
+      app.ports.clipboardEventInternal.send(['cut', null]);
+    },
+    onPaste(text) {
+      app.ports.clipboardEventInternal.send(['paste', text]);
+    }
+  });
+
+  console.log(app.ports);
+
+  app.ports.setClipboardCopyableText.subscribe(
+    text => clipboardController.setCurrentCopyableText(text)
+  );
 })();
 
 // MUSIC
