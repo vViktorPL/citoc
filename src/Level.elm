@@ -229,6 +229,15 @@ fromData tiles triggers startingPosition startingOrientation =
                             ToyBucket ->
                                 SandGround
 
+                            -- Walls collide, however sometimes they are replaced with floors,
+                            -- so we can apply solid floor sound in advance as a workaround
+                            -- for no sound bug for such tiles
+                            Wall ->
+                                SolidFloor
+
+                            BreakableWall _ ->
+                                SolidFloor
+
                             _ ->
                                 VoidGround
                         )
