@@ -7,6 +7,8 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
+            "Chadtech/unique-list": "2.1.5",
+            "Evelios/elm-hash": "1.0.0",
             "avh4/elm-color": "1.0.0",
             "elm/browser": "1.0.2",
             "elm/core": "1.0.5",
@@ -27,13 +29,17 @@
             "w0rm/elm-physics": "5.1.3"
         },
         "indirect": {
+            "bonzaico/murmur3": "1.0.0",
+            "chain-partners/elm-bignum": "1.0.1",
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
+            "elm/regex": "1.0.0",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm/virtual-dom": "1.0.3",
             "ianmackenzie/elm-interval": "3.1.0",
-            "ianmackenzie/elm-units-interval": "3.2.0"
+            "ianmackenzie/elm-units-interval": "3.2.0",
+            "myrho/elm-round": "1.0.5"
         }
     },
     "test-dependencies": {

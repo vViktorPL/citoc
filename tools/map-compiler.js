@@ -95,13 +95,14 @@ fs.readdir(path.join(__dirname, '../levels')).then(
 
           const code = [
             `module Level.${filename.replace(".txt", "")} exposing (data)`,
-            'import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), BreakableWallType(..), fromData)',
+            'import Level',
+            'import LevelTile',
+            'import Trigger exposing (Trigger, TriggerCondition(..), TriggerEffect(..))',
             'import Orientation exposing (Orientation(..))',
             'import Color',
             'import Length',
             '',
-            'data : Level',
-            `data = fromData ${tiles} [${triggers.join(',')}] (${startingPosX}, ${startingPosY}) ${startingOrientation}`,
+            `data = Level.fromData { tiles = ${tiles}, triggers = [${triggers.join(',')}], playerStartPosition = (${startingPosX}, ${startingPosY}), playerStartingOrientation = ${startingOrientation} }`,
           ].join('\n');
 
           fs.writeFile(outputFilePath, code);
@@ -114,14 +115,11 @@ fs.readdir(path.join(__dirname, '../levels')).then(
     fs.writeFile(path.join(outputPath, "Index.elm"), [
       'module Level.Index exposing (firstLevel, restLevels)',
       '',
-      'import Level exposing (Level)',
+      'import Level',
       ...levelModules.map(levelModule => `import ${levelModule}`),
       '',
       '',
-      'firstLevel : Level',
       `firstLevel = ${levelsData[0]}`,
-      '',
-      'restLevels : List Level',
       `restLevels = [${levelsData.slice(1).join(', ')}]`,
     ].join('\n'));
   }
@@ -130,7 +128,7 @@ fs.readdir(path.join(__dirname, '../levels')).then(
 
 const asciiToTile = legend => ascii => {
   if (ascii in legend) {
-    return legend[ascii];
+    return `LevelTile.${legend[ascii]}`;
   }
 
   switch (ascii) {
@@ -139,12 +137,12 @@ const asciiToTile = legend => ascii => {
     case '>':
     case 'v':
     case '<':
-      return "Floor";
+      return "LevelTile.floor";
 
     case '#':
-      return "Wall";
+      return "LevelTile.wall";
 
     default:
-      return "Empty";
+      return "LevelTile.empty";
   }
 };

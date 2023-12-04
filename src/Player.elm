@@ -8,7 +8,7 @@ module Player exposing
     , getPlayerPosition
     , getSector
     , getVerticalLookAngle
-    , initOnLevel
+    , init
     , isUpsideDown
     , playerRadius
     , safeTeleport
@@ -34,9 +34,9 @@ module Player exposing
 
 import Angle exposing (Angle)
 import Camera3d
+import Coordinates exposing (ObjectCoordinates, SectorCoordinates, WorldCoordinates)
 import Direction3d
 import Length exposing (Length)
-import Level exposing (WorldCoordinates, pointOnLevel)
 import Orientation exposing (Orientation(..))
 import Point3d exposing (Point3d)
 import Vector3d exposing (Vector3d)
@@ -113,10 +113,20 @@ playerRadius =
     Length.centimeters 20
 
 
-init : ( Int, Int ) -> Orientation -> Player
-init ( x, y ) orientation =
+playerHeight =
+    Length.meters 0.5
+
+
+playerHeightVector =
+    Vector3d.xyz (Length.meters 0) (Length.meters 0) playerHeight
+
+
+init : SectorCoordinates -> Orientation -> Player
+init sector orientation =
     Player
-        { position = pointOnLevel (toFloat x + 0.5) (toFloat y + 0.5) 0.5
+        { position =
+            Coordinates.sectorToWorldPosition sector
+                |> Point3d.translateBy playerHeightVector
         , horizontalAngle =
             case orientation of
                 North ->
@@ -155,7 +165,7 @@ seamlessTeleport (Player playerData) ( x, y ) =
     in
     Player
         { playerData
-            | position = pointOnLevel (toFloat x + offsetX) (toFloat y + offsetY) 0.5
+            | position = Point3d.meters (toFloat x + offsetX) (toFloat y + offsetY) oldPosition3d.z
         }
 
 
@@ -163,7 +173,7 @@ safeTeleport : Player -> ( Int, Int ) -> Player
 safeTeleport (Player playerData) ( x, y ) =
     Player
         { playerData
-            | position = pointOnLevel (toFloat x + 0.5) (toFloat y + 0.5) 0.5
+            | position = Point3d.meters (toFloat x + 0.5) (toFloat y + 0.5) (Point3d.toMeters playerData.position).z
         }
 
 
@@ -196,25 +206,13 @@ getVerticalLookAngle (Player playerData) =
     playerData.verticalAngle
 
 
-getSector : Player -> ( Int, Int )
+getSector : Player -> SectorCoordinates
 getSector (Player playerData) =
     let
         { x, y } =
             Point3d.toMeters playerData.position
     in
     ( floor -x, floor y )
-
-
-initOnLevel : Level.Level -> Player
-initOnLevel level =
-    let
-        startingPosition =
-            Level.getStartingPosition level
-
-        startingOrientation =
-            Level.getStartingOrientation level
-    in
-    init startingPosition startingOrientation
 
 
 view : Player -> Camera3d.Camera3d Length.Meters WorldCoordinates

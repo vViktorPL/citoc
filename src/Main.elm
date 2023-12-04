@@ -1,15 +1,11 @@
 module Main exposing (..)
 
+import Assets
 import Browser
 import Game
 import Html exposing (Html)
 import Html.Attributes
 import Menu
-import SceneAssets
-
-
-
--- MAIN
 
 
 main : Program () Model Msg
@@ -22,13 +18,9 @@ main =
         }
 
 
-
--- MODEL
-
-
 type alias Model =
     { screen : Screen
-    , sceneAssets : SceneAssets.Model
+    , assets : Assets.Model
     }
 
 
@@ -42,23 +34,20 @@ type Screen
 init : ( Model, Cmd Msg )
 init =
     let
-        ( sceneAssetsModel, sceneAssetsCmd ) =
-            SceneAssets.init
+        ( assets, sceneAssetsCmd ) =
+            Assets.init
+                |> Assets.requestDependencies Menu.dependencies
     in
     ( { screen = Initialising
-      , sceneAssets = sceneAssetsModel
+      , assets = assets
       }
-    , Cmd.map SceneAssetsMsg sceneAssetsCmd
+    , Cmd.map AssetsMsg sceneAssetsCmd
     )
-
-
-
--- UPDATE
 
 
 type Msg
     = GameMsg Game.Msg
-    | SceneAssetsMsg SceneAssets.Msg
+    | AssetsMsg Assets.Msg
     | MenuMsg Menu.Msg
 
 
@@ -72,16 +61,16 @@ update msg model =
             in
             ( { model | screen = Playing newGameModel }, Cmd.map GameMsg gameCmd )
 
-        ( SceneAssetsMsg sceneAssetsMsg, Initialising ) ->
+        ( AssetsMsg sceneAssetsMsg, Initialising ) ->
             let
                 ( newSceneAssetsModel, sceneAssetsCmd ) =
-                    SceneAssets.update sceneAssetsMsg model.sceneAssets
+                    Assets.update sceneAssetsMsg model.assets
 
                 assetsReady =
-                    SceneAssets.ready newSceneAssetsModel
+                    Assets.areReady newSceneAssetsModel
 
                 assetsUpdatedModel =
-                    { model | sceneAssets = newSceneAssetsModel }
+                    { model | assets = newSceneAssetsModel }
             in
             if assetsReady then
                 let
@@ -91,7 +80,7 @@ update msg model =
                 ( { assetsUpdatedModel | screen = InMenu menuModel }, Cmd.map MenuMsg menuCmd )
 
             else
-                ( assetsUpdatedModel, Cmd.map SceneAssetsMsg sceneAssetsCmd )
+                ( assetsUpdatedModel, Cmd.map AssetsMsg sceneAssetsCmd )
 
         ( MenuMsg menuMsg, InMenu menuModel ) ->
             let
@@ -105,7 +94,7 @@ update msg model =
                 Menu.StartNewGame ->
                     let
                         ( initializedGameModel, gameCmd ) =
-                            Game.init model.sceneAssets
+                            Game.init model.assets
                     in
                     ( { model | screen = Playing initializedGameModel }, Cmd.map GameMsg gameCmd )
 
@@ -121,8 +110,8 @@ subscriptions model =
                 |> Sub.map GameMsg
 
         Initialising ->
-            SceneAssets.subscription model.sceneAssets
-                |> Sub.map SceneAssetsMsg
+            Assets.subscription
+                |> Sub.map AssetsMsg
 
         InMenu menu ->
             Menu.subscription menu
@@ -136,7 +125,7 @@ view : Model -> Html Msg
 view model =
     case model.screen of
         Playing game ->
-            Game.view model.sceneAssets game
+            Game.view game
                 |> Html.map GameMsg
 
         Initialising ->
@@ -150,5 +139,5 @@ view model =
             Html.div [] [ Html.text "Error :-(" ]
 
         InMenu menu ->
-            Menu.view model.sceneAssets menu
+            Menu.view model.assets menu
                 |> Html.map MenuMsg

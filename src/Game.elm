@@ -1,9 +1,11 @@
 module Game exposing (..)
 
 import Angle
+import Assets
 import Browser.Dom
 import Browser.Events
 import Color exposing (..)
+import Coordinates
 import Dict exposing (Dict)
 import Direction3d
 import Ending
@@ -11,17 +13,18 @@ import Html exposing (Html)
 import Html.Attributes
 import Json.Decode as Decode
 import Length
-import Level exposing (Level, TriggerCondition(..), TriggerEffect(..))
+import Level
 import Level.Index as LevelIndex
+import LevelTile
 import Narration
 import Orientation exposing (Orientation(..))
 import Pixels
 import Player exposing (Player)
 import Point3d
 import Scene3d
-import SceneAssets
 import Sound
 import Task
+import Trigger exposing (TriggerCondition, TriggerEffect)
 import Vector3d
 import WebBrowser
 
@@ -36,11 +39,12 @@ subscriptions _ =
         , Browser.Events.onResize WindowResize
         , WebBrowser.windowShake BrowserWindowShaken
         , WebBrowser.clipboardEvent Clipboard
+        , Assets.subscription |> Sub.map AssetsMsg
         ]
 
 
 type GameState
-    = Initializing
+    = LoadingLevel
     | Playing
     | FadingOutLevel Float
     | FadingInLevel Float
@@ -51,8 +55,8 @@ type GameState
 type alias Model =
     { state : GameState
     , player : Player
-    , level : Level
-    , levelsLeft : List Level
+    , level : Level.Model
+    , levelsLeft : List ( Level.Model, List Assets.Dependency )
     , counters : Dict String Int
     , gestureHistory : List Gesture
     , canvasSize : ( Int, Int )
@@ -60,7 +64,9 @@ type alias Model =
     , backgroundColor : Color
     , visibility : Scene3d.Visibility
     , narration : Narration.Model
-    , sceneAssets : SceneAssets.Model
+    , assets : Assets.Model
+    , levelJustLoaded : Bool
+    , windowShaken : Bool
     }
 
 
@@ -75,19 +81,42 @@ maxGestureHistory =
     5
 
 
-init : SceneAssets.Model -> ( Model, Cmd Msg )
-init sceneAssets =
+loadNextLevel : Model -> ( Model, Cmd Msg )
+loadNextLevel model =
     let
-        level =
-            --LevelIndex.restLevels
-            --    |> List.drop 1
-            --    |> List.head
-            --    |> Maybe.withDefault
-            LevelIndex.firstLevel
+        ( nextLevel, dependencies ) =
+            model.levelsLeft
+                |> List.head
+                |> Maybe.withDefault ( model.level, [] )
+
+        ( updatedAssets, assetsCmd ) =
+            Assets.requestDependencies dependencies model.assets
     in
-    ( { state = Initializing
-      , player = Player.initOnLevel level
+    ( { model
+        | state = LoadingLevel
+        , level = nextLevel
+        , levelJustLoaded = True
+        , levelsLeft = List.drop 1 model.levelsLeft
+        , assets = updatedAssets
+        , player = Level.initPlayer nextLevel
+      }
+    , Cmd.map AssetsMsg assetsCmd
+    )
+
+
+init : Assets.Model -> ( Model, Cmd Msg )
+init assets =
+    let
+        ( level, dependencies ) =
+            LevelIndex.firstLevel
+
+        ( updatedAssets, assetsCmd ) =
+            Assets.requestDependencies dependencies assets
+    in
+    ( { state = LoadingLevel
+      , player = Level.initPlayer level
       , level = level
+      , levelJustLoaded = True
       , levelsLeft = LevelIndex.restLevels
       , counters = Dict.empty
       , gestureHistory = []
@@ -96,19 +125,22 @@ init sceneAssets =
       , backgroundColor = Color.white
       , visibility = Scene3d.clearView
       , narration = Narration.init
-      , sceneAssets = sceneAssets
+      , assets = updatedAssets
+      , windowShaken = False
       }
     , Cmd.batch
         [ Task.perform
             (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
             Browser.Dom.getViewport
         , Sound.stopMusic ()
+        , Cmd.map AssetsMsg assetsCmd
         ]
     )
 
 
 type Msg
     = AnimationTick Float
+    | AssetsMsg Assets.Msg
     | KeyDown ControlKey
     | KeyUp ControlKey
     | MouseMove ( Int, Int )
@@ -129,13 +161,13 @@ levelFadeInTime =
     1000
 
 
-playerCollides : Level -> Player -> Bool
+playerCollides : Level.Model -> Player -> Bool
 playerCollides level player =
-    case Level.cylinderCollisionSector level (Player.isUpsideDown player) Player.playerRadius (Player.getPlayerPosition player) of
-        Just _ ->
+    case Level.interact level player Vector3d.zero of
+        ( Level.LevelCollision _, _ ) ->
             True
 
-        Nothing ->
+        _ ->
             False
 
 
@@ -152,15 +184,15 @@ playerTriggerInteraction model player =
         ( modelAfterTriggers, cmd )
 
 
-handleStepSounds : Level.Level -> Player.Player -> Player.OutMsg -> Cmd msg
+handleStepSounds : Level.Model -> Player.Player -> Player.OutMsg -> Cmd msg
 handleStepSounds level player outmsg =
     case outmsg of
         Player.EmitStepSound soundNumber ->
             case Level.getGroundSound level (Player.getSector player) of
-                Level.SolidFloor ->
+                LevelTile.SolidFloor ->
                     Sound.playSound ("step-" ++ String.fromInt soundNumber ++ ".mp3")
 
-                Level.SandGround ->
+                LevelTile.SandGround ->
                     Sound.playSound "sand-step.mp3"
 
                 _ ->
@@ -173,9 +205,10 @@ handleStepSounds level player outmsg =
 updateAnimation : Float -> Model -> ( Model, Cmd Msg )
 updateAnimation delta model =
     case model.state of
-        Initializing ->
-            ( { model | state = FadingInLevel initFadeInTime }, Cmd.none )
+        LoadingLevel ->
+            ( model, Cmd.none )
 
+        --( { model | state = FadingInLevel initFadeInTime }, Cmd.none )
         Playing ->
             let
                 modelToUpdate =
@@ -194,13 +227,12 @@ updateAnimation delta model =
                         |> Vector3d.scaleBy delta
 
                 ( interactionResult, interactionCmd ) =
-                    Level.interactAsCylinder (Player.isUpsideDown model.player) Player.playerRadius (Player.getPlayerPosition model.player) v modelToUpdate.level
+                    Level.interact modelToUpdate.level model.player v
             in
             case interactionResult of
                 Level.LevelUpdated updatedLevel ->
                     ( { modelToUpdate | level = updatedLevel }, interactionCmd )
 
-                --player = newPlayer,
                 Level.LevelCollision adjustedVector ->
                     let
                         ( adjustedPlayer, adjustedOutMsg ) =
@@ -224,21 +256,9 @@ updateAnimation delta model =
             let
                 newTimeLeft =
                     max (timeLeft - delta) 0
-
-                nextLevel =
-                    model.levelsLeft
-                        |> List.head
-                        |> Maybe.withDefault model.level
             in
             if newTimeLeft == 0 then
-                ( { model
-                    | level = nextLevel
-                    , levelsLeft = List.drop 1 model.levelsLeft
-                    , player = Player.initOnLevel nextLevel
-                    , state = FadingInLevel levelFadeInTime
-                  }
-                , Cmd.none
-                )
+                loadNextLevel model
 
             else
                 ( { model | state = FadingOutLevel newTimeLeft, counters = Dict.empty }, Cmd.none )
@@ -249,7 +269,7 @@ updateAnimation delta model =
                     max (timeLeft - delta) 0
             in
             if timeLeft == 0 then
-                ( { model | state = GameEnding (Ending.init model.sceneAssets) }, Cmd.none )
+                ( { model | state = GameEnding (Ending.init model.assets) }, Cmd.none )
 
             else
                 ( { model | state = FinalFadeOut newTimeLeft }, Cmd.none )
@@ -278,6 +298,24 @@ update msg model =
     case msg of
         WindowResize width height ->
             ( { model | canvasSize = ( width, height ) }, Cmd.none )
+
+        AssetsMsg assetsMsg ->
+            let
+                ( updatedAssets, assetsCmd ) =
+                    Assets.update assetsMsg model.assets
+            in
+            ( { model
+                | assets = updatedAssets
+                , state =
+                    case ( model.state, Assets.areReady updatedAssets ) of
+                        ( LoadingLevel, True ) ->
+                            FadingInLevel 0
+
+                        _ ->
+                            model.state
+              }
+            , Cmd.map AssetsMsg assetsCmd
+            )
 
         AnimationTick delta ->
             let
@@ -369,23 +407,7 @@ update msg model =
         BrowserWindowShaken ->
             case model.state of
                 Playing ->
-                    let
-                        effectsToExecute =
-                            Level.getAllTriggers model.level
-                                |> List.concatMap
-                                    (\{ conditions, effects } ->
-                                        if conditions == [ Level.WindowShake ] then
-                                            effects
-
-                                        else
-                                            []
-                                    )
-                    in
-                    if List.length effectsToExecute > 0 then
-                        executeEffects model effectsToExecute
-
-                    else
-                        ( model, Cmd.none )
+                    ( { model | windowShaken = True }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -515,7 +537,13 @@ handleTriggers model newPlayer =
                 List.all
                     (\condition ->
                         case condition of
-                            EnteredFrom orientation ->
+                            Trigger.LevelLoaded ->
+                                model.levelJustLoaded
+
+                            Trigger.InSector sector ->
+                                sector == ( newX, newY )
+
+                            Trigger.EnteredFrom orientation ->
                                 case orientation of
                                     North ->
                                         dY < 0
@@ -529,13 +557,13 @@ handleTriggers model newPlayer =
                                     West ->
                                         dX < 0
 
-                            LookAngle orientation ->
+                            Trigger.LookAngle orientation ->
                                 orientation == lookingAt
 
-                            LookingAtGround ->
+                            Trigger.LookingAtGround ->
                                 Angle.inDegrees (Player.getVerticalLookAngle newPlayer) <= -45
 
-                            NegativeHeadshake ->
+                            Trigger.NegativeHeadshake ->
                                 let
                                     last3Gestures =
                                         List.take 3 model.gestureHistory
@@ -545,7 +573,7 @@ handleTriggers model newPlayer =
                                     || last3Gestures
                                     == [ LookRight, LookLeft, LookRight ]
 
-                            Nod ->
+                            Trigger.Nod ->
                                 let
                                     last3Gestures =
                                         List.take 3 model.gestureHistory
@@ -555,21 +583,21 @@ handleTriggers model newPlayer =
                                     || last3Gestures
                                     == [ LookDown, LookUp, LookDown ]
 
-                            StepIn ->
+                            Trigger.SteppedIn ->
                                 dX /= 0 || dY /= 0
 
-                            CameBackToFloor ->
+                            Trigger.CameBackToFloor ->
                                 Player.isUpsideDown model.player && not (Player.isUpsideDown newPlayer)
 
-                            CounterEquals counterName desiredNumber ->
+                            Trigger.CounterEquals counterName desiredNumber ->
                                 let
                                     counterState =
                                         Maybe.withDefault 0 (Dict.get counterName model.counters)
                                 in
                                 desiredNumber == counterState
 
-                            WindowShake ->
-                                False
+                            Trigger.WindowShake ->
+                                model.windowShaken
                     )
                     trigger.conditions
             )
@@ -583,6 +611,8 @@ handleTriggers model newPlayer =
 
                     else
                         model.gestureHistory
+                , windowShaken = False
+                , levelJustLoaded = False
             }
 
 
@@ -592,99 +622,105 @@ executeEffects model effects =
         |> List.foldl
             (\effect ( modelAcc, cmdAcc ) ->
                 case effect of
-                    Teleport targetSector ->
+                    Trigger.Teleport targetSector ->
                         ( { modelAcc | player = Player.seamlessTeleport modelAcc.player targetSector }, cmdAcc )
 
-                    NextLevel ->
+                    Trigger.NextLevel ->
                         ( transitionToNextLevel modelAcc, Cmd.batch [ cmdAcc, Sound.playSound "success.mp3" ] )
 
-                    ChangeTile sector newTile ->
+                    Trigger.ChangeTile sector newTile ->
                         ( { modelAcc | level = Level.updateTile sector newTile modelAcc.level }, cmdAcc )
 
-                    CreateTrigger trigger ->
+                    Trigger.CreateTrigger trigger ->
                         ( { modelAcc | level = Level.addTrigger trigger modelAcc.level }, cmdAcc )
 
-                    RemoveAllTriggersInSector sector ->
+                    Trigger.RemoveAllTriggersInSector sector ->
                         ( { modelAcc | level = Level.removeAllTriggersAtSector sector modelAcc.level }, cmdAcc )
 
-                    RemoveAllTriggersInSectors sectors ->
+                    Trigger.RemoveAllTriggersInSectors sectors ->
                         ( { modelAcc | level = Level.removeAllTriggersAtSectors sectors modelAcc.level }, cmdAcc )
 
-                    IncrementCounter counterName ->
+                    Trigger.IncrementCounter counterName ->
                         ( { modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
                         , Cmd.batch [ cmdAcc, Sound.playSound "notify-up.mp3" ]
                         )
 
-                    DecrementCounter counterName ->
+                    Trigger.DecrementCounter counterName ->
                         ( { modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount - 1)) modelAcc.counters }
                         , Cmd.batch [ cmdAcc, Sound.playSound "notify-down.mp3" ]
                         )
 
-                    PlaySound fileName ->
+                    Trigger.PlaySound fileName ->
                         ( modelAcc, Cmd.batch [ cmdAcc, Sound.playSound fileName ] )
 
-                    InitFog color distance ->
+                    Trigger.InitFog color distance ->
                         ( { modelAcc | backgroundColor = color, visibility = Scene3d.fog distance }, cmdAcc )
 
-                    SitDown ->
+                    Trigger.SitDown ->
                         ( { modelAcc | player = Player.sitDown modelAcc.player }, cmdAcc )
 
-                    OpenTerms sector ->
+                    Trigger.OpenTerms sector ->
                         ( { modelAcc | level = Level.openTerms modelAcc.level sector }, Cmd.batch [ cmdAcc, Sound.playSound "elevator_door.mp3" ] )
 
-                    PlayMusic fileName ->
+                    Trigger.PlayMusic fileName ->
                         ( modelAcc, Cmd.batch [ cmdAcc, Sound.playMusic fileName ] )
 
-                    StartNarration narrationNumber ->
+                    Trigger.StartNarration narrationNumber ->
                         let
                             ( narration, narrationCmd ) =
                                 Narration.playNarration modelAcc.narration narrationNumber
                         in
                         ( { modelAcc | narration = narration }, Cmd.batch [ cmdAcc, narrationCmd ] )
 
-                    ShowGameEndingScreen ->
+                    Trigger.ShowGameEndingScreen ->
                         ( { modelAcc | state = FinalFadeOut levelFadeOutTime, fadeColor = "black" }, Cmd.batch [ cmdAcc, Sound.stopMusic () ] )
 
-                    BreakWall sector ->
+                    Trigger.BreakWall sector ->
                         ( { modelAcc | level = Level.breakWall modelAcc.level sector Point3d.origin Vector3d.zero }, cmdAcc )
 
-                    EnableUpsideDownWalking ->
+                    Trigger.EnableUpsideDownWalking ->
                         ( { modelAcc | player = Player.enableUpsideDownWalking modelAcc.player }, cmdAcc )
 
-                    ComeBackDown ->
+                    Trigger.ComeBackDown ->
                         ( { modelAcc | player = Player.comeBackDown modelAcc.player }, cmdAcc )
             )
             ( model, Cmd.none )
 
 
-view : SceneAssets.Model -> Model -> Html Msg
-view sceneAssets model =
+view : Model -> Html Msg
+view model =
     case model.state of
         FadingOutLevel timeLeft ->
-            viewGame sceneAssets model (timeLeft / levelFadeOutTime)
+            viewGame model (timeLeft / levelFadeOutTime)
 
         FadingInLevel timeLeft ->
-            viewGame sceneAssets model ((levelFadeInTime - timeLeft) / levelFadeInTime)
+            viewGame model ((levelFadeInTime - timeLeft) / levelFadeInTime)
 
         Playing ->
-            viewGame sceneAssets model 1
+            viewGame model 1
 
-        Initializing ->
-            viewGame sceneAssets model 0
+        LoadingLevel ->
+            viewGame model 0
 
         FinalFadeOut timeLeft ->
-            viewGame sceneAssets model (timeLeft / levelFadeOutTime)
+            viewGame model (timeLeft / levelFadeOutTime)
 
         GameEnding ending ->
             Ending.view ending model.canvasSize
 
 
-viewGame sceneAssets model opacity =
+viewGame model opacity =
+    let
+        playerSector =
+            model.player
+                |> Player.getPlayerPosition
+                |> Coordinates.worldPositionToSector
+    in
     Html.div [ Html.Attributes.style "background" model.fadeColor ]
         [ Html.div
             [ Html.Attributes.style "opacity" (String.fromFloat opacity)
             , Html.Attributes.style "visibility"
-                (if model.state == Initializing then
+                (if model.state == LoadingLevel then
                     "hidden"
 
                  else
@@ -693,7 +729,7 @@ viewGame sceneAssets model opacity =
             ]
             [ Scene3d.cloudy
                 { entities =
-                    [ Level.view sceneAssets (Player.getSector model.player) model.level
+                    [ Level.view model.assets model.level playerSector
                     ]
                 , camera = Player.view model.player
                 , upDirection = Direction3d.z
@@ -704,4 +740,14 @@ viewGame sceneAssets model opacity =
                 }
             ]
         , Narration.view model.narration
+        , Html.div
+            [ Html.Attributes.style "visibility"
+                (if model.state == LoadingLevel then
+                    "hidden"
+
+                 else
+                    "visible"
+                )
+            ]
+            [ Html.text "Loading..." ]
         ]

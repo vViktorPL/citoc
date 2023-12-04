@@ -20,7 +20,6 @@ import Random
 import Scene3d
 import Scene3d.Material exposing (Material)
 import Scene3d.Mesh
-import SceneAssets
 import Triangle2d
 import TriangularMesh exposing (TriangularMesh)
 import Vector3d exposing (Vector3d)
@@ -193,31 +192,36 @@ init thickness =
 
 
 view sceneAssets (BreakableWall { physics }) =
-    let
-        ( texture, roughness ) =
-            SceneAssets.wallTexture sceneAssets
+    -- TODO: implement breakable wall view
+    Scene3d.nothing
 
-        material =
-            Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness }
-    in
-    physics
-        |> Physics.World.bodies
-        |> List.map
-            (\body ->
-                let
-                    frame3d =
-                        Physics.Body.frame body
-                in
-                case Physics.Body.data body of
-                    WallTriangle ( position, triangle ) ->
-                        triangle
-                            |> Scene3d.mesh material
-                            |> Scene3d.placeIn frame3d
 
-                    Floor ->
-                        Scene3d.nothing
-            )
-        |> Scene3d.group
+
+--let
+--    ( texture, roughness ) =
+--        SceneAssets.wallTexture sceneAssets
+--
+--    material =
+--        Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness }
+--in
+--physics
+--    |> Physics.World.bodies
+--    |> List.map
+--        (\body ->
+--            let
+--                frame3d =
+--                    Physics.Body.frame body
+--            in
+--            case Physics.Body.data body of
+--                WallTriangle ( position, triangle ) ->
+--                    triangle
+--                        |> Scene3d.mesh material
+--                        |> Scene3d.placeIn frame3d
+--
+--                Floor ->
+--                    Scene3d.nothing
+--        )
+--    |> Scene3d.group
 
 
 break : Point2d Length.Meters BodyCoordinates -> Vector3d Length.Meters WorldCoordinates -> Model -> Model

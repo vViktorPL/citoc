@@ -1,0 +1,56 @@
+###
+..#
+#C#
+#b####  #####
+#.#..#  #...#
+#.#*#####A#.#### X
+#.........#....#
+#.........####c#
+#..e......#  #B#
+###-#####.#  #.#
+  !T! #Q#.#  #.#
+  !t! #.#.#  #.........#
+  !^! #...#  #.........#
+  !!! #####  #.........#
+             #########.#
+
+
+#####
+#...#
+#d#D#
+#q#.#
+#.#.#
+#...#
+#####
+
+    ###
+    ..#
+#####.#
+#...#X#
+#x#.#.#
+#.#.#.#
+#.###.#
+#.....#
+#######
+
+
+---
+Q Floor [StepIn] [ChangeTile @A Floor, ChangeTile @- Wall, RemoveAllTriggersInSector @Q]
+A Floor
+X Floor [StepIn] [NextLevel]
+A Wall
+T Terms [StepIn] [PlayMusic "first-level.mp3", RemoveAllTriggersInSector @T]
+t BlackFloor [Nod] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+^ BlackFloor [Nod] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+! BlackWall
+- Floor
+e Floor [LookAngle North] [ChangeTile @- Wall, RemoveAllTriggersInSector @e]
+* (BreakableWall HeavyWall)
+b Wall
+B Floor [StepIn] [ChangeTile @b Floor, Teleport @b]
+C Floor [StepIn] [Teleport @c, CreateTrigger (Trigger @Q [StepIn] [Teleport @q])]
+c Floor
+D Floor [StepIn] [ChangeTile @d Floor, RemoveAllTriggersInSector @D]
+d Wall [StepIn, LookAngle North] [Teleport @x]
+x Floor
+q Floor

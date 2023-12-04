@@ -1,7 +1,8 @@
-module Ending exposing (Model, init, update, view)
+module Ending exposing (Model, dependencies, init, update, view)
 
 import Acceleration
 import Angle
+import Assets
 import Camera3d
 import Color
 import Direction3d
@@ -16,7 +17,6 @@ import Physics.World
 import Pixels
 import Point3d
 import Scene3d
-import SceneAssets
 import SketchPlane3d
 import Sound
 import Vector3d
@@ -36,13 +36,23 @@ origin =
     Frame3d.atOrigin
 
 
-init : SceneAssets.Model -> Model
-init sceneAssets =
-    let
-        tangram =
-            SceneAssets.tangram sceneAssets
-                |> List.map (Physics.Body.translateBy (Vector3d.unsafe { x = 0, y = 0, z = 0.3 }))
+dependencies : List Assets.Dependency
+dependencies =
+    [ Assets.SoundEffectDep "narration_14.mp3"
+    , Assets.MusicDep "thx_song.mp3"
+    , Assets.MeshCollectionDep "tangram.obj"
+    ]
 
+
+init : Assets.Model -> Model
+init assets =
+    let
+        -- TODO: render tanagram
+        tangram =
+            []
+
+        --SceneAssets.tangram assets
+        --    |> List.map (Physics.Body.translateBy (Vector3d.unsafe { x = 0, y = 0, z = 0.3 }))
         world =
             List.foldl Physics.World.add Physics.World.empty tangram
                 |> Physics.World.add (Physics.Body.plane Scene3d.nothing)

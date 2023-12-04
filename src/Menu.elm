@@ -1,6 +1,7 @@
 module Menu exposing (..)
 
 import Angle
+import Assets
 import Browser.Dom
 import Browser.Events
 import Camera3d
@@ -11,15 +12,12 @@ import Html exposing (Html)
 import Html.Attributes exposing (class, style)
 import Html.Events
 import Length
-import Luminance
+import LevelTile
 import Pixels
 import Point3d
 import Scene3d
-import Scene3d.Material
-import SceneAssets
 import Sound
 import Task
-import Textures
 import Vector3d
 import Viewpoint3d
 
@@ -46,6 +44,16 @@ type MenuState
 type OutMsg
     = Noop
     | StartNewGame
+
+
+dependencies : List Assets.Dependency
+dependencies =
+    let
+        tileDeps =
+            [ LevelTile.floor, LevelTile.wall ]
+                |> List.concatMap LevelTile.dependencies
+    in
+    tileDeps ++ [ Assets.MusicDep "menu.mp3" ]
 
 
 init : ( Model, Cmd Msg )
@@ -102,8 +110,8 @@ update msg model =
             ( { model | state = StartingNewGame 1.0 }, Noop )
 
 
-view : SceneAssets.Model -> Model -> Html Msg
-view sceneAssets model =
+view : Assets.Model -> Model -> Html Msg
+view assets model =
     let
         opacity =
             String.fromFloat
@@ -126,12 +134,11 @@ view sceneAssets model =
                             position =
                                 Point3d.meters 0 currentSegmentOffset 0
                         in
-                        Scene3d.group
-                            [ SceneAssets.floorTile sceneAssets
-                            , SceneAssets.ceilingTile sceneAssets
-                            , SceneAssets.wallBlock sceneAssets |> Scene3d.translateBy (Vector3d.fromMeters { x = 1, y = 0, z = 0 })
-                            , SceneAssets.wallBlock sceneAssets |> Scene3d.translateBy (Vector3d.fromMeters { x = -1, y = 0, z = 0 })
-                            ]
+                        [ LevelTile.view assets LevelTile.floor
+                        , LevelTile.view assets LevelTile.wall |> Scene3d.translateBy (Vector3d.fromMeters { x = 1, y = 0, z = 0 })
+                        , LevelTile.view assets LevelTile.wall |> Scene3d.translateBy (Vector3d.fromMeters { x = -1, y = 0, z = 0 })
+                        ]
+                            |> Scene3d.group
                             |> Scene3d.placeIn (Frame3d.atPoint position)
                     )
     in
@@ -182,96 +189,6 @@ camera =
                 }
         , verticalFieldOfView = Angle.degrees 110
         }
-
-
-
---
---viewWall textures x y z =
---    Maybe.withDefault Scene3d.nothing <|
---    Maybe.map2
---        (\texture roughness ->
---            let
---                material = (Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness })
---                x1 = Length.meters (-x + 0.5)
---                x2 = Length.meters (-x - 0.5)
---                y1 = Length.meters (y - 0.5)
---                y2 = Length.meters (y + 0.5)
---                z1 = Length.meters (z - 0.5)
---                z2 = Length.meters (z + 0.5)
---            in
---                 Scene3d.group
---                    [ Scene3d.quad material
---                         (Point3d.xyz x1 y1 z1)
---                         (Point3d.xyz x1 y2 z1)
---                         (Point3d.xyz x1 y2 z2)
---                         (Point3d.xyz x1 y1 z2)
---                    , Scene3d.quad material
---                         (Point3d.xyz x2 y2 z1)
---                         (Point3d.xyz x2 y1 z1)
---                         (Point3d.xyz x2 y1 z2)
---                         (Point3d.xyz x2 y2 z2)
---                    ]
---        )
---    (Textures.getTexture textures "Bricks021_1K-JPG_Color.jpg")
---    (Textures.getTextureFloat textures "Bricks021_1K-JPG_Roughness.jpg")
-
-
-viewFloor textures x y z =
-    Maybe.withDefault Scene3d.nothing <|
-        Maybe.map2
-            (\floorTexture ceilingTexture ->
-                let
-                    floorMaterial =
-                        Scene3d.Material.texturedNonmetal { baseColor = floorTexture, roughness = Scene3d.Material.constant 0.5 }
-
-                    ceilingMaterial =
-                        Scene3d.Material.texturedEmissive ceilingTexture (Luminance.footLamberts 100)
-
-                    x1 =
-                        Length.meters (-x + 0.5)
-
-                    y1 =
-                        Length.meters (y + 0.5)
-
-                    x2 =
-                        Length.meters (-x - 0.5)
-
-                    y2 =
-                        Length.meters (y + 0.5)
-
-                    x3 =
-                        Length.meters (-x - 0.5)
-
-                    y3 =
-                        Length.meters (y - 0.5)
-
-                    x4 =
-                        Length.meters (-x + 0.5)
-
-                    y4 =
-                        Length.meters (y - 0.5)
-
-                    zBottom =
-                        Length.meters (z - 0.5)
-
-                    zTop =
-                        Length.meters (z + 0.5)
-                in
-                Scene3d.group
-                    [ Scene3d.quad floorMaterial
-                        (Point3d.xyz x1 y1 zBottom)
-                        (Point3d.xyz x2 y2 zBottom)
-                        (Point3d.xyz x3 y3 zBottom)
-                        (Point3d.xyz x4 y4 zBottom)
-                    , Scene3d.quad ceilingMaterial
-                        (Point3d.xyz x1 y1 zTop)
-                        (Point3d.xyz x2 y2 zTop)
-                        (Point3d.xyz x3 y3 zTop)
-                        (Point3d.xyz x4 y4 zTop)
-                    ]
-            )
-            (Textures.getTexture textures "CheckerFloor.jpg")
-            (Textures.getTexture textures "OfficeCeiling005_4K_Color.jpg")
 
 
 subscription : Model -> Sub Msg

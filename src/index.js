@@ -1,45 +1,45 @@
 import ElmModule from './Main.elm';
-const sfxFiles = [
-  'success.mp3',
-  'notify-up.mp3',
-  'notify-down.mp3',
-  'rumble.mp3',
-  'step-1.mp3',
-  'step-2.mp3',
-  'step-3.mp3',
-  'step-4.mp3',
-  'step-5.mp3',
-  'sand-step.mp3',
-  'elevator_door.mp3',
-  'glass-break.mp3',
-  'narration_1.mp3',
-  'narration_2.mp3',
-  'narration_3.mp3',
-  'narration_4.mp3',
-  'narration_5.mp3',
-  'narration_6.mp3',
-  'narration_7.mp3',
-  'narration_8.mp3',
-  'narration_9.mp3',
-  'narration_10.mp3',
-  'narration_11.mp3',
-  'narration_12.mp3',
-  'narration_13.mp3',
-  'narration_14.mp3'
-];
-const musicFiles = [
-  'menu.mp3',
-  'first-level.mp3',
-  'weird-level.mp3',
-  'funky.mp3',
-  'funky-piano.mp3',
-  'ending_loop0.mp3',
-  'ending_loop1.mp3',
-  'ending_loop2.mp3',
-  'ending_loop3.mp3',
-  'ending_loop4.mp3',
-  'thx-song.mp3'
-];
+// const sfxFiles = [
+//   'success.mp3',
+//   'notify-up.mp3',
+//   'notify-down.mp3',
+//   'rumble.mp3',
+//   'step-1.mp3',
+//   'step-2.mp3',
+//   'step-3.mp3',
+//   'step-4.mp3',
+//   'step-5.mp3',
+//   'sand-step.mp3',
+//   'elevator_door.mp3',
+//   'glass-break.mp3',
+//   'narration_1.mp3',
+//   'narration_2.mp3',
+//   'narration_3.mp3',
+//   'narration_4.mp3',
+//   'narration_5.mp3',
+//   'narration_6.mp3',
+//   'narration_7.mp3',
+//   'narration_8.mp3',
+//   'narration_9.mp3',
+//   'narration_10.mp3',
+//   'narration_11.mp3',
+//   'narration_12.mp3',
+//   'narration_13.mp3',
+//   'narration_14.mp3'
+// ];
+// const musicFiles = [
+//   'menu.mp3',
+//   'first-level.mp3',
+//   'weird-level.mp3',
+//   'funky.mp3',
+//   'funky-piano.mp3',
+//   'ending_loop0.mp3',
+//   'ending_loop1.mp3',
+//   'ending_loop2.mp3',
+//   'ending_loop3.mp3',
+//   'ending_loop4.mp3',
+//   'thx-song.mp3'
+// ];
 
 import { generateSignTexture } from './texture-generator';
 import { subscribeToWindowShaking, controlClipboard } from './browser-extra';
@@ -60,29 +60,6 @@ function startAudioContext() {
 
 (async () => {
   const { Elm } = await ElmModule;
-
-  if (audioContext) {
-    for (const file of sfxFiles) {
-      const url = file.startsWith('narration') ? `assets/narration/${file}` : `assets/sfx/${file}`;
-      await window.fetch(url)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(
-          arrayBuffer,
-          audioBuffer => soundBuffers[file] = audioBuffer)
-        );
-    }
-
-    for (const file of musicFiles) {
-      const url = `assets/music/${file}`;
-      await window.fetch(url)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(
-          arrayBuffer,
-          musicBuffer => musicBuffers[file] = musicBuffer)
-        );
-    }
-  }
-
   const app = Elm.Main.init({
     node: document.getElementById('game')
   });
@@ -93,6 +70,19 @@ function startAudioContext() {
   });
 
   // Sound port
+  app.ports.preloadSound.subscribe(async filename => {
+    if (audioContext) {
+      const url = filename.startsWith('narration') ? `assets/narration/${filename}` : `assets/sfx/${filename}`;
+      await window.fetch(url)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContext.decodeAudioData(
+          arrayBuffer,
+          audioBuffer => soundBuffers[filename] = audioBuffer)
+        );
+    }
+    app.ports.soundPreloadedSub.send(filename);
+  })
+
   app.ports.playSound.subscribe(filename => {
     if (!audioContext || !(filename in soundBuffers)) {
       return;
@@ -105,6 +95,19 @@ function startAudioContext() {
   });
 
   // Music port
+  app.ports.preloadMusic.subscribe(async filename => {
+    if (audioContext) {
+      const url = `assets/music/${filename}`;
+      await window.fetch(url)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContext.decodeAudioData(
+          arrayBuffer,
+          musicBuffer => musicBuffers[filename] = musicBuffer)
+        );
+    }
+    app.ports.musicPreloadedSub.send(filename);
+  });
+
   app.ports.playMusic.subscribe(filename => {
     if (!audioContext || !(filename in musicBuffers)) {
       return;
@@ -144,23 +147,23 @@ function startAudioContext() {
 
   subscribeToWindowShaking(() => app.ports.windowShakeInternal.send(null))
 
-  const clipboardController = controlClipboard({
-    onCopy() {
-      app.ports.clipboardEventInternal.send(['copy', null]);
-    },
-    onCut() {
-      app.ports.clipboardEventInternal.send(['cut', null]);
-    },
-    onPaste(text) {
-      app.ports.clipboardEventInternal.send(['paste', text]);
-    }
-  });
+  // const clipboardController = controlClipboard({
+  //   onCopy() {
+  //     app.ports.clipboardEventInternal.send(['copy', null]);
+  //   },
+  //   onCut() {
+  //     app.ports.clipboardEventInternal.send(['cut', null]);
+  //   },
+  //   onPaste(text) {
+  //     app.ports.clipboardEventInternal.send(['paste', text]);
+  //   }
+  // });
 
   console.log(app.ports);
 
-  app.ports.setClipboardCopyableText.subscribe(
-    text => clipboardController.setCurrentCopyableText(text)
-  );
+  // app.ports.setClipboardCopyableText.subscribe(
+  //   text => clipboardController.setCurrentCopyableText(text)
+  // );
 })();
 
 // MUSIC
