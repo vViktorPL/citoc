@@ -1,8 +1,0 @@
-module Level.Level_07 exposing (data)
-import Level exposing (Level, LevelTile(..), Trigger, TriggerCondition(..), TriggerEffect(..), BreakableWallType(..), fromData)
-import Orientation exposing (Orientation(..))
-import Color
-import Length
-
-data : Level
-data = fromData [[Wall,Wall,Wall,(Sign "Sign-LookHigh" South),Wall,Wall,Wall],[Wall,Floor,Floor,Floor,Floor,Floor,Wall],[Wall,Floor,Floor,Floor,Floor,Floor,Wall],[Wall,Floor,Floor,Floor,Floor,Floor,Wall],[Wall,(Hole { walls = [North, South, West], barriers = [North, South]}),(Hole { walls = [North, South], barriers = [North, South]}),(Hole { walls = [North, South], barriers = [North, South]}),(Hole { walls = [North, South], barriers = [North, South]}),(Hole { walls = [North, South, East], barriers = [North, South]}),Wall],[Wall,Floor,Floor,Floor,Floor,Floor,Wall],[Wall,Floor,Floor,Floor,Floor,Floor,Wall],[Wall,Floor,Wall,(Sign "Sign-UpsideDownNotAllowed" North),Wall,Wall,Wall],[Wall,Floor,Wall],[Wall,Floor,Wall],[Wall,Floor,Wall,Wall,Wall,Wall],[Wall,Floor,(Sign "Sign-UpsideDownNotAllowed" West),Floor,Floor,Wall],[Wall,Wall,Wall,Wall,Floor,Wall],[Empty,Empty,Empty,Wall,Floor,Wall],[Empty,Empty,Empty,Wall,Floor,Wall],[],[]] [Trigger (1, 1) [] [PlayMusic "funky-piano.mp3", RemoveAllTriggersInSector (1, 1)],Trigger (3, 1) [StepIn] [EnableUpsideDownWalking],Trigger (3, 6) [StepIn] [ComeBackDown, ChangeTile (2, 11) Floor],Trigger (3, 11) [StepIn] [NextLevel]] (1, 1) South

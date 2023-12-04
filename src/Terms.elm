@@ -1,7 +1,11 @@
 module Terms exposing (Model, doesCollide, init, open, update, view)
 
+import Assets
+import Point3d
 import Scene3d
-import SceneAssets
+import Scene3d.Material
+import Scene3d.Mesh
+import TriangularMesh
 import Vector3d
 
 
@@ -17,10 +21,38 @@ init =
     Closed
 
 
-view sceneAssets model =
+view assets model =
     let
-        ( leftSideOriginal, rightSideOriginal ) =
-            SceneAssets.terms sceneAssets
+        material =
+            Scene3d.Material.texturedColor (Assets.getColorTexture assets "toc.png")
+
+        leftSideOriginal =
+            TriangularMesh.triangles
+                [ ( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = ( 0, 0 ) }
+                  , { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = ( 0.5, 0 ) }
+                  , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = ( 0.5, 1 ) }
+                  )
+                , ( { position = Point3d.unsafe { x = 0.5, y = 0, z = 0 }, uv = ( 0, 0 ) }
+                  , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = ( 0.5, 1 ) }
+                  , { position = Point3d.unsafe { x = 0.5, y = 0, z = 1 }, uv = ( 0, 1 ) }
+                  )
+                ]
+                |> Scene3d.Mesh.texturedTriangles
+                |> Scene3d.mesh material
+
+        rightSideOriginal =
+            TriangularMesh.triangles
+                [ ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = ( 0.5, 0 ) }
+                  , { position = Point3d.unsafe { x = -0.5, y = 0, z = 0 }, uv = ( 1, 0 ) }
+                  , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = ( 1, 1 ) }
+                  )
+                , ( { position = Point3d.unsafe { x = 0, y = 0, z = 0 }, uv = ( 0.5, 0 ) }
+                  , { position = Point3d.unsafe { x = -0.5, y = 0, z = 1 }, uv = ( 1, 1 ) }
+                  , { position = Point3d.unsafe { x = 0, y = 0, z = 1 }, uv = ( 0.5, 1 ) }
+                  )
+                ]
+                |> Scene3d.Mesh.texturedTriangles
+                |> Scene3d.mesh material
 
         ( leftSide, rightSide ) =
             case model of

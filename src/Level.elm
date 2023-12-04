@@ -1,6 +1,7 @@
 module Level exposing
     ( LevelInteractionResult(..)
     , Model
+    , activateTile
     , addTrigger
     , breakWall
     , fromData
@@ -8,7 +9,6 @@ module Level exposing
     , getTriggersAt
     , initPlayer
     , interact
-    , openTerms
     , removeAllTriggersAtSector
     , removeAllTriggersAtSectors
     , update
@@ -197,7 +197,10 @@ getTileAt (Level { partitions, sectorYToPartitionIndex }) ( x, y ) =
 
 update : Float -> Model -> Model
 update delta (Level levelData) =
-    Level levelData
+    Level
+        { levelData
+            | partitions = Array.map (\partition -> Dict.map (\sector tile -> LevelTile.update delta tile) partition) levelData.partitions
+        }
 
 
 
@@ -532,8 +535,11 @@ interact model player v =
     in
     case targetSectorCollision of
         Just sector ->
-            case adjustedSectorCollision of
-                Just _ ->
+            case ( LevelTile.interact player (getTileAt model sector), adjustedSectorCollision ) of
+                ( Just tileAfterInteraction, _ ) ->
+                    ( LevelUpdated (updateTile sector tileAfterInteraction model), Cmd.none )
+
+                ( _, Just _ ) ->
                     ( LevelCollision Vector3d.zero, Cmd.none )
 
                 _ ->
@@ -1212,23 +1218,18 @@ removeAllTriggersAtSectors sectors (Level data) =
 --
 
 
-openTerms : Model -> SectorCoordinates -> Model
-openTerms model sector =
-    model
+mapTile : (LevelTile.Model -> LevelTile.Model) -> SectorCoordinates -> Model -> Model
+mapTile f sector model =
+    let
+        previousTile =
+            getTileAt model sector
+
+        newTile =
+            f previousTile
+    in
+    updateTile sector newTile model
 
 
-
---TODO: implement terms opening
---openTerms : Level -> ( Int, Int ) -> Level
---openTerms level sector =
---    mapDynamicEntity
---        (\dynamicEntity ->
---            case dynamicEntity of
---                TermsEntity entitySector termsState ->
---                    TermsEntity entitySector (Terms.open termsState)
---
---                _ ->
---                    dynamicEntity
---        )
---        sector
---        level
+activateTile : Model -> SectorCoordinates -> Model
+activateTile model sector =
+    mapTile LevelTile.activate sector model

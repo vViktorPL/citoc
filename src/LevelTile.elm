@@ -2,6 +2,7 @@ module LevelTile exposing
     ( GroundSound(..)
     , Model
     , TileCollisionType(..)
+    , activate
     , bigCastle
     , blackFloor
     , blackWall
@@ -15,12 +16,14 @@ module LevelTile exposing
     , floor
     , glassWall
     , groundSound
+    , interact
     , invisibleWall
     , openFloor
     , sand
     , sandboxWithCastle
     , sign
     , terms
+    , update
     , view
     , wall
     )
@@ -29,15 +32,19 @@ import Angle
 import Assets exposing (Dependency)
 import Axis3d
 import BreakableWall
+import Color
 import Coordinates exposing (ObjectCoordinates, WorldCoordinates)
 import Hash exposing (Hash)
 import Length
 import Luminance
 import Orientation exposing (Orientation(..))
 import Player exposing (Player)
+import Point2d
 import Point3d exposing (Point3d)
 import Scene3d
 import Scene3d.Material
+import Terms
+import Vector3d
 
 
 type Model
@@ -52,8 +59,8 @@ type Model
     | BigCastle
     | Chair
     | Sandbox Bool
-    | Terms
-    | BreakableWall BreakableWall.Model
+    | Terms Terms.Model
+    | BreakableWall BreakableWallType BreakableWall.Model
     | BlackWall
     | BlackFloor
     | Hole HoleTileData
@@ -64,6 +71,11 @@ type GroundSound
     = SolidFloor
     | SandGround
     | VoidGround
+
+
+type BreakableWallType
+    = GlassWall
+    | HeavyWall
 
 
 floor =
@@ -110,7 +122,7 @@ emptySandbox =
 
 
 terms =
-    Terms
+    Terms Terms.init
 
 
 blackWall =
@@ -135,21 +147,21 @@ blackFloor =
 
 glassWall : Model
 glassWall =
-    BreakableWall (BreakableWall.init 0.01)
+    BreakableWall GlassWall (BreakableWall.init 0.01)
 
 
 breakableWall : Model
 breakableWall =
-    BreakableWall (BreakableWall.init 0.05)
+    BreakableWall HeavyWall (BreakableWall.init 0.05)
 
 
 isDynamic : Model -> Bool
 isDynamic model =
     case model of
-        Terms ->
+        Terms _ ->
             True
 
-        BreakableWall _ ->
+        BreakableWall _ _ ->
             True
 
         Sign _ _ _ ->
@@ -193,6 +205,22 @@ collision model =
 
         Sandbox _ ->
             Collision
+
+        Terms termsModel ->
+            case Terms.doesCollide termsModel of
+                True ->
+                    Collision
+
+                False ->
+                    NoCollision
+
+        BreakableWall _ breakableWallModel ->
+            case BreakableWall.isBroken breakableWallModel of
+                True ->
+                    NoCollision
+
+                False ->
+                    Collision
 
         _ ->
             NoCollision
@@ -317,6 +345,26 @@ view assets model =
                 , z2 = Length.meters 1
                 }
 
+        BlackWall ->
+            wallBlockTile
+                (Scene3d.Material.color Color.black)
+                { x1 = Length.meters -0.5
+                , x2 = Length.meters 0.5
+                , y1 = Length.meters -0.5
+                , y2 = Length.meters 0.5
+                , z1 = Length.meters 0
+                , z2 = Length.meters 1
+                }
+
+        BlackFloor ->
+            Scene3d.group
+                [ horizontalTile (Length.meters 0) (Scene3d.Material.color Color.black)
+                , horizontalTile (Length.meters 1) (Scene3d.Material.color Color.black)
+                ]
+
+        Terms termsModel ->
+            Scene3d.group [ Terms.view assets termsModel, view assets blackFloor ]
+
         Sign name _ orientation ->
             let
                 material =
@@ -367,6 +415,9 @@ view assets model =
                         }
             in
             horizontalTile (Length.meters 0) material
+
+        BreakableWall _ breakableWallModel ->
+            BreakableWall.view assets breakableWallModel
 
         -- TODO: rest tiles
         _ ->
@@ -432,6 +483,9 @@ dependencies model =
         InvisibleWall tile ->
             dependencies tile
 
+        Terms _ ->
+            [ Assets.ColorTextureDep "toc.png" ]
+
         --BreakableWall _ ->
         --    [ Assets.SoundEffectDep "glass-break.mp3"
         --    ]
@@ -467,7 +521,7 @@ groundSound model =
         BlackFloor ->
             SolidFloor
 
-        Terms ->
+        Terms _ ->
             SolidFloor
 
         Sand ->
@@ -479,11 +533,68 @@ groundSound model =
         Wall ->
             SolidFloor
 
-        BreakableWall _ ->
+        BreakableWall _ _ ->
             SolidFloor
 
         _ ->
             VoidGround
+
+
+update : Float -> Model -> Model
+update delta model =
+    case model of
+        Terms termsModel ->
+            Terms (Terms.update delta termsModel)
+
+        BreakableWall wallType breakableWallModel ->
+            BreakableWall wallType (BreakableWall.update delta breakableWallModel)
+
+        _ ->
+            model
+
+
+activate : Model -> Model
+activate model =
+    case model of
+        Terms termsModel ->
+            Terms (Terms.open termsModel)
+
+        BreakableWall wallType breakableWallModel ->
+            BreakableWall wallType (BreakableWall.break (Point2d.meters 0.5 0.5) Vector3d.zero breakableWallModel)
+
+        _ ->
+            model
+
+
+interact : Player -> Model -> Maybe Model
+interact player model =
+    case model of
+        BreakableWall GlassWall breakableWallModel ->
+            if BreakableWall.isBroken breakableWallModel then
+                Nothing
+
+            else
+                let
+                    v =
+                        Player.getMovementVector player
+
+                    playerPosition =
+                        Player.getPlayerPosition player
+
+                    wallCollisionPointX =
+                        Coordinates.worldPositionToSectorOffsetX playerPosition
+
+                    wallCollisionPointY =
+                        Point3d.zCoordinate playerPosition
+                            |> Length.inMeters
+
+                    wallCollisionPoint =
+                        Point2d.meters wallCollisionPointX wallCollisionPointY
+                in
+                Just (BreakableWall GlassWall (BreakableWall.break wallCollisionPoint v breakableWallModel))
+
+        _ ->
+            Nothing
 
 
 

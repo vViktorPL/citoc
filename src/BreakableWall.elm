@@ -2,15 +2,18 @@ module BreakableWall exposing (Model, break, init, isBroken, update, view)
 
 import Acceleration
 import Array
+import Assets
+import Coordinates exposing (ObjectCoordinates)
 import DelaunayTriangulation2d
 import Direction3d
 import Duration
 import Force
+import Frame3d
 import Length exposing (Meters)
 import Mass
 import Obj.Decode exposing (ObjCoordinates)
 import Physics.Body
-import Physics.Coordinates exposing (BodyCoordinates)
+import Physics.Coordinates exposing (BodyCoordinates, WorldCoordinates)
 import Physics.Shape
 import Physics.World exposing (World)
 import Point2d exposing (Point2d)
@@ -33,8 +36,9 @@ type Model
         }
 
 
-type alias WorldCoordinates =
-    ObjCoordinates
+
+--type alias WorldCoordinates =
+--    ObjCoordinates
 
 
 type Body
@@ -191,40 +195,47 @@ init thickness =
         }
 
 
-view sceneAssets (BreakableWall { physics }) =
-    -- TODO: implement breakable wall view
-    Scene3d.nothing
+objectFrame : Frame3d.Frame3d Meters ObjectCoordinates { defines : WorldCoordinates }
+objectFrame =
+    Frame3d.atPoint (Point3d.meters 0.5 0.5 0)
 
 
+view : Assets.Model -> Model -> Scene3d.Entity Coordinates.ObjectCoordinates
+view assets (BreakableWall { physics }) =
+    let
+        material =
+            Scene3d.Material.texturedNonmetal
+                { baseColor = Assets.getColorTexture assets "Bricks021_1K-JPG_Color.jpg"
+                , roughness = Assets.getOtherTexture assets "Bricks021_1K-JPG_Roughness.jpg"
+                }
+    in
+    physics
+        |> Physics.World.bodies
+        |> List.map
+            (\body ->
+                let
+                    frame3d =
+                        Physics.Body.frame body
+                in
+                case Physics.Body.data body of
+                    WallTriangle ( position, triangle ) ->
+                        triangle
+                            |> Scene3d.mesh material
+                            |> Scene3d.placeIn frame3d
+                            |> Scene3d.placeIn objectFrame
 
---let
---    ( texture, roughness ) =
---        SceneAssets.wallTexture sceneAssets
---
---    material =
---        Scene3d.Material.texturedNonmetal { baseColor = texture, roughness = roughness }
---in
---physics
---    |> Physics.World.bodies
---    |> List.map
---        (\body ->
---            let
---                frame3d =
---                    Physics.Body.frame body
---            in
---            case Physics.Body.data body of
---                WallTriangle ( position, triangle ) ->
---                    triangle
---                        |> Scene3d.mesh material
---                        |> Scene3d.placeIn frame3d
---
---                Floor ->
---                    Scene3d.nothing
---        )
---    |> Scene3d.group
+                    Floor ->
+                        Scene3d.nothing
+            )
+        |> Scene3d.group
 
 
-break : Point2d Length.Meters BodyCoordinates -> Vector3d Length.Meters WorldCoordinates -> Model -> Model
+wallCenter : Point2d Length.Meters ObjectCoordinates
+wallCenter =
+    Point2d.meters 0.5 0.5
+
+
+break : Point2d Length.Meters ObjectCoordinates -> Vector3d Length.Meters Coordinates.WorldCoordinates -> Model -> Model
 break collisionPoint forceVector (BreakableWall model) =
     if model.active then
         BreakableWall model
@@ -268,7 +279,7 @@ break collisionPoint forceVector (BreakableWall model) =
                                                 Point3d.distanceFrom center collisionPoint3d
 
                                             impulse =
-                                                Force.newtons (max 0.2 (1 - Length.inMeters distance) * forceLength * 200)
+                                                Force.newtons (max 0.2 (1 - Length.inMeters distance) * forceLength * 5000)
                                                     |> Quantity.times (Duration.seconds 1)
                                         in
                                         Physics.Body.applyImpulse impulse direction center body

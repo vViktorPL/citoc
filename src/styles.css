@@ -60,12 +60,14 @@ body {
 }
 
 .loadingScreen {
+    mix-blend-mode: difference;
     font-family: sans-serif;
     width: 100vw;
     height: 100vh;
     position: fixed;
     left: 0;
     right: 0;
+    top: 0;
     display: flex;
     flex-direction: column;
     align-items: center;

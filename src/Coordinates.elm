@@ -1,4 +1,4 @@
-module Coordinates exposing (ObjectCoordinates(..), SectorCoordinates, WorldCoordinates(..), sectorToWorldPosition, worldPositionToSector)
+module Coordinates exposing (ObjectCoordinates(..), SectorCoordinates, WorldCoordinates(..), sectorToWorldPosition, worldPositionToSector, worldPositionToSectorOffsetX)
 
 import Length exposing (Meters)
 import Point3d exposing (Point3d)
@@ -28,3 +28,10 @@ worldPositionToSector worldPosition =
             Point3d.toMeters worldPosition
     in
     ( floor -p.x, floor p.y )
+
+
+worldPositionToSectorOffsetX : Point3d Meters WorldCoordinates -> Float
+worldPositionToSectorOffsetX worldPosition =
+    worldPosition
+        |> Point3d.xCoordinate
+        |> Length.inMeters

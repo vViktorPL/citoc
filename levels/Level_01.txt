@@ -1,9 +1,56 @@
-#########
-#....%%%#
-#....%%%#
-#...^...#
-#########
+###
+..#
+#C#
+#b####  #####
+#.#..#  #...#
+#.#######A#.####
+#.........#....#
+#.........####c#
+#..e......#  #B#
+###-#####.#  #.#
+  !T! #Q#.#  #.#
+  !t! #.#.#  #.........#
+  !^! #...#  #.........#
+  !z! #####  #.........#
+             #########.#
+
+
+#####
+#...#
+#d#D#
+#q#.#
+#.#.#
+#...#
+#####
+
+    ###
+    ..#
+#####.#
+#...#X#
+#x#.#.#
+#.#.#.#
+#.###.#
+#.....#
+#######
 
 
 ---
-% sand
+Q floor [SteppedIn] [ChangeTile @A LevelTile.floor, ChangeTile @- LevelTile.wall, RemoveAllTriggersInSector @Q]
+A floor
+X floor [SteppedIn] [NextLevel]
+A wall
+T terms [SteppedIn] [PlayMusic "first-level.mp3", RemoveAllTriggersInSector @T]
+t blackFloor [Nod, LookAngle North] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+^ blackFloor [Nod, LookAngle North] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+! blackWall
+- floor
+e floor [LookAngle North] [ChangeTile @- LevelTile.wall, RemoveAllTriggersInSector @e]
+b wall
+B floor [SteppedIn] [ChangeTile @b LevelTile.floor, Teleport @b]
+C floor [SteppedIn] [Teleport @c, CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
+c floor
+D floor [SteppedIn] [ChangeTile @d LevelTile.floor, RemoveAllTriggersInSector @D]
+d wall [SteppedIn, LookAngle North] [Teleport @x]
+x floor
+q floor
+z (sign "Just accept the terms\ndude" North)

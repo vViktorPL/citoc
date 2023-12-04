@@ -309,7 +309,7 @@ update msg model =
                 , state =
                     case ( model.state, Assets.areReady updatedAssets ) of
                         ( LoadingLevel, True ) ->
-                            FadingInLevel 0
+                            FadingInLevel initFadeInTime
 
                         _ ->
                             model.state
@@ -660,7 +660,7 @@ executeEffects model effects =
                         ( { modelAcc | player = Player.sitDown modelAcc.player }, cmdAcc )
 
                     Trigger.OpenTerms sector ->
-                        ( { modelAcc | level = Level.openTerms modelAcc.level sector }, Cmd.batch [ cmdAcc, Sound.playSound "elevator_door.mp3" ] )
+                        ( { modelAcc | level = Level.activateTile modelAcc.level sector }, Cmd.batch [ cmdAcc, Sound.playSound "elevator_door.mp3" ] )
 
                     Trigger.PlayMusic fileName ->
                         ( modelAcc, Cmd.batch [ cmdAcc, Sound.playMusic fileName ] )
@@ -741,13 +741,28 @@ viewGame model opacity =
             ]
         , Narration.view model.narration
         , Html.div
-            [ Html.Attributes.style "visibility"
+            [ Html.Attributes.class "loadingScreen"
+            , Html.Attributes.style
+                "visibility"
                 (if model.state == LoadingLevel then
-                    "hidden"
+                    "visible"
 
                  else
-                    "visible"
+                    "hidden"
                 )
             ]
-            [ Html.text "Loading..." ]
+            [ Html.div [ Html.Attributes.class "loadingSpinner" ] []
+            , Html.text "Loading..."
+            ]
+
+        --, Html.div
+        --    [ Html.Attributes.style "visibility"
+        --        (if model.state == LoadingLevel then
+        --            "hidden"
+        --
+        --         else
+        --            "visible"
+        --        )
+        --    ]
+        --    [ Html.text "Loading..." ]
         ]

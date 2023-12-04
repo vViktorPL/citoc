@@ -151,7 +151,7 @@ init sector orientation =
         }
 
 
-seamlessTeleport : Player -> ( Int, Int ) -> Player
+seamlessTeleport : Player -> SectorCoordinates -> Player
 seamlessTeleport (Player playerData) ( x, y ) =
     let
         oldPosition3d =
@@ -165,15 +165,15 @@ seamlessTeleport (Player playerData) ( x, y ) =
     in
     Player
         { playerData
-            | position = Point3d.meters (toFloat x + offsetX) (toFloat y + offsetY) oldPosition3d.z
+            | position = Point3d.meters -(toFloat x + offsetX) (toFloat y + offsetY) oldPosition3d.z
         }
 
 
-safeTeleport : Player -> ( Int, Int ) -> Player
+safeTeleport : Player -> SectorCoordinates -> Player
 safeTeleport (Player playerData) ( x, y ) =
     Player
         { playerData
-            | position = Point3d.meters (toFloat x + 0.5) (toFloat y + 0.5) (Point3d.toMeters playerData.position).z
+            | position = Point3d.meters -(toFloat x + 0.5) (toFloat y + 0.5) (Point3d.toMeters playerData.position).z
         }
 
 

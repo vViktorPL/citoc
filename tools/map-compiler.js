@@ -64,11 +64,11 @@ fs.readdir(path.join(__dirname, '../levels')).then(
                 if (Array.isArray(uniqueTilePositions[legendTile])) {
                   uniqueTilePositions[legendTile].forEach(
                     position => {
-                      triggers.push(`Trigger ${position} ${triggerData}`)
+                      triggers.push(`Trigger.localTrigger ${position} ${triggerData}`)
                     }
                   )
                 } else {
-                  triggers.push(`Trigger ${uniqueTilePositions[legendTile]} ${triggerData}`)
+                  triggers.push(`Trigger.localTrigger ${uniqueTilePositions[legendTile]} ${triggerData}`)
                 }
               }
 
@@ -128,7 +128,8 @@ fs.readdir(path.join(__dirname, '../levels')).then(
 
 const asciiToTile = legend => ascii => {
   if (ascii in legend) {
-    return `LevelTile.${legend[ascii]}`;
+    const tile = legend[ascii];
+    return tile[0] === '(' ? `(LevelTile.${tile.substring(1)}` : `LevelTile.${tile}`;
   }
 
   switch (ascii) {

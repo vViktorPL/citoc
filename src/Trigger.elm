@@ -1,4 +1,4 @@
-module Trigger exposing (Trigger, TriggerCondition(..), TriggerEffect(..), dependencies, isGlobalTrigger, narrowedToSector, tilesUsed)
+module Trigger exposing (Trigger, TriggerCondition(..), TriggerEffect(..), dependencies, isGlobalTrigger, localTrigger, narrowedToSector, tilesUsed)
 
 import Assets exposing (Dependency)
 import Color exposing (Color)
@@ -13,6 +13,11 @@ type alias Trigger =
     { conditions : List TriggerCondition
     , effects : List TriggerEffect
     }
+
+
+localTrigger : SectorCoordinates -> List TriggerCondition -> List TriggerEffect -> Trigger
+localTrigger sector conditions effects =
+    Trigger (InSector sector :: conditions) effects
 
 
 narrowedToSector : Trigger -> Maybe SectorCoordinates
