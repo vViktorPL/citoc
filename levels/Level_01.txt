@@ -43,8 +43,8 @@ X floor [SteppedIn] [NextLevel]
 F floor [SteppedIn] [NextLevel]
 A wall
 T terms [SteppedIn] [PlayMusic "first-level.mp3", RemoveAllTriggersInSector @T]
-t blackFloor [Nod, LookAngle North] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
-^ blackFloor [Nod, LookAngle North] [OpenTerms @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+t blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+^ blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
 ! blackWall
 - floor
 e floor [LookAngle North] [ChangeTile @- LevelTile.wall, RemoveAllTriggersInSector @e]

@@ -523,8 +523,6 @@ updatePlayerSteps delta (Player playerData) =
                     }
                 , EmitStepSound newStepSoundNumber
                 )
-                --, Sound.playSound ("step-" ++ String.fromInt newStepSoundNumber ++ ".mp3")
-                --)
 
             else
                 ( Player { playerData | remainingTimeToStepSound = Just newTime }, Noop )

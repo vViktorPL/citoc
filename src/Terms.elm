@@ -1,4 +1,4 @@
-module Terms exposing (Model, doesCollide, init, open, update, view)
+module Terms exposing (Model, dependencies, doesCollide, init, open, update, view)
 
 import Assets
 import Point3d
@@ -19,6 +19,13 @@ type Model
 init : Model
 init =
     Closed
+
+
+dependencies : List Assets.Dependency
+dependencies =
+    [ Assets.SoundEffectDep "elevator_door.mp3"
+    , Assets.OtherTextureDep "toc.png"
+    ]
 
 
 view assets model =

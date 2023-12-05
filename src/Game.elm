@@ -20,7 +20,6 @@ import Narration
 import Orientation exposing (Orientation(..))
 import Pixels
 import Player exposing (Player)
-import Point3d
 import Scene3d
 import Sound
 import Task
@@ -606,7 +605,7 @@ handleTriggers model newPlayer =
                                     r =
                                         Player.playerRadius |> Length.inMeters
                                 in
-                                xOffset >= r && xOffset <= 1 - r && yOffset >= r && yOffset <= 1 - r
+                                xOffset > r && xOffset < 1 - r && yOffset > r && yOffset < 1 - r
 
                             Trigger.CameBackToFloor ->
                                 Player.isUpsideDown model.player && not (Player.isUpsideDown newPlayer)
@@ -684,9 +683,6 @@ executeEffects model effects =
                     Trigger.SitDown ->
                         ( { modelAcc | player = Player.sitDown modelAcc.player }, cmdAcc )
 
-                    Trigger.OpenTerms sector ->
-                        ( { modelAcc | level = Level.activateTile modelAcc.level sector }, Cmd.batch [ cmdAcc, Sound.playSound "elevator_door.mp3" ] )
-
                     Trigger.PlayMusic fileName ->
                         ( modelAcc, Cmd.batch [ cmdAcc, Sound.playMusic fileName ] )
 
@@ -700,8 +696,12 @@ executeEffects model effects =
                     Trigger.ShowGameEndingScreen ->
                         ( { modelAcc | state = FinalFadeOut levelFadeOutTime, fadeColor = "black" }, Cmd.batch [ cmdAcc, Sound.stopMusic () ] )
 
-                    Trigger.BreakWall sector ->
-                        ( { modelAcc | level = Level.breakWall modelAcc.level sector Point3d.origin Vector3d.zero }, cmdAcc )
+                    Trigger.ActivateTile sector ->
+                        let
+                            ( updatedLevel, tileActivationCmd ) =
+                                Level.activateTile modelAcc.level sector
+                        in
+                        ( { modelAcc | level = updatedLevel }, Cmd.batch [ cmdAcc, tileActivationCmd ] )
 
                     Trigger.EnableUpsideDownWalking ->
                         ( { modelAcc | player = Player.enableUpsideDownWalking modelAcc.player }, cmdAcc )
@@ -787,15 +787,4 @@ viewGame model opacity =
             , Html.br [] []
             , Html.text loadingProgress
             ]
-
-        --, Html.div
-        --    [ Html.Attributes.style "visibility"
-        --        (if model.state == LoadingLevel then
-        --            "hidden"
-        --
-        --         else
-        --            "visible"
-        --        )
-        --    ]
-        --    [ Html.text "Loading..." ]
         ]

@@ -300,13 +300,3 @@ viewCreditText ( startTime, endTime ) texts time =
     texts
         |> List.map (text >> List.singleton >> Html.div [])
         |> Html.div [ classList [ ( "credits-text", True ), ( "visible", time >= startTime && time <= endTime ) ] ]
-
-
-
---orbit :
---    { focalPoint : Point3d units coordinates
---    , groundPlane : SketchPlane3d units coordinates defines
---    , azimuth : Angle
---    , elevation : Angle
---    , distance : Quantity Float units
---    }

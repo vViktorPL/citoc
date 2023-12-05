@@ -4,7 +4,7 @@
   #%#    #%#%%%%%# #.#.#.#
   #%#    #%#####%# #.#.#.#
   #%#    #%%%%%%%# #.#.#.#
-###%###  ######### #...#.#
+###%###  ######### #...#^#
 #%%%%%#            #######
 #%%T%%#
 #%%%%%#
@@ -136,7 +136,7 @@
             #b#
             #.#
             #.#???????????????????????#################
-            #.loooooooooooooąooooooooo...............^.ó
+            #.loooooooooooooąooooooooo.................ó
             #.#???????????????????????#################
             #.#
             #.#
@@ -188,14 +188,14 @@ t toyBucket
 ! (invisibleWall LevelTile.sand)
 + (invisibleWall LevelTile.empty)
 C bigCastle
-g openFloor [SteppedIn] [SafeTeleport @G, PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), RemoveAllTriggersInSector @g]
+g sand [SteppedIn] [SafeTeleport @G, PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), RemoveAllTriggersInSector @g]
 G empty
 f chair [SteppedIn, LookAngle South] [StartNarration 6, Teleport @F, SitDown, RemoveAllTriggersInSector @f]
 F chair
 p empty
 s sandboxWithCastle
 S emptySandbox
-x floor [InSafeTeleportingOffset] [Teleport @x, StartNarration 7, RemoveAllTriggersInSector @X]
+x floor [InSafeTeleportingOffset] [Teleport @X, StartNarration 7, RemoveAllTriggersInSector @x]
 X floor
 _ wall
 8 floor [LookAngle South] [StartNarration 8, ChangeTile @_ LevelTile.floor, RemoveAllTriggersInSector @8]

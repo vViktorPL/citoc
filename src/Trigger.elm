@@ -88,9 +88,6 @@ dependencies { effects } =
                 ShowGameEndingScreen ->
                     Ending.dependencies
 
-                OpenTerms _ ->
-                    [ Assets.SoundEffectDep "elevator_door.mp3" ]
-
                 --BreakWall _ -> [Assets.SoundEffectDep "rumble.mp3"]
                 _ ->
                     []
@@ -113,10 +110,6 @@ type TriggerCondition
     | WindowShake
 
 
-
---| SectorCollision SectorCoordinates
-
-
 type TriggerEffect
     = Teleport SectorCoordinates
     | SafeTeleport SectorCoordinates
@@ -130,10 +123,9 @@ type TriggerEffect
     | PlaySound String
     | InitFog Color Length
     | SitDown
-    | OpenTerms SectorCoordinates
+    | ActivateTile SectorCoordinates
     | PlayMusic String
     | StartNarration Int
     | ShowGameEndingScreen
-    | BreakWall SectorCoordinates
     | EnableUpsideDownWalking
     | ComeBackDown

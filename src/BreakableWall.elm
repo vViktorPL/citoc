@@ -36,11 +36,6 @@ type Model
         }
 
 
-
---type alias WorldCoordinates =
---    ObjCoordinates
-
-
 type Body
     = WallTriangle ( Point3d Length.Meters BodyCoordinates, Scene3d.Mesh.Textured BodyCoordinates )
     | Floor
@@ -58,11 +53,6 @@ random2DPoints =
         |> List.append [ ( 0, 0 ), ( 1, 0 ), ( 0, 1 ), ( 1, 1 ) ]
         |> List.map (\( x, y ) -> Point2d.meters x y)
         |> Array.fromList
-
-
-
---thickness =
---    0.01
 
 
 init : Float -> Model

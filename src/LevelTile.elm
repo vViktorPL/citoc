@@ -47,6 +47,7 @@ import Point2d
 import Point3d exposing (Point3d)
 import Scene3d
 import Scene3d.Material
+import Sound
 import Terms
 import Vector3d
 
@@ -665,7 +666,7 @@ dependencies model =
             dependencies tile
 
         Terms _ ->
-            [ Assets.ColorTextureDep "toc.png" ]
+            Terms.dependencies
 
         Sandbox withCastle ->
             [ Assets.ColorTextureDep "Ground054_1K-JPG_Color.jpg"
@@ -760,20 +761,29 @@ update delta model =
             model
 
 
-activate : Model -> Model
+activate : Model -> ( Model, Cmd msg )
 activate model =
     case model of
         Terms termsModel ->
-            Terms (Terms.open termsModel)
+            ( Terms (Terms.open termsModel), Sound.playSound "elevator_door.mp3" )
 
         BreakableWall wallType breakableWallModel ->
-            BreakableWall wallType (BreakableWall.break (Point2d.meters 0.5 0.5) Vector3d.zero breakableWallModel)
+            ( BreakableWall wallType (BreakableWall.break (Point2d.meters 0.5 0.5) Vector3d.zero breakableWallModel)
+            , Sound.playSound
+                (case wallType of
+                    GlassWall ->
+                        "glass-break.mp3"
+
+                    HeavyWall ->
+                        "rumble.mp3"
+                )
+            )
 
         _ ->
-            model
+            ( model, Cmd.none )
 
 
-interact : Player -> Model -> Maybe Model
+interact : Player -> Model -> Maybe ( Model, Cmd msg )
 interact player model =
     case model of
         BreakableWall GlassWall breakableWallModel ->
@@ -798,7 +808,7 @@ interact player model =
                     wallCollisionPoint =
                         Point2d.meters wallCollisionPointX wallCollisionPointY
                 in
-                Just (BreakableWall GlassWall (BreakableWall.break wallCollisionPoint v breakableWallModel))
+                Just ( BreakableWall GlassWall (BreakableWall.break wallCollisionPoint v breakableWallModel), Sound.playSound "glass-break.mp3" )
 
         _ ->
             Nothing
