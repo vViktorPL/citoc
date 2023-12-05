@@ -591,16 +591,12 @@ handleTriggers model newPlayer =
                                         Player.getPlayerPosition model.player
 
                                     xOffset =
-                                        Debug.log "xOffset"
-                                            (Coordinates.worldPositionToSectorOffsetX
-                                                playerPos
-                                            )
+                                        Coordinates.worldPositionToSectorOffsetX
+                                            playerPos
 
                                     yOffset =
-                                        Debug.log "yOffset"
-                                            (Coordinates.worldPositionToSectorOffsetY
-                                                playerPos
-                                            )
+                                        Coordinates.worldPositionToSectorOffsetY
+                                            playerPos
 
                                     r =
                                         Player.playerRadius |> Length.inMeters
