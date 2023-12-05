@@ -24,7 +24,7 @@ init =
 dependencies : List Assets.Dependency
 dependencies =
     [ Assets.SoundEffectDep "elevator_door.mp3"
-    , Assets.OtherTextureDep "toc.png"
+    , Assets.ColorTextureDep "toc.png"
     ]
 
 

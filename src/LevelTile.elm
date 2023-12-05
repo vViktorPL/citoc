@@ -16,6 +16,7 @@ module LevelTile exposing
     , floor
     , glassWall
     , groundSound
+    , hole
     , interact
     , invisibleWall
     , openFloor
@@ -152,6 +153,10 @@ bigCastle =
 
 blackFloor =
     BlackFloor
+
+
+hole =
+    Hole
 
 
 glassWall : Model
@@ -516,10 +521,13 @@ view assets model =
 
         Hole { walls, barriers } ->
             let
+                levels =
+                    2
+
                 concreteMaterial =
                     Scene3d.Material.texturedNonmetal
-                        { baseColor = Assets.getColorTexture assets "CorrugatedSteel007B_1K-JPG_Color.jpg"
-                        , roughness = Assets.getOtherTexture assets "CorrugatedSteel007B_1K-JPG_Roughness.jpg"
+                        { baseColor = Assets.getColorTexture assets "Concrete032_4K_Color.jpg"
+                        , roughness = Assets.getOtherTexture assets "Concrete032_4K_Roughness.jpg"
                         }
 
                 concreteWallEntity =
@@ -541,13 +549,15 @@ view assets model =
                         |> Assets.getMesh assets
                         |> Assets.texturedMesh
                         |> Scene3d.mesh barrierMaterial
+                        |> Scene3d.rotateAround Axis3d.x (Angle.degrees 90)
+                        |> Scene3d.scaleAbout Point3d.origin 0.43
                         |> Scene3d.placeIn Frame3d.atOrigin
 
                 wallEntities =
                     walls
                         |> List.map
                             (\wallOrientation ->
-                                List.range 1 2
+                                List.range 1 levels
                                     |> List.map
                                         (\level ->
                                             concreteWallEntity
@@ -556,6 +566,12 @@ view assets model =
                                         )
                                     |> Scene3d.group
                             )
+
+                floorEntity =
+                    horizontalTile (Length.meters -levels) concreteMaterial
+
+                ceilingEntity =
+                    horizontalTile (Length.meters 1) (getCeilingMaterial assets)
 
                 barrierEntities =
                     barriers
@@ -566,7 +582,7 @@ view assets model =
                                     |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle barrierOrientation))
                             )
             in
-            Scene3d.group (horizontalTile (Length.meters 1) (getCeilingMaterial assets) :: wallEntities ++ barrierEntities)
+            Scene3d.group ([ floorEntity, ceilingEntity ] ++ wallEntities ++ barrierEntities)
 
         ToyBucket ->
             let
