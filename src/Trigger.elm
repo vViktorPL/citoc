@@ -108,6 +108,7 @@ type TriggerCondition
     | CameBackToFloor
     | CounterEquals String Int
     | WindowShake
+    | SignTextLike SectorCoordinates String
 
 
 type TriggerEffect

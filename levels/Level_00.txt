@@ -1,0 +1,45 @@
+
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #b#
+  #B#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#      #######
+  #c########.....#
+  #.C............#
+  #.##L#L###.....#
+##s.#......#.....#
+#.t.#......#######
+#...#............#
+#...u............#
+#...#.q.w.......<#
+######1#2#########
+
+---
+s (sign "Infinite corridor" South)
+t floor [SignTextLike @s "Finite corridor"] [PlaySound "rumble.mp3", ChangeTile @c LevelTile.wall, ChangeTile @C LevelTile.floor, RemoveAllTriggersInSector @t]
+< floor [] [InitFog Color.black (Length.meters 2)]
+b floor [SteppedIn] [Teleport @B]
+B floor
+c floor
+C wall
+L (sign "Larry Tesler\n1945 - 2020" South)
+1 (sign "" North)
+2 (sign "" North)
+q floor [SignTextLike @1 "Larry Tesler", SignTextLike @2 "Larry Tesler"] [ChangeTile @u LevelTile.floor, RemoveAllTriggersInSectors [@q, @w]]
+w floor [SignTextLike @1 "Larry Tesler", SignTextLike @2 "Larry Tesler"] [ChangeTile @u LevelTile.floor, RemoveAllTriggersInSectors [@q, @w]]
+u wall

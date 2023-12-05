@@ -667,6 +667,11 @@ handleTriggers model newPlayer =
 
                             Trigger.WindowShake ->
                                 model.windowShaken
+
+                            Trigger.SignTextLike signSector textMatch ->
+                                Level.getSignTextAt model.level signSector
+                                    |> Maybe.map (String.toLower >> String.startsWith (String.toLower textMatch))
+                                    |> Maybe.withDefault False
                     )
                     trigger.conditions
             )
