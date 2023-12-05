@@ -5,9 +5,12 @@ module Level exposing
     , addTrigger
     , fromData
     , getGroundSound
+    , getSignTextAt
+    , getTileAt
     , getTriggersAt
     , initPlayer
     , interact
+    , mapTile
     , removeAllTriggersAtSector
     , removeAllTriggersAtSectors
     , update
@@ -459,6 +462,12 @@ removeAllTriggersAtSectors sectors (Level data) =
                     |> List.filter (\( sector, _ ) -> not (List.member sector sectors))
                     |> Dict.fromList
         }
+
+
+getSignTextAt : Model -> SectorCoordinates -> Maybe String
+getSignTextAt level sector =
+    getTileAt level sector
+        |> LevelTile.getSignText
 
 
 mapTile : (LevelTile.Model -> LevelTile.Model) -> SectorCoordinates -> Model -> Model

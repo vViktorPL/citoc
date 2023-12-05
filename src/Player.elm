@@ -10,6 +10,7 @@ module Player exposing
     , getVerticalLookAngle
     , init
     , isUpsideDown
+    , orientedToSector
     , playerRadius
     , safeTeleport
     , seamlessTeleport
@@ -213,6 +214,29 @@ getSector (Player playerData) =
             Point3d.toMeters playerData.position
     in
     ( floor -x, floor y )
+
+
+orientedToSector : Player -> SectorCoordinates
+orientedToSector player =
+    let
+        orientation =
+            getHorizontalOrientation player
+
+        ( x, y ) =
+            getSector player
+    in
+    case orientation of
+        North ->
+            ( x, y - 1 )
+
+        East ->
+            ( x + 1, y )
+
+        South ->
+            ( x, y + 1 )
+
+        West ->
+            ( x - 1, y )
 
 
 view : Player -> Camera3d.Camera3d Length.Meters WorldCoordinates

@@ -326,8 +326,60 @@ update msg model =
             in
             ( { animatedModel | narration = updatedNarration }, Cmd.batch [ animationCmd, narrationCmd ] )
 
-        Clipboard _ ->
-            ( model, Cmd.none )
+        Clipboard WebBrowser.ClipboardCopy ->
+            let
+                sector =
+                    Player.orientedToSector model.player
+
+                signText =
+                    Level.getSignTextAt model.level sector
+                        |> Maybe.withDefault ""
+            in
+            ( model, WebBrowser.setClipboardCopyableText signText )
+
+        Clipboard WebBrowser.ClipboardCut ->
+            let
+                sector =
+                    Player.orientedToSector model.player
+
+                signText =
+                    Level.getSignTextAt model.level sector
+                        |> Maybe.withDefault ""
+
+                newSign =
+                    sector
+                        |> Level.getTileAt model.level
+                        |> LevelTile.updateSignText ""
+
+                ( updatedAssets, assetsCmd ) =
+                    Assets.requestDependencies (LevelTile.dependencies newSign) model.assets
+            in
+            ( { model
+                | level = Level.updateTile sector newSign model.level
+                , assets = updatedAssets
+              }
+            , Cmd.batch [ Cmd.map AssetsMsg assetsCmd, WebBrowser.setClipboardCopyableText signText ]
+            )
+
+        Clipboard (WebBrowser.ClipboardPaste text) ->
+            let
+                sector =
+                    Player.orientedToSector model.player
+
+                newSign =
+                    sector
+                        |> Level.getTileAt model.level
+                        |> LevelTile.updateSignText text
+
+                ( updatedAssets, assetsCmd ) =
+                    Assets.requestDependencies (LevelTile.dependencies newSign) model.assets
+            in
+            ( { model
+                | level = Level.updateTile sector newSign model.level
+                , assets = updatedAssets
+              }
+            , Cmd.map AssetsMsg assetsCmd
+            )
 
         KeyDown key ->
             ( { model

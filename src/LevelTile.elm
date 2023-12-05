@@ -14,6 +14,7 @@ module LevelTile exposing
     , empty
     , emptySandbox
     , floor
+    , getSignText
     , glassWall
     , groundSound
     , hole
@@ -26,6 +27,7 @@ module LevelTile exposing
     , terms
     , toyBucket
     , update
+    , updateSignText
     , view
     , wall
     )
@@ -828,6 +830,26 @@ interact player model =
 
         _ ->
             Nothing
+
+
+getSignText : Model -> Maybe String
+getSignText model =
+    case model of
+        Sign _ text _ ->
+            Just text
+
+        _ ->
+            Nothing
+
+
+updateSignText : String -> Model -> Model
+updateSignText newText model =
+    case model of
+        Sign _ _ orientation ->
+            sign newText orientation
+
+        _ ->
+            model
 
 
 type alias HoleTileData =
