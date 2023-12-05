@@ -1,13 +1,13 @@
 ###
 ..#
 #C#
-#b####  #####
+#b####  #s###
 #.#..#  #...#
 #.#######A#.####
-#.........#..F.#
-#..sS.....####c#
+#.........#....#
+#.........####c#
 #..e......#  #B#
-###-#####.#  #.#
+###-###S#.#  #.#
   !T! #Q#.#  #.#
   !t! #.#.#  #.........#
   !^! #...#  #.........#
@@ -29,28 +29,29 @@
 #...#X#
 #x#.#.#
 #.#.#.#
-#.###.#
-#.....#
+#.#E#.#
+#.....L
 #######
 
 
 ---
-s emptySandbox
-S sandboxWithCastle
+S (sign "Come closer\nthings will change..." South)
+s (sign "See?" South)
+E (sign "Dead end?" North)
+L (sign "There is always an exit.\n\nNow you can proceed\nto the next level." West)
 Q floor [SteppedIn] [ChangeTile @A LevelTile.floor, ChangeTile @- LevelTile.wall, RemoveAllTriggersInSector @Q]
 A floor
 X floor [SteppedIn] [NextLevel]
-F floor [SteppedIn] [NextLevel]
 A wall
 T terms [SteppedIn] [PlayMusic "first-level.mp3", RemoveAllTriggersInSector @T]
-t blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
-^ blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSector @t, RemoveAllTriggersInSector @^]
+t blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSectors [@t, @^], ChangeTile @z LevelTile.blackWall]
+^ blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSectors [@t, @^], ChangeTile @z LevelTile.blackWall]
 ! blackWall
 - floor
 e floor [LookAngle North] [ChangeTile @- LevelTile.wall, RemoveAllTriggersInSector @e]
 b wall
-B floor [SteppedIn] [ChangeTile @b LevelTile.floor, Teleport @b]
-C floor [SteppedIn] [Teleport @c, CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
+B floor [SteppedIn] [ChangeTile @b LevelTile.floor, ChangeTile @S (LevelTile.sign "Have you tried the other direction?" South), Teleport @b]
+C floor [SteppedIn] [Teleport @c, ChangeTile @S LevelTile.wall, CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
 c floor
 D floor [SteppedIn] [ChangeTile @d LevelTile.floor, RemoveAllTriggersInSector @D]
 d wall [SteppedIn, LookAngle North] [Teleport @x]

@@ -15,7 +15,7 @@
 #########
 
 ---
-x floor [SteppedIn] [ChangeTile @A LevelTile.floor, PlaySound "rumble.mp3", RemoveAllTriggersInSector @x]
+x floor [SteppedIn] [ChangeTile @A LevelTile.floor, RemoveAllTriggersInSector @x]
 1 floor [LookAngle South] [Teleport @Q]
 Q floor
 2 floor [LookAngle South] [Teleport @W]
