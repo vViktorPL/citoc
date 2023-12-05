@@ -107,6 +107,7 @@ type TriggerCondition
     | NegativeHeadshake
     | Nod
     | SteppedIn
+    | InSafeTeleportingOffset
     | CameBackToFloor
     | CounterEquals String Int
     | WindowShake
@@ -118,6 +119,7 @@ type TriggerCondition
 
 type TriggerEffect
     = Teleport SectorCoordinates
+    | SafeTeleport SectorCoordinates
     | NextLevel
     | ChangeTile SectorCoordinates LevelTile.Model
     | CreateTrigger Trigger

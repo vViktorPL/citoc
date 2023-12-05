@@ -586,6 +586,28 @@ handleTriggers model newPlayer =
                             Trigger.SteppedIn ->
                                 dX /= 0 || dY /= 0
 
+                            Trigger.InSafeTeleportingOffset ->
+                                let
+                                    playerPos =
+                                        Player.getPlayerPosition model.player
+
+                                    xOffset =
+                                        Debug.log "xOffset"
+                                            (Coordinates.worldPositionToSectorOffsetX
+                                                playerPos
+                                            )
+
+                                    yOffset =
+                                        Debug.log "yOffset"
+                                            (Coordinates.worldPositionToSectorOffsetY
+                                                playerPos
+                                            )
+
+                                    r =
+                                        Player.playerRadius |> Length.inMeters
+                                in
+                                xOffset >= r && xOffset <= 1 - r && yOffset >= r && yOffset <= 1 - r
+
                             Trigger.CameBackToFloor ->
                                 Player.isUpsideDown model.player && not (Player.isUpsideDown newPlayer)
 
@@ -624,6 +646,9 @@ executeEffects model effects =
                 case effect of
                     Trigger.Teleport targetSector ->
                         ( { modelAcc | player = Player.seamlessTeleport modelAcc.player targetSector }, cmdAcc )
+
+                    Trigger.SafeTeleport targetSector ->
+                        ( { modelAcc | player = Player.safeTeleport modelAcc.player targetSector }, cmdAcc )
 
                     Trigger.NextLevel ->
                         ( transitionToNextLevel modelAcc, Cmd.batch [ cmdAcc, Sound.playSound "success.mp3" ] )
@@ -715,6 +740,12 @@ viewGame model opacity =
             model.player
                 |> Player.getPlayerPosition
                 |> Coordinates.worldPositionToSector
+
+        loadingProgress =
+            model.assets
+                |> Assets.loadingProgressPercentage
+                |> String.fromInt
+                |> (\percentageNumberString -> percentageNumberString ++ "%")
     in
     Html.div [ Html.Attributes.style "background" model.fadeColor ]
         [ Html.div
@@ -753,6 +784,8 @@ viewGame model opacity =
             ]
             [ Html.div [ Html.Attributes.class "loadingSpinner" ] []
             , Html.text "Loading..."
+            , Html.br [] []
+            , Html.text loadingProgress
             ]
 
         --, Html.div

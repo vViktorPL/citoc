@@ -1,0 +1,28 @@
+############## ########
+E4D#.........# ER.....K
+##3#.#######.# ######.#
+ #C#.#.....#.#     ##X#
+ #2#.#.#S#.#.#     ...#
+ #B#.#.#v#.#.#     ####
+ #1#.#.#...#.#
+ #A#.#.#####.#
+ #0#.#.......#
+ #...#########
+ #####
+
+---
+v floor [SteppedIn] [PlayMusic "weird-level.mp3", RemoveAllTriggersInSector @v]
+0 floor [LookAngle North] [ChangeTile @S (LevelTile.sign "Let's count to 3" South), Teleport @v, RemoveAllTriggersInSector @0, ChangeTile @A LevelTile.floor]
+1 floor [LookAngle North] [ChangeTile @S (LevelTile.sign "1" South), Teleport @v, RemoveAllTriggersInSector @1, ChangeTile @B LevelTile.floor]
+2 floor [LookAngle North] [ChangeTile @S (LevelTile.sign "2" South), Teleport @v, RemoveAllTriggersInSector @2, ChangeTile @C LevelTile.floor]
+3 floor [LookAngle North] [ChangeTile @S (LevelTile.sign "3" South), RemoveAllTriggersInSector @3, ChangeTile @D LevelTile.floor, Teleport @v]
+4 floor [LookAngle West] [Teleport @R]
+A (sign "Let's count to 3" South)
+B (sign "1" South)
+C (sign "2" South)
+D (sign "3" South)
+E (sign "Actually,\na good programmer\nwould start with zero...\nso let's start over..." East)
+K (sign "Just kidding" West)
+S wall
+R floor
+X floor [SteppedIn] [NextLevel]

@@ -1,0 +1,25 @@
+#######
+#...X.#
+#A###.#
+#v#  #
+#.#######
+#.......#
+#.......#
+#.......#
+#.##?##.#
+#.#.x.#.#
+#Q#2#1#W#
+#.#.#.#.#
+#.#.#.#.#
+#...#...#
+#########
+
+---
+x floor [SteppedIn] [ChangeTile @A LevelTile.floor, PlaySound "rumble.mp3", RemoveAllTriggersInSector @x]
+1 floor [LookAngle South] [Teleport @Q]
+Q floor
+2 floor [LookAngle South] [Teleport @W]
+W floor
+X floor [SteppedIn] [NextLevel]
+A wall
+? (sign "BEWARE OF\nCONFUSING\nCORRIDORS" South)

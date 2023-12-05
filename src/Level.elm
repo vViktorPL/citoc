@@ -970,7 +970,7 @@ removeAllTriggersAtSectors sectors (Level data) =
             | triggersForSector =
                 data.triggersForSector
                     |> Dict.toList
-                    |> List.filter (\( sector, _ ) -> List.member sector sectors)
+                    |> List.filter (\( sector, _ ) -> not (List.member sector sectors))
                     |> Dict.fromList
         }
 

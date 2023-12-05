@@ -23,6 +23,7 @@ module LevelTile exposing
     , sandboxWithCastle
     , sign
     , terms
+    , toyBucket
     , update
     , view
     , wall
@@ -31,9 +32,12 @@ module LevelTile exposing
 import Angle
 import Assets exposing (Dependency)
 import Axis3d
+import Block3d
 import BreakableWall
+import Castle
 import Color
 import Coordinates exposing (ObjectCoordinates, WorldCoordinates)
+import Frame3d
 import Hash exposing (Hash)
 import Length
 import Luminance
@@ -99,6 +103,10 @@ sign text orientation =
                 |> Hash.toString
     in
     Sign name text orientation
+
+
+toyBucket =
+    ToyBucket
 
 
 blueWall =
@@ -280,15 +288,87 @@ wallBlockTile material { x1, x2, y1, y2, z1, z2 } =
     Scene3d.group [ leftQuad, frontQuad, behindQuad, rightQuad ]
 
 
+getCeilingMaterial assets =
+    Scene3d.Material.texturedEmissive
+        (Assets.getColorTexture assets "OfficeCeiling005_4K_Color.jpg")
+        (Luminance.footLamberts 100)
+
+
+viewSandbox : Assets.Model -> Bool -> Scene3d.Entity ObjectCoordinates
+viewSandbox assets withCastle =
+    [ Scene3d.block
+        (Scene3d.Material.color Color.darkRed)
+        (Block3d.from
+            (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
+            (Point3d.unsafe { x = -0.5, y = -0.45, z = 0.12 })
+        )
+    , Scene3d.block
+        (Scene3d.Material.color Color.darkRed)
+        (Block3d.from
+            (Point3d.unsafe { x = -0.5, y = -0.5, z = 0 })
+            (Point3d.unsafe { x = -0.45, y = 0.5, z = 0.12 })
+        )
+    , Scene3d.block
+        (Scene3d.Material.color Color.darkRed)
+        (Block3d.from
+            (Point3d.unsafe { x = -0.5, y = 0.45, z = 0 })
+            (Point3d.unsafe { x = 0.5, y = 0.5, z = 0.12 })
+        )
+    , Scene3d.block
+        (Scene3d.Material.color Color.darkRed)
+        (Block3d.from
+            (Point3d.unsafe { x = 0.5, y = -0.5, z = 0 })
+            (Point3d.unsafe { x = 0.45, y = 0.5, z = 0.12 })
+        )
+    , let
+        x1 =
+            Length.meters 0.45
+
+        y1 =
+            Length.meters 0.45
+
+        x2 =
+            Length.meters -0.45
+
+        y2 =
+            Length.meters -0.45
+
+        z =
+            Length.meters 0.08
+
+        sandMaterial =
+            Scene3d.Material.texturedNonmetal
+                { baseColor = Assets.getColorTexture assets "Ground054_1K-JPG_Color.jpg"
+                , roughness = Assets.getOtherTexture assets "Ground054_1K-JPG_Roughness.jpg"
+                }
+      in
+      Scene3d.quad sandMaterial
+        (Point3d.xyz x1 y1 z)
+        (Point3d.xyz x2 y1 z)
+        (Point3d.xyz x2 y2 z)
+        (Point3d.xyz x1 y2 z)
+    , horizontalTile (Length.meters 1) (getCeilingMaterial assets)
+    ]
+        ++ (if withCastle then
+                [ Castle.view assets False
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees 90)
+                    |> Scene3d.scaleAbout Point3d.origin 0.05
+                    |> Scene3d.placeIn (Frame3d.atPoint (Point3d.meters 0 0 0.08))
+                ]
+
+            else
+                []
+           )
+        |> Scene3d.group
+
+
 view : Assets.Model -> Model -> Scene3d.Entity ObjectCoordinates
 view assets model =
     case model of
         Floor ->
             let
                 ceilingMaterial =
-                    Scene3d.Material.texturedEmissive
-                        (Assets.getColorTexture assets "OfficeCeiling005_4K_Color.jpg")
-                        (Luminance.footLamberts 100)
+                    getCeilingMaterial assets
 
                 ceilingEntity =
                     horizontalTile (Length.meters 1) ceilingMaterial
@@ -406,6 +486,9 @@ view assets model =
             in
             Scene3d.group [ view assets Wall, signEntity ]
 
+        Sandbox withCastle ->
+            viewSandbox assets withCastle
+
         Sand ->
             let
                 material =
@@ -417,10 +500,108 @@ view assets model =
             horizontalTile (Length.meters 0) material
 
         BreakableWall _ breakableWallModel ->
-            BreakableWall.view assets breakableWallModel
+            Scene3d.group
+                [ BreakableWall.view assets breakableWallModel
+                , view assets floor
+                ]
 
-        -- TODO: rest tiles
-        _ ->
+        BigCastle ->
+            Scene3d.group
+                [ Castle.view assets True
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees -90)
+                    |> Scene3d.scaleAbout Point3d.origin 3
+                , view assets Sand
+                ]
+
+        Hole { walls, barriers } ->
+            let
+                concreteMaterial =
+                    Scene3d.Material.texturedNonmetal
+                        { baseColor = Assets.getColorTexture assets "CorrugatedSteel007B_1K-JPG_Color.jpg"
+                        , roughness = Assets.getOtherTexture assets "CorrugatedSteel007B_1K-JPG_Roughness.jpg"
+                        }
+
+                concreteWallEntity =
+                    Scene3d.quad
+                        concreteMaterial
+                        (Point3d.meters 0.5 0 0)
+                        (Point3d.meters -0.5 0 0)
+                        (Point3d.meters -0.5 0 1)
+                        (Point3d.meters 0.5 0 1)
+
+                barrierMaterial =
+                    Scene3d.Material.texturedMetal
+                        { baseColor = Assets.getColorTexture assets "Street_barrier_fence_1_2m_BaseColor.jpg"
+                        , roughness = Assets.getOtherTexture assets "Street_barrier_fence_1_2m_Roughness.jpg"
+                        }
+
+                barrierEntity =
+                    "Street_barrier_fence_1_2m.obj"
+                        |> Assets.getMesh assets
+                        |> Assets.texturedMesh
+                        |> Scene3d.mesh barrierMaterial
+                        |> Scene3d.placeIn Frame3d.atOrigin
+
+                wallEntities =
+                    walls
+                        |> List.map
+                            (\wallOrientation ->
+                                List.range 1 2
+                                    |> List.map
+                                        (\level ->
+                                            concreteWallEntity
+                                                |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.5, z = toFloat -level })
+                                                |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle wallOrientation))
+                                        )
+                                    |> Scene3d.group
+                            )
+
+                barrierEntities =
+                    barriers
+                        |> List.map
+                            (\barrierOrientation ->
+                                barrierEntity
+                                    |> Scene3d.translateBy (Vector3d.fromMeters { x = 0, y = 0.62, z = 0 })
+                                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle barrierOrientation))
+                            )
+            in
+            Scene3d.group (horizontalTile (Length.meters 1) (getCeilingMaterial assets) :: wallEntities ++ barrierEntities)
+
+        ToyBucket ->
+            let
+                bucketMaterial =
+                    Scene3d.Material.texturedMatte (Assets.getColorTexture assets "ToyBucket.png")
+
+                bucketEntity =
+                    "ToyBucket.obj"
+                        |> Assets.getMesh assets
+                        |> Assets.texturedMesh
+                        |> Scene3d.mesh bucketMaterial
+                        |> Scene3d.placeIn Frame3d.atOrigin
+            in
+            Scene3d.group
+                [ bucketEntity
+                    |> Scene3d.scaleAbout Point3d.origin 0.3
+                , view assets Sand
+                ]
+
+        InvisibleWall subModel ->
+            view assets subModel
+
+        Chair ->
+            let
+                chairMaterial =
+                    Scene3d.Material.texturedMatte (Assets.getColorTexture assets "SofaChairTexture.jpg")
+            in
+            "Chair.obj"
+                |> Assets.getMesh assets
+                |> Assets.texturedMesh
+                |> Scene3d.mesh chairMaterial
+                |> Scene3d.rotateAround Axis3d.z (Angle.degrees 90)
+                |> Scene3d.scaleAbout Point3d.origin 0.6
+                |> Scene3d.placeIn Frame3d.atOrigin
+
+        Empty ->
             Scene3d.nothing
 
 
@@ -486,27 +667,53 @@ dependencies model =
         Terms _ ->
             [ Assets.ColorTextureDep "toc.png" ]
 
-        --BreakableWall _ ->
-        --    [ Assets.SoundEffectDep "glass-break.mp3"
-        --    ]
-        --        ++ dependencies Wall
+        Sandbox withCastle ->
+            [ Assets.ColorTextureDep "Ground054_1K-JPG_Color.jpg"
+            , Assets.OtherTextureDep "Ground054_1K-JPG_Roughness.jpg"
+            ]
+                ++ (if withCastle then
+                        Castle.dependencies
+
+                    else
+                        []
+                   )
+
+        BreakableWall wallType _ ->
+            Assets.SoundEffectDep
+                (case wallType of
+                    GlassWall ->
+                        "glass-break.mp3"
+
+                    HeavyWall ->
+                        "rumble.mp3"
+                )
+                :: dependencies Wall
+
+        BigCastle ->
+            Castle.dependencies
+
+        Chair ->
+            [ Assets.ColorTextureDep "SofaChairTexture.jpg"
+            , Assets.MeshDep "Chair.obj"
+            ]
+
+        Hole { barriers } ->
+            [ Assets.ColorTextureDep "Concrete032_4K_Color.jpg"
+            , Assets.OtherTextureDep "Concrete032_4K_Roughness.jpg"
+            ]
+                ++ dependencies openFloor
+                ++ (if List.isEmpty barriers then
+                        []
+
+                    else
+                        [ Assets.ColorTextureDep "Street_barrier_fence_1_2m_BaseColor.jpg"
+                        , Assets.OtherTextureDep "Street_barrier_fence_1_2m_Roughness.jpg"
+                        , Assets.MeshDep "Street_barrier_fence_1_2m.obj"
+                        ]
+                   )
+
         _ ->
             []
-
-
-
---type LevelInteractionResult
---    = NoInteraction
---    | LevelCollision (Vector3d Length.Meters WorldCoordinates)
---    | LevelUpdated Level
--- TODO: need this?
---type TileInteractionResult
---    = NoInteraction
---    | Collision
---    | TileUpdated Model
---interact : Player -> Point3d Length.Meters WorldCoordinates -> Model -> TileInteractionResult
---interact player modelWorldPosition model =
---    Player.getPlayerPosition player
 
 
 groundSound : Model -> GroundSound
@@ -595,11 +802,6 @@ interact player model =
 
         _ ->
             Nothing
-
-
-
---BigCastle ->
---Chair ->
 
 
 type alias HoleTileData =

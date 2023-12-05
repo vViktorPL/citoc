@@ -1,0 +1,218 @@
+  ########################
+  #%%%%%%1%#%%%I.....#...#
+  #%######%#%#######.#.#.#
+  #%#    #%#%%%%%# #.#.#.#
+  #%#    #%#####%# #.#.#.#
+  #%#    #%%%%%%%# #.#.#.#
+###%###  ######### #...#.#
+#%%%%%#            #######
+#%%T%%#
+#%%%%%#
+#%%%%%#
+#######
+
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%!!!!!!!!!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%t%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!3333333!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!4444444!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!%%%%%%%!%%%%%%%%
+ %%%%%%%!!!!%!!!!%%%%%%%%
+ %%%%%%%%%%!C!%%%%%%%%%%%
+ %%%%%%%%%%%g%%%%%%%%%%%%
+
++++
++G+
++ +
++5+
++ +
++ +
++ +
++ +
++ +
++ +
++o+
++o+
++o+
++o+
++o+
++o+
++o+
++o+
++o+
++o+
++o+
++f+
+
+#######
+#.....#
+#..s..#
+#..x..#
++++F+++
+  +++
+
+       ##########
+       #...#...##
+       #.#.#.#.##
+   #####.#.#.#.##
+   #.....#9..#.##
+   #.#########.##.#
+   #.#       #..d.#
+   #.#       ######
+ ###_###
+ #..8..#
+ #..s..#
+ #..X..#
+ ###)###
+#.##.#
+#..D.#
+######
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%!!!!!!!!!!!!!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+%%%%%%%!%%%%%%%%%%%!%%%%%%%
+       ?    #b#    ?
+       ?    #.#    ?
+       ?    #.#    ?
+       ?    #.#    ?
+       ?LLLL#.#LLLL?
+       ?    #.#    ?
+       ?    #b#    ?
+       ?    #.#    ?
+       ?????#.#?????
+            #.#
+            #b#
+            #.#
+            #.#???????????????????????#################
+            #.loooooooooooooąooooooooo...............^.ó
+            #.#???????????????????????#################
+            #.#
+            #.#
+            #.#
+            #b#
+            #.#
+            #.#
+            #.#
+            #.#
+            #.#
+            #.#
+        #####B#
+        #ś#Ś#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#.#.#
+        #.#ć#Ć#
+   ######.#####
+   #....#.#
+   #.##.#.#
+   #.##.#.#
+   #.##...#
+ ###.######
+ #.....#
+ #..S..#
+ #..0..#
+ ###.###
+#.##.#
+#..A.#
+######
+
+---
+^ floor [] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
+% sand
+o openFloor
+3 sand [SteppedIn] [StartNarration 3, RemoveAllTriggersInSectors @3]
+4 sand [SteppedIn] [StartNarration 4, RemoveAllTriggersInSectors @4]
+5 empty [SteppedIn] [StartNarration 5, RemoveAllTriggersInSector @5]
+1 sand [SteppedIn] [StartNarration 1, RemoveAllTriggersInSector @1]
+I sand [SteppedIn] [PlayMusic "ending_loop1.mp3", InitFog Color.white (Length.meters 10), RemoveAllTriggersInSector @I]
+T toyBucket [LookingAtGround] [StartNarration 2, InitFog Color.white (Length.meters 5), Teleport @t, PlayMusic "ending_loop2.mp3"]
+t toyBucket
+! (invisibleWall LevelTile.sand)
++ (invisibleWall LevelTile.empty)
+C bigCastle
+g openFloor [SteppedIn] [SafeTeleport @G, PlayMusic "ending_loop3.mp3", InitFog Color.black (Length.meters 0.75), RemoveAllTriggersInSector @g]
+G empty
+f chair [SteppedIn, LookAngle South] [StartNarration 6, Teleport @F, SitDown, RemoveAllTriggersInSector @f]
+F chair
+p empty
+s sandboxWithCastle
+S emptySandbox
+x floor [InSafeTeleportingOffset] [Teleport @x, StartNarration 7, RemoveAllTriggersInSector @X]
+X floor
+_ wall
+8 floor [LookAngle South] [StartNarration 8, ChangeTile @_ LevelTile.floor, RemoveAllTriggersInSector @8]
+) wall
+D floor
+9 floor [SteppedIn] [StartNarration 9, RemoveAllTriggersInSector @9]
+d floor [SteppedIn] [ChangeTile @) LevelTile.floor, Teleport @D, RemoveAllTriggersInSector @d, CreateTrigger (Trigger.localTrigger @d [SteppedIn] [Teleport @A])]
+0 floor [SteppedIn] [StartNarration 10, RemoveAllTriggersInSector @0]
+A floor
+ś floor [LookAngle North] [Teleport @Ś]
+Ś floor
+b glassWall
+B glassWall [SteppedIn] [InitFog Color.white (Length.meters 0.5), PlayMusic "ending_loop4.mp3", StartNarration 12, RemoveAllTriggersInSector @B]
+ć floor [SteppedIn] [StartNarration 11, Teleport @Ć, RemoveAllTriggersInSector @ć]
+Ć floor
+L empty [SteppedIn] [StartNarration 13, ChangeTile @l LevelTile.floor, RemoveAllTriggersInSectors @L]
+l wall
+? (invisibleWall LevelTile.empty)
+ą openFloor [SteppedIn] [PlayMusic "ending_loop2.mp3", RemoveAllTriggersInSector @ą]
+ó empty [SteppedIn] [ShowGameEndingScreen]

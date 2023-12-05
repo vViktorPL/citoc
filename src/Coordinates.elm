@@ -1,4 +1,4 @@
-module Coordinates exposing (ObjectCoordinates(..), SectorCoordinates, WorldCoordinates(..), sectorToWorldPosition, worldPositionToSector, worldPositionToSectorOffsetX)
+module Coordinates exposing (ObjectCoordinates(..), SectorCoordinates, WorldCoordinates(..), sectorToWorldPosition, worldPositionToSector, worldPositionToSectorOffsetX, worldPositionToSectorOffsetY)
 
 import Length exposing (Meters)
 import Point3d exposing (Point3d)
@@ -35,3 +35,23 @@ worldPositionToSectorOffsetX worldPosition =
     worldPosition
         |> Point3d.xCoordinate
         |> Length.inMeters
+        |> flipSign
+        |> fraction
+
+
+worldPositionToSectorOffsetY : Point3d Meters WorldCoordinates -> Float
+worldPositionToSectorOffsetY worldPosition =
+    worldPosition
+        |> Point3d.yCoordinate
+        |> Length.inMeters
+        |> fraction
+
+
+flipSign : number -> number
+flipSign number =
+    -number
+
+
+fraction : Float -> Float
+fraction number =
+    number - toFloat (floor number)

@@ -78,7 +78,9 @@ function startAudioContext() {
         .then(arrayBuffer => audioContext.decodeAudioData(
           arrayBuffer,
           audioBuffer => soundBuffers[filename] = audioBuffer)
-        );
+        ).catch(e => {
+          console.error(`Couldn't load sfx: ${filename}`, e);
+        });
     }
     app.ports.soundPreloadedSub.send(filename);
   })
@@ -103,7 +105,9 @@ function startAudioContext() {
         .then(arrayBuffer => audioContext.decodeAudioData(
           arrayBuffer,
           musicBuffer => musicBuffers[filename] = musicBuffer)
-        );
+        ).catch(e => {
+          console.error(`Couldn't load music: ${filename}`, e);
+        });
     }
     app.ports.musicPreloadedSub.send(filename);
   });

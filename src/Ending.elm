@@ -11,14 +11,18 @@ import Frame3d
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (classList)
 import Length
+import Mass
 import Obj.Decode exposing (ObjCoordinates)
 import Physics.Body
+import Physics.Shape
 import Physics.World
 import Pixels
 import Point3d
 import Scene3d
+import Scene3d.Material
 import SketchPlane3d
 import Sound
+import TriangularMesh
 import Vector3d
 import Viewpoint3d
 
@@ -39,7 +43,7 @@ origin =
 dependencies : List Assets.Dependency
 dependencies =
     [ Assets.SoundEffectDep "narration_14.mp3"
-    , Assets.MusicDep "thx_song.mp3"
+    , Assets.MusicDep "thx-song.mp3"
     , Assets.MeshCollectionDep "tangram.obj"
     ]
 
@@ -47,12 +51,32 @@ dependencies =
 init : Assets.Model -> Model
 init assets =
     let
+        material =
+            Scene3d.Material.matte Color.white
+
         -- TODO: render tanagram
         tangram =
-            []
+            "tangram.obj"
+                |> Assets.getMeshCollection assets
+                |> List.map
+                    (\meshAsset ->
+                        let
+                            vertices =
+                                Assets.meshVertices meshAsset
 
-        --SceneAssets.tangram assets
-        --    |> List.map (Physics.Body.translateBy (Vector3d.unsafe { x = 0, y = 0, z = 0.3 }))
+                            entity =
+                                meshAsset
+                                    |> Assets.texturedMesh
+                                    |> Scene3d.mesh material
+
+                            bodyVertices =
+                                TriangularMesh.mapVertices (Point3d.unwrap >> Point3d.unsafe) vertices
+                        in
+                        Physics.Body.compound [ Physics.Shape.unsafeConvex bodyVertices ] entity
+                            |> Physics.Body.withBehavior (Physics.Body.dynamic (Mass.grams 10))
+                            |> Physics.Body.translateBy (Vector3d.meters 0 0 0.3)
+                    )
+
         world =
             List.foldl Physics.World.add Physics.World.empty tangram
                 |> Physics.World.add (Physics.Body.plane Scene3d.nothing)
@@ -216,10 +240,10 @@ view model canvasSize =
                 , viewCreditText ( unsoundscapesTime, unsoundscapesFadeout ) [ "Andrey Kuzmin", "for creating", "elm-physics and elm-obj-file" ] timePassed
                 , viewCreditText ( lueTime, lueFadeout ) [ "lue", "for organizing", "Elm Game Jam #6" ] timePassed
                 , viewCreditText ( lueFadeout + 1500, lueFadeout + 3500 ) [ "Textures:", "https://ambientcg.com", "https://cc0-textures.com" ] timePassed
-                , viewCreditText ( lueFadeout + 4500, lueFadeout + 6500 ) [ "3D models & sounds:", "https://opengameart.org" ] timePassed
-                , viewCreditText ( lueFadeout + 7500, lueFadeout + 9500 ) [ "Music:", "https://soundraw.io" ] timePassed
-                , viewCreditText ( lueFadeout + 10500, lueFadeout + 12500 ) [ "Narration:", "https://murf.ai" ] timePassed
-                , viewCreditText ( thxSongStartTime + 53000, thxSongStartTime + 58000 ) [ "Thanks for playing!" ] timePassed
+                , viewCreditText ( lueFadeout + 4000, lueFadeout + 6500 ) [ "3D models & sounds:", "https://opengameart.org" ] timePassed
+                , viewCreditText ( lueFadeout + 7000, lueFadeout + 8500 ) [ "Music:", "https://soundraw.io" ] timePassed
+                , viewCreditText ( lueFadeout + 9500, lueFadeout + 11500 ) [ "Narration:", "https://murf.ai" ] timePassed
+                , viewCreditText ( thxSongStartTime + 51800, thxSongStartTime + 58000 ) [ "Thanks for playing!" ] timePassed
                 , div [ classList [ ( "credits-3d-scene", True ), ( "visible", timePassed >= evanTime && timePassed < lueFadeout ) ] ]
                     [ Scene3d.cloudy
                         { entities =
