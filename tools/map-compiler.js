@@ -68,7 +68,11 @@ fs.readdir(path.join(__dirname, '../levels')).then(
                     }
                   )
                 } else {
-                  triggers.push(`Trigger.localTrigger ${uniqueTilePositions[legendTile]} ${triggerData}`)
+                  if (triggerData.startsWith('[] ') && ['^', '>', 'v', '<'].includes(legendTile)) {
+                    triggers.push(`Trigger.localTrigger ${uniqueTilePositions[legendTile]} [LevelLoaded] ${triggerData.substring(3)}`)
+                  } else {
+                    triggers.push(`Trigger.localTrigger ${uniqueTilePositions[legendTile]} ${triggerData}`)
+                  }
                 }
               }
 

@@ -302,18 +302,28 @@ update msg model =
             let
                 ( updatedAssets, assetsCmd ) =
                     Assets.update assetsMsg model.assets
-            in
-            ( { model
-                | assets = updatedAssets
-                , state =
-                    case ( model.state, Assets.areReady updatedAssets ) of
-                        ( LoadingLevel, True ) ->
-                            FadingInLevel initFadeInTime
 
-                        _ ->
-                            model.state
-              }
-            , Cmd.map AssetsMsg assetsCmd
+                levelReady =
+                    model.state == LoadingLevel && Assets.areReady updatedAssets
+
+                ( updatedModel, triggerCmd ) =
+                    if levelReady then
+                        handleTriggers
+                            { model
+                                | assets = updatedAssets
+                                , state = FadingInLevel initFadeInTime
+                            }
+                            model.player
+
+                    else
+                        ( { model
+                            | assets = updatedAssets
+                          }
+                        , Cmd.none
+                        )
+            in
+            ( updatedModel
+            , Cmd.batch [ Cmd.map AssetsMsg assetsCmd, triggerCmd ]
             )
 
         AnimationTick delta ->
