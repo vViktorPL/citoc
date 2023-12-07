@@ -76,6 +76,12 @@ dependencies { effects } =
                 CreateTrigger subtrigger ->
                     dependencies subtrigger
 
+                NextLevel ->
+                    [ Assets.SoundEffectDep "success.mp3" ]
+
+                PrevLevel ->
+                    [ Assets.SoundEffectDep "prev-level.mp3" ]
+
                 PlaySound fileName ->
                     [ Assets.SoundEffectDep fileName ]
 
@@ -115,6 +121,7 @@ type TriggerEffect
     = Teleport SectorCoordinates
     | SafeTeleport SectorCoordinates
     | NextLevel
+    | PrevLevel
     | ChangeTile SectorCoordinates LevelTile.Model
     | CreateTrigger Trigger
     | RemoveAllTriggersInSector ( Int, Int )

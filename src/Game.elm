@@ -45,7 +45,7 @@ subscriptions _ =
 type GameState
     = LoadingLevel
     | Playing
-    | FadingOutLevel Float
+    | FadingOutLevel Float TargetLevel
     | FadingInLevel Float
     | FinalFadeOut Float
     | GameEnding Ending.Model
@@ -54,6 +54,7 @@ type GameState
 type alias Model =
     { state : GameState
     , player : Player
+    , previousLevel : Level.Model
     , level : Level.Model
     , levelsLeft : List ( Level.Model, List Assets.Dependency )
     , counters : Dict String Int
@@ -80,27 +81,49 @@ maxGestureHistory =
     5
 
 
-loadNextLevel : Model -> ( Model, Cmd Msg )
-loadNextLevel model =
-    let
-        ( nextLevel, dependencies ) =
-            model.levelsLeft
-                |> List.head
-                |> Maybe.withDefault ( model.level, [] )
+type TargetLevel
+    = NextLevel
+    | PreviousLevel
 
-        ( updatedAssets, assetsCmd ) =
-            Assets.requestDependencies dependencies model.assets
-    in
-    ( { model
-        | state = LoadingLevel
-        , level = nextLevel
-        , levelJustLoaded = True
-        , levelsLeft = List.drop 1 model.levelsLeft
-        , assets = updatedAssets
-        , player = Level.initPlayer nextLevel
-      }
-    , Cmd.map AssetsMsg assetsCmd
-    )
+
+loadTargetLevel : TargetLevel -> Model -> ( Model, Cmd Msg )
+loadTargetLevel targetLevel model =
+    case targetLevel of
+        NextLevel ->
+            let
+                ( nextLevel, dependencies ) =
+                    model.levelsLeft
+                        |> List.head
+                        |> Maybe.withDefault ( model.level, [] )
+
+                ( updatedAssets, assetsCmd ) =
+                    Assets.requestDependencies dependencies model.assets
+
+                ( updatedModel, triggersCmd ) =
+                    handleLevelLoadCompletion
+                        { model
+                            | state = LoadingLevel
+                            , previousLevel = model.level
+                            , level = nextLevel
+                            , levelJustLoaded = True
+                            , levelsLeft = List.drop 1 model.levelsLeft
+                            , assets = updatedAssets
+                            , player = Level.initPlayer nextLevel
+                        }
+            in
+            ( updatedModel
+            , Cmd.batch [ Cmd.map AssetsMsg assetsCmd, triggersCmd ]
+            )
+
+        PreviousLevel ->
+            handleLevelLoadCompletion
+                { model
+                    | state = LoadingLevel
+                    , level = model.previousLevel
+                    , levelsLeft = ( model.level, [] ) :: model.levelsLeft
+                    , levelJustLoaded = True
+                    , player = Level.initPlayer model.previousLevel
+                }
 
 
 init : Assets.Model -> ( Model, Cmd Msg )
@@ -114,6 +137,7 @@ init assets =
     in
     ( { state = LoadingLevel
       , player = Level.initPlayer level
+      , previousLevel = level
       , level = level
       , levelJustLoaded = True
       , levelsLeft = LevelIndex.restLevels
@@ -251,16 +275,16 @@ updateAnimation delta model =
                     playerTriggerInteraction modelToUpdate newPlayer
                         |> Tuple.mapSecond (\triggerCmd -> Cmd.batch [ playerCmd, interactionCmd, triggerCmd ])
 
-        FadingOutLevel timeLeft ->
+        FadingOutLevel timeLeft targetLevel ->
             let
                 newTimeLeft =
                     max (timeLeft - delta) 0
             in
             if newTimeLeft == 0 then
-                loadNextLevel model
+                loadTargetLevel targetLevel model
 
             else
-                ( { model | state = FadingOutLevel newTimeLeft, counters = Dict.empty }, Cmd.none )
+                ( { model | state = FadingOutLevel newTimeLeft targetLevel, counters = Dict.empty }, Cmd.none )
 
         FinalFadeOut timeLeft ->
             let
@@ -292,6 +316,21 @@ updateAnimation delta model =
             ( { model | state = GameEnding updatedEnding }, endingCmd )
 
 
+handleLevelLoadCompletion : Model -> ( Model, Cmd Msg )
+handleLevelLoadCompletion model =
+    if model.state == LoadingLevel && Assets.areReady model.assets then
+        handleTriggers
+            { model
+                | state = FadingInLevel initFadeInTime
+            }
+            model.player
+
+    else
+        ( model
+        , Cmd.none
+        )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -303,24 +342,8 @@ update msg model =
                 ( updatedAssets, assetsCmd ) =
                     Assets.update assetsMsg model.assets
 
-                levelReady =
-                    model.state == LoadingLevel && Assets.areReady updatedAssets
-
                 ( updatedModel, triggerCmd ) =
-                    if levelReady then
-                        handleTriggers
-                            { model
-                                | assets = updatedAssets
-                                , state = FadingInLevel initFadeInTime
-                            }
-                            model.player
-
-                    else
-                        ( { model
-                            | assets = updatedAssets
-                          }
-                        , Cmd.none
-                        )
+                    handleLevelLoadCompletion { model | assets = updatedAssets }
             in
             ( updatedModel
             , Cmd.batch [ Cmd.map AssetsMsg assetsCmd, triggerCmd ]
@@ -574,7 +597,12 @@ keyDecoder =
 
 transitionToNextLevel : Model -> Model
 transitionToNextLevel model =
-    { model | state = FadingOutLevel levelFadeOutTime }
+    { model | state = FadingOutLevel levelFadeOutTime NextLevel }
+
+
+transitionToPrevLevel : Model -> Model
+transitionToPrevLevel model =
+    { model | state = FadingOutLevel levelFadeOutTime PreviousLevel }
 
 
 handleTriggers : Model -> Player -> ( Model, Cmd Msg )
@@ -715,6 +743,9 @@ executeEffects model effects =
                     Trigger.NextLevel ->
                         ( transitionToNextLevel modelAcc, Cmd.batch [ cmdAcc, Sound.playSound "success.mp3" ] )
 
+                    Trigger.PrevLevel ->
+                        ( transitionToPrevLevel modelAcc, Cmd.batch [ cmdAcc, Sound.playSound "prev-level.mp3" ] )
+
                     Trigger.ChangeTile sector newTile ->
                         ( { modelAcc | level = Level.updateTile sector newTile modelAcc.level }, cmdAcc )
 
@@ -778,7 +809,7 @@ executeEffects model effects =
 view : Model -> Html Msg
 view model =
     case model.state of
-        FadingOutLevel timeLeft ->
+        FadingOutLevel timeLeft _ ->
             viewGame model (timeLeft / levelFadeOutTime)
 
         FadingInLevel timeLeft ->

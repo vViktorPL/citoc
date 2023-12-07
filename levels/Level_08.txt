@@ -1,0 +1,97 @@
+
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #b#
+  #B#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#
+  #.#            #####
+  #.#            ....#
+  #.#          #x###X#
+  #.#          #?....y
+  #.#          #.#####
+  #.#          #.#
+  #.#      #####.#
+  #c########...#.#
+  #.C.........AH.U
+  #.##L#L###...#.#
+##s.#......#...#.#
+#.t.#......#####a#
+#...#............#
+#...u............#
+#...#.q.w.......<#
+######1#2#########
+
+---
+s (sign "Infinite corridor" South)
+t floor [SignTextLike @s "Finite corridor"] [PlaySound "load.mp3", ChangeTile @c LevelTile.wall, ChangeTile @C LevelTile.floor, RemoveAllTriggersInSector @t]
+< floor [] [PlayMusic "funky-piano.mp3", InitFog Color.black (Length.meters 15)]
+b floor [SteppedIn] [Teleport @B]
+B floor
+c floor
+C wall
+L (sign "Larry Tesler\n1945 - 2020" South)
+1 (sign "" North)
+2 (sign "" North)
+q floor [SignTextLike @1 "Larry Tesler"] [PlaySound "Rise01.mp3", RemoveAllTriggersInSectors [@q, @w], CreateTrigger (Trigger.localTrigger @w [SignTextLike @2 "Larry Tesler"] [PlaySound "Rise02.mp3", ChangeTile @u LevelTile.floor, RemoveAllTriggersInSector @w])]
+w floor [SignTextLike @2 "Larry Tesler"] [PlaySound "Rise01.mp3", RemoveAllTriggersInSectors [@q, @w], CreateTrigger (Trigger.localTrigger @q [SignTextLike @1 "Larry Tesler"] [PlaySound "Rise02.mp3", ChangeTile @u LevelTile.floor, RemoveAllTriggersInSector @q])]
+u wall
+U (sign "Want to get here?\nSometimes you have to backtrack." West)
+H (hole { barriers = [West, East], walls = [North, East, South, West] })
+A floor [SteppedIn] [ChangeTile @a LevelTile.floor]
+a wall
+x (sign "To the previous level\n-->" South)
+? floor [SignTextLike @x "To the next level"] [PlaySound "Rise01.mp3", RemoveAllTriggersInSector @X, CreateTrigger (Trigger.localTrigger @X [SteppedIn] [NextLevel]), ChangeTile @y LevelTile.wall, RemoveAllTriggersInSector @?]
+X floor [SteppedIn] [PrevLevel]
+y (sign "Are you sure?\nYou are really going back..." West)
