@@ -240,7 +240,7 @@ view model canvasSize =
                 , viewCreditText ( unsoundscapesTime, unsoundscapesFadeout ) [ "Andrey Kuzmin", "for creating", "elm-physics and elm-obj-file" ] timePassed
                 , viewCreditText ( lueTime, lueFadeout ) [ "lue", "for organizing", "Elm Game Jam #6" ] timePassed
                 , viewCreditText ( lueFadeout + 1500, lueFadeout + 3500 ) [ "Textures:", "https://ambientcg.com", "https://cc0-textures.com" ] timePassed
-                , viewCreditText ( lueFadeout + 4000, lueFadeout + 6500 ) [ "3D models & sounds:", "https://opengameart.org" ] timePassed
+                , viewCreditText ( lueFadeout + 4000, lueFadeout + 6500 ) [ "3D models & sounds:", "https://opengameart.org", "https://cc03d.com" ] timePassed
                 , viewCreditText ( lueFadeout + 7000, lueFadeout + 8500 ) [ "Music:", "https://soundraw.io" ] timePassed
                 , viewCreditText ( lueFadeout + 9500, lueFadeout + 11500 ) [ "Narration:", "https://murf.ai" ] timePassed
                 , viewCreditText ( thxSongStartTime + 51800, thxSongStartTime + 58000 ) [ "Thanks for playing!" ] timePassed
