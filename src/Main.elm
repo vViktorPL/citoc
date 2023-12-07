@@ -51,15 +51,28 @@ type Msg
     | MenuMsg Menu.Msg
 
 
+showGameCompletedMenu : Model -> ( Model, Cmd Msg )
+showGameCompletedMenu model =
+    let
+        ( menu, menuCmd ) =
+            Menu.init True
+    in
+    ( { model | screen = InMenu menu }, menuCmd |> Cmd.map MenuMsg )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.screen ) of
         ( GameMsg gameMsg, Playing gameModel ) ->
-            let
-                ( newGameModel, gameCmd ) =
-                    Game.update gameMsg gameModel
-            in
-            ( { model | screen = Playing newGameModel }, Cmd.map GameMsg gameCmd )
+            if Game.isGameCompletedMsg gameMsg then
+                showGameCompletedMenu model
+
+            else
+                let
+                    ( newGameModel, gameCmd ) =
+                        Game.update gameMsg gameModel
+                in
+                ( { model | screen = Playing newGameModel }, Cmd.map GameMsg gameCmd )
 
         ( AssetsMsg sceneAssetsMsg, Initialising ) ->
             let
@@ -75,7 +88,7 @@ update msg model =
             if assetsReady then
                 let
                     ( menuModel, menuCmd ) =
-                        Menu.init
+                        Menu.init False
                 in
                 ( { assetsUpdatedModel | screen = InMenu menuModel }, Cmd.map MenuMsg menuCmd )
 

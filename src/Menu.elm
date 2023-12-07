@@ -27,6 +27,7 @@ type alias Model =
     , canvasSize : ( Int, Int )
     , offset : Float
     , state : MenuState
+    , backward : Bool
     }
 
 
@@ -53,21 +54,28 @@ dependencies =
             [ LevelTile.floor, LevelTile.wall ]
                 |> List.concatMap LevelTile.dependencies
     in
-    tileDeps ++ [ Assets.MusicDep "menu.mp3" ]
+    tileDeps ++ [ Assets.MusicDep "menu.mp3", Assets.MusicDep "menu2.mp3" ]
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Bool -> ( Model, Cmd Msg )
+init backward =
     ( { initialized = False
       , canvasSize = ( 800, 600 )
       , offset = 0
       , state = Idle
+      , backward = backward
       }
     , Cmd.batch
         [ Task.perform
             (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
             Browser.Dom.getViewport
-        , Sound.playMusic "menu.mp3"
+        , Sound.playMusic
+            (if backward then
+                "menu2.mp3"
+
+             else
+                "menu.mp3"
+            )
         ]
     )
 
@@ -78,7 +86,15 @@ update msg model =
         AnimationTick delta ->
             let
                 newOffset =
-                    model.offset + delta * 0.0001
+                    model.offset
+                        + delta
+                        * 0.0001
+                        * (if model.backward then
+                            -1
+
+                           else
+                            1
+                          )
 
                 safeNewOffset =
                     newOffset - toFloat (floor newOffset)

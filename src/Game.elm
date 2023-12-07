@@ -170,6 +170,7 @@ type Msg
     | WindowResize Int Int
     | BrowserWindowShaken
     | Clipboard WebBrowser.ClipboardEvent
+    | GameCompletedByPlayer
 
 
 initFadeInTime =
@@ -313,7 +314,11 @@ updateAnimation delta model =
                 ( updatedEnding, endingCmd ) =
                     Ending.update delta ending
             in
-            ( { model | state = GameEnding updatedEnding }, endingCmd )
+            if Ending.isFinished updatedEnding then
+                ( model, Task.succeed GameCompletedByPlayer |> Task.perform identity )
+
+            else
+                ( { model | state = GameEnding updatedEnding }, endingCmd )
 
 
 handleLevelLoadCompletion : Model -> ( Model, Cmd Msg )
@@ -495,6 +500,9 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        GameCompletedByPlayer ->
+            ( model, Cmd.none )
 
 
 controlKeyToPlayerAction : ControlKey -> (Player -> Player)
@@ -882,3 +890,8 @@ viewGame model opacity =
             , Html.text loadingProgress
             ]
         ]
+
+
+isGameCompletedMsg : Msg -> Bool
+isGameCompletedMsg msg =
+    msg == GameCompletedByPlayer

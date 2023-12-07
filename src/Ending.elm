@@ -1,4 +1,4 @@
-module Ending exposing (Model, dependencies, init, update, view)
+module Ending exposing (Model, dependencies, init, isFinished, update, view)
 
 import Acceleration
 import Angle
@@ -34,6 +34,7 @@ type alias SceneWorld =
 type Model
     = TitleReveal Float Bool SceneWorld
     | Credits Float SceneWorld
+    | Finished
 
 
 origin =
@@ -213,7 +214,14 @@ update delta model =
                     else
                         world
             in
-            ( Credits newTimePassed newWorld, Cmd.none )
+            if newTimePassed >= thxSongStartTime + 60000 then
+                ( Finished, Cmd.none )
+
+            else
+                ( Credits newTimePassed newWorld, Cmd.none )
+
+        Finished ->
+            ( Finished, Cmd.none )
 
 
 view : Model -> ( Int, Int ) -> Html msg
@@ -289,6 +297,9 @@ view model canvasSize =
                     ]
                 ]
 
+        Finished ->
+            div [ classList [ ( "credits", True ) ] ] []
+
 
 frac : Float -> Float
 frac n =
@@ -300,3 +311,8 @@ viewCreditText ( startTime, endTime ) texts time =
     texts
         |> List.map (text >> List.singleton >> Html.div [])
         |> Html.div [ classList [ ( "credits-text", True ), ( "visible", time >= startTime && time <= endTime ) ] ]
+
+
+isFinished : Model -> Bool
+isFinished model =
+    model == Finished
