@@ -54,7 +54,7 @@ B floor [SteppedIn] [ChangeTile @b LevelTile.floor, ChangeTile @S (LevelTile.sig
 C floor [SteppedIn] [Teleport @c, ChangeTile @S LevelTile.wall, CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
 c floor
 D floor [SteppedIn] [ChangeTile @d LevelTile.floor, RemoveAllTriggersInSector @D]
-d wall [SteppedIn, LookAngle North] [Teleport @x]
+d wall [LookAngle North] [Teleport @x]
 x floor
 q floor
 z (sign "Just accept the terms\ndude" North)
