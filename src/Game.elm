@@ -228,97 +228,101 @@ handleStepSounds level player outmsg =
 
 updateAnimation : Float -> Model -> ( Model, Cmd Msg )
 updateAnimation delta model =
-    case model.state of
-        LoadingLevel ->
-            ( model, Cmd.none )
+    if delta > maxDeltaStep then
+        updateAnimation maxDeltaStep model
 
-        --( { model | state = FadingInLevel initFadeInTime }, Cmd.none )
-        Playing ->
-            let
-                modelToUpdate =
-                    { model | level = Level.update delta model.level }
+    else
+        case model.state of
+            LoadingLevel ->
+                ( model, Cmd.none )
 
-                ( newPlayer, playerOutMsg ) =
-                    model.player
-                        |> Player.updatePlayerPosition v
-                        |> Player.update delta
+            --( { model | state = FadingInLevel initFadeInTime }, Cmd.none )
+            Playing ->
+                let
+                    modelToUpdate =
+                        { model | level = Level.update delta model.level }
 
-                playerCmd =
-                    handleStepSounds modelToUpdate.level newPlayer playerOutMsg
+                    ( newPlayer, playerOutMsg ) =
+                        model.player
+                            |> Player.updatePlayerPosition v
+                            |> Player.update delta
 
-                v =
-                    Player.getMovementVector model.player
-                        |> Vector3d.scaleBy delta
+                    playerCmd =
+                        handleStepSounds modelToUpdate.level newPlayer playerOutMsg
 
-                ( interactionResult, interactionCmd ) =
-                    Level.interact modelToUpdate.level model.player v
-            in
-            case interactionResult of
-                Level.LevelUpdated updatedLevel ->
-                    ( { modelToUpdate | level = updatedLevel }, interactionCmd )
+                    v =
+                        Player.getMovementVector model.player
+                            |> Vector3d.scaleBy delta
 
-                Level.LevelCollision adjustedVector ->
-                    let
-                        ( adjustedPlayer, adjustedOutMsg ) =
-                            model.player
-                                |> Player.updatePlayerPosition adjustedVector
-                                |> Player.update delta
+                    ( interactionResult, interactionCmd ) =
+                        Level.interact modelToUpdate.level model.player v
+                in
+                case interactionResult of
+                    Level.LevelUpdated updatedLevel ->
+                        ( { modelToUpdate | level = updatedLevel }, interactionCmd )
 
-                        adjustedCmd =
-                            handleStepSounds postTriggerModel.level adjustedPlayer adjustedOutMsg
+                    Level.LevelCollision adjustedVector ->
+                        let
+                            ( adjustedPlayer, adjustedOutMsg ) =
+                                model.player
+                                    |> Player.updatePlayerPosition adjustedVector
+                                    |> Player.update delta
 
-                        ( postTriggerModel, triggerCmd ) =
-                            playerTriggerInteraction modelToUpdate adjustedPlayer
-                    in
-                    ( postTriggerModel, Cmd.batch [ adjustedCmd, interactionCmd, triggerCmd ] )
+                            adjustedCmd =
+                                handleStepSounds postTriggerModel.level adjustedPlayer adjustedOutMsg
 
-                Level.NoInteraction ->
-                    playerTriggerInteraction modelToUpdate newPlayer
-                        |> Tuple.mapSecond (\triggerCmd -> Cmd.batch [ playerCmd, interactionCmd, triggerCmd ])
+                            ( postTriggerModel, triggerCmd ) =
+                                playerTriggerInteraction modelToUpdate adjustedPlayer
+                        in
+                        ( postTriggerModel, Cmd.batch [ adjustedCmd, interactionCmd, triggerCmd ] )
 
-        FadingOutLevel timeLeft targetLevel ->
-            let
-                newTimeLeft =
-                    max (timeLeft - delta) 0
-            in
-            if newTimeLeft == 0 then
-                loadTargetLevel targetLevel model
+                    Level.NoInteraction ->
+                        playerTriggerInteraction modelToUpdate newPlayer
+                            |> Tuple.mapSecond (\triggerCmd -> Cmd.batch [ playerCmd, interactionCmd, triggerCmd ])
 
-            else
-                ( { model | state = FadingOutLevel newTimeLeft targetLevel, counters = Dict.empty }, Cmd.none )
+            FadingOutLevel timeLeft targetLevel ->
+                let
+                    newTimeLeft =
+                        max (timeLeft - delta) 0
+                in
+                if newTimeLeft == 0 then
+                    loadTargetLevel targetLevel model
 
-        FinalFadeOut timeLeft ->
-            let
-                newTimeLeft =
-                    max (timeLeft - delta) 0
-            in
-            if timeLeft == 0 then
-                ( { model | state = GameEnding (Ending.init model.assets) }, Cmd.none )
+                else
+                    ( { model | state = FadingOutLevel newTimeLeft targetLevel, counters = Dict.empty }, Cmd.none )
 
-            else
-                ( { model | state = FinalFadeOut newTimeLeft }, Cmd.none )
+            FinalFadeOut timeLeft ->
+                let
+                    newTimeLeft =
+                        max (timeLeft - delta) 0
+                in
+                if timeLeft == 0 then
+                    ( { model | state = GameEnding (Ending.init model.assets) }, Cmd.none )
 
-        FadingInLevel timeLeft ->
-            let
-                newTimeLeft =
-                    max (timeLeft - delta) 0
-            in
-            if newTimeLeft == 0 then
-                ( { model | state = Playing, fadeColor = "white" }, Cmd.none )
+                else
+                    ( { model | state = FinalFadeOut newTimeLeft }, Cmd.none )
 
-            else
-                ( { model | state = FadingInLevel newTimeLeft }, Cmd.none )
+            FadingInLevel timeLeft ->
+                let
+                    newTimeLeft =
+                        max (timeLeft - delta) 0
+                in
+                if newTimeLeft == 0 then
+                    ( { model | state = Playing, fadeColor = "white" }, Cmd.none )
 
-        GameEnding ending ->
-            let
-                ( updatedEnding, endingCmd ) =
-                    Ending.update delta ending
-            in
-            if Ending.isFinished updatedEnding then
-                ( model, Task.succeed GameCompletedByPlayer |> Task.perform identity )
+                else
+                    ( { model | state = FadingInLevel newTimeLeft }, Cmd.none )
 
-            else
-                ( { model | state = GameEnding updatedEnding }, endingCmd )
+            GameEnding ending ->
+                let
+                    ( updatedEnding, endingCmd ) =
+                        Ending.update delta ending
+                in
+                if Ending.isFinished updatedEnding then
+                    ( model, Task.succeed GameCompletedByPlayer |> Task.perform identity )
+
+                else
+                    ( { model | state = GameEnding updatedEnding }, endingCmd )
 
 
 handleLevelLoadCompletion : Model -> ( Model, Cmd Msg )
@@ -334,6 +338,10 @@ handleLevelLoadCompletion model =
         ( model
         , Cmd.none
         )
+
+
+maxDeltaStep =
+    100
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
