@@ -113,6 +113,11 @@ saveGame model =
     WebBrowser.saveState ( "save", E.object [ ( "levelIndex", E.int model.levelIndex ) ] )
 
 
+deleteSavedGame : Cmd msg
+deleteSavedGame =
+    WebBrowser.saveState ( "save", E.null )
+
+
 loadTargetLevel : TargetLevel -> Model -> ( Model, Cmd Msg )
 loadTargetLevel targetLevel model =
     case targetLevel of

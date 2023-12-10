@@ -72,7 +72,12 @@ showGameCompletedMenu model =
         ( menu, menuCmd ) =
             Menu.init { alternativeMenu = True, continuationAvailable = False }
     in
-    ( { model | screen = InMenu menu, savedGame = Game.newGameState }, menuCmd |> Cmd.map MenuMsg )
+    ( { model | screen = InMenu menu, savedGame = Game.newGameState }
+    , Cmd.batch
+        [ menuCmd |> Cmd.map MenuMsg
+        , Game.deleteSavedGame
+        ]
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
