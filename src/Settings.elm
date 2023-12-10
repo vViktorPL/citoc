@@ -69,7 +69,7 @@ view extraMessage model =
         , Html.div [ Attr.class "settingsList" ]
             [ Html.div []
                 [ viewRangeSetting
-                    { label = "Mouse sensitivity"
+                    { label = "Mouse sensitivity:"
                     , value = model.mouseSensitivity
                     , onChange = MouseSensitivityUpdated
                     , min = 0.1
@@ -77,7 +77,7 @@ view extraMessage model =
                     , step = 0.01
                     }
                 , viewRangeSetting
-                    { label = "Music volume"
+                    { label = "Music volume:"
                     , value = model.musicVolume
                     , onChange = MusicVolumeUpdated
                     , min = 0
@@ -85,7 +85,7 @@ view extraMessage model =
                     , step = 0.05
                     }
                 , viewRangeSetting
-                    { label = "Sound volume"
+                    { label = "Sound volume:"
                     , value = model.soundVolume
                     , onChange = SoundVolumeUpdated
                     , min = 0

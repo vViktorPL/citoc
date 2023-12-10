@@ -298,8 +298,11 @@ body {
 
 .settingRow {
     display: flex;
-    align-items: flex-end;
     margin-bottom: 1rem;
+}
+
+.settingRow > div {
+    display: flex;
 }
 
 .settingRow > div:first-child {
@@ -312,67 +315,36 @@ input[type="range"] {
     -webkit-appearance: none;
     position: relative;
     overflow: hidden;
-    height: 40px;
+    height: 30px;
     width: 200px;
     cursor: pointer;
     border-radius: 0;
+    background: transparent;
 }
 
 ::-webkit-slider-runnable-track {
-    background: #ddd;
+    background: #555;
 }
 
 ::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 20px;
-    height: 40px;
+    height: 30px;
     background: #fff;
     box-shadow: -200px 0 0 200px white;
     border: 2px solid #999;
 }
 
 ::-moz-range-track {
-    height: 40px;
-    background: #ddd;
+    background: #555;
 }
 
 ::-moz-range-thumb {
     background: #fff;
     height: 40px;
     width: 20px;
-    border: 3px solid #999;
-    border-radius: 0 !important;
-    box-shadow: -200px 0 0 200px dodgerblue;
-    box-sizing: border-box;
-}
-
-::-ms-fill-lower {
-    background: dodgerblue;
-}
-
-::-ms-thumb {
-    background: #fff;
     border: 2px solid #999;
-    height: 40px;
-    width: 20px;
+    border-radius: 0 !important;
+    box-shadow: -200px 0 0 200px white;
     box-sizing: border-box;
-}
-
-::-ms-ticks-after {
-    display: none;
-}
-
-::-ms-ticks-before {
-    display: none;
-}
-
-::-ms-track {
-    background: #ddd;
-    color: transparent;
-    height: 40px;
-    border: none;
-}
-
-::-ms-tooltip {
-    display: none;
 }
