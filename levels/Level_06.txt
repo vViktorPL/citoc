@@ -1,0 +1,29 @@
+###S###
+#v.U..#
+#.....#
+#.....#
+#LHHHR#
+#.....#
+#..u..#
+#.#s###
+#.#
+#.#
+#.####
+#.|X.#
+####.#
+   #.#
+   #.#
+
+
+---
+v floor [] [PlayMusic "funky-piano.mp3", RemoveAllTriggersInSector @v]
+L (hole { walls = [North, South, West], barriers = [North, South]})
+R (hole { walls = [North, South, East], barriers = [North, South]})
+H (hole { walls = [North, South], barriers = [North, South]})
+S (sign "Look high,\ndon't be shy;\nflip your view,\nnew clues to try!" South)
+s (sign "Defying the laws of physics\nis not allowed\nbefore entering next level." North)
+U floor [SteppedIn] [EnableUpsideDownWalking]
+u floor [SteppedIn] [ComeBackDown, ChangeTile @| LevelTile.floor]
+| (sign "Defying the laws of physics\nis not allowed\nbefore entering next level." West)
+X floor [SteppedIn] [NextLevel]
+

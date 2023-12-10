@@ -838,6 +838,9 @@ executeEffects model effects =
                     Trigger.RemoveAllTriggersInSectors sectors ->
                         ( { modelAcc | level = Level.removeAllTriggersAtSectors sectors modelAcc.level }, cmdAcc )
 
+                    Trigger.RemoveAllGlobalTriggers ->
+                        ( { modelAcc | level = Level.removeAllGlobalTriggers modelAcc.level }, cmdAcc )
+
                     Trigger.IncrementCounter counterName ->
                         ( { modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
                         , Cmd.batch [ cmdAcc, Sound.playSound "notify-up.mp3" ]

@@ -126,6 +126,7 @@ type TriggerEffect
     | CreateTrigger Trigger
     | RemoveAllTriggersInSector ( Int, Int )
     | RemoveAllTriggersInSectors (List SectorCoordinates)
+    | RemoveAllGlobalTriggers
     | IncrementCounter String
     | DecrementCounter String
     | PlaySound String

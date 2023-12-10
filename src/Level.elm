@@ -11,6 +11,7 @@ module Level exposing
     , initPlayer
     , interact
     , mapTile
+    , removeAllGlobalTriggers
     , removeAllTriggersAtSector
     , removeAllTriggersAtSectors
     , update
@@ -461,6 +462,14 @@ removeAllTriggersAtSectors sectors (Level data) =
                     |> Dict.toList
                     |> List.filter (\( sector, _ ) -> not (List.member sector sectors))
                     |> Dict.fromList
+        }
+
+
+removeAllGlobalTriggers : Model -> Model
+removeAllGlobalTriggers (Level data) =
+    Level
+        { data
+            | globalTriggers = []
         }
 
 

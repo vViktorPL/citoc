@@ -1,29 +1,36 @@
-###S###
-#v.U..#
-#.....#
-#.....#
-#LHHHR#
-#.....#
-#..u..#
-#.#s###
-#.#
-#.#
-#.####
-#.|X.#
-####.#
-   #.#
-   #.#
-
+    ####
+    ...#
+    ##f#####
+     #E3dc.#
+    ####.#.#
+    ...#.#.#
+    ##X#.#.#
+     #.#.#.#####
+     #.#.#.D...#
+ #####B#Csb###.###
+ #.Gv#.......#...#
+ #.#.#.......###F#####
+ #.#.........h.#e....#
+ #.###########.###.#.#
+ #...........H.# #.#.#
+ ###############
 
 ---
-v floor [] [PlayMusic "funky-piano.mp3", RemoveAllTriggersInSector @v]
-L (hole { walls = [North, South, West], barriers = [North, South]})
-R (hole { walls = [North, South, East], barriers = [North, South]})
-H (hole { walls = [North, South], barriers = [North, South]})
-S (sign "Look high,\ndon't be shy;\nflip your view,\nnew clues to try!" South)
-s (sign "Defying the laws of physics\nis not allowed\nbefore entering next level." North)
-U floor [SteppedIn] [EnableUpsideDownWalking]
-u floor [SteppedIn] [ComeBackDown, ChangeTile @| LevelTile.floor]
-| (sign "Defying the laws of physics\nis not allowed\nbefore entering next level." West)
+v floor [] [PlayMusic "funky.mp3", CreateTrigger (Trigger [WindowShake] [PlaySound "rumble.mp3", ActivateTile @b, RemoveAllGlobalTriggers])]
+s (sign "Sometimes, a digital window\nneeds a nudge to respond." South)
+b breakableWall
+C wall [SteppedIn] [CreateTrigger (Trigger.localTrigger @d [SteppedIn] [ChangeTile @D LevelTile.floor, RemoveAllTriggersInSector @d])]
+c floor [SteppedIn] [ChangeTile @C LevelTile.floor, RemoveAllTriggersInSector @c]
+d floor
+D wall
+e floor [SteppedIn] [ChangeTile @3 LevelTile.floor, Teleport @E]
+f floor [SteppedIn] [Teleport @F]
+E floor [SteppedIn] [PlaySound "rumble.mp3", ChangeTile @G LevelTile.floor, RemoveAllTriggersInSector @E]
+F floor
+3 wall
++ (invisibleWall LevelTile.floor)
+B breakableWall
+G wall
+H floor [SteppedIn] [ChangeTile @h LevelTile.floor, ChangeTile @s (LevelTile.sign "Okay, this gets boring right?\nShake it again." South), CreateTrigger (Trigger [WindowShake] [PlaySound "rumble.mp3", ActivateTile @B, RemoveAllGlobalTriggers]), RemoveAllTriggersInSector @H]
+h wall
 X floor [SteppedIn] [NextLevel]
-
