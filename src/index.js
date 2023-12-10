@@ -38,9 +38,12 @@ function startAudioContext() {
   const app = Elm.Main.init({
     node: document.getElementById('game'),
     flags: {
-      mouseSensitivity: 0.25,
-      musicVolume: currentGainNode ? currentGainNode.gain.value : 1,
-      soundVolume: soundGainNode ? soundGainNode.gain.value : 1
+      settings: {
+        mouseSensitivity: 0.25,
+        musicVolume: currentGainNode ? currentGainNode.gain.value : 1,
+        soundVolume: soundGainNode ? soundGainNode.gain.value : 1
+      },
+      save: JSON.parse(localStorage.getItem("save") ?? 'null')
     }
   });
 
@@ -162,6 +165,12 @@ function startAudioContext() {
 
   app.ports.setClipboardCopyableText.subscribe(
     text => clipboardController.setCurrentCopyableText(text)
+  );
+
+  app.ports.saveState.subscribe(
+    ([key, state]) => {
+      localStorage.setItem(key, JSON.stringify(state));
+    }
   );
 })();
 

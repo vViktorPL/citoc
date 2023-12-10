@@ -11,7 +11,13 @@ import Menu
 import Settings
 
 
-main : Program Settings.InitFlags Model Msg
+type alias Flags =
+    { save : Maybe Game.SavedGameState
+    , settings : Settings.InitFlags
+    }
+
+
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init
@@ -23,6 +29,7 @@ main =
 
 type alias Model =
     { screen : Screen
+    , savedGame : Game.SavedGameState
     , assets : Assets.Model
     , settings : Settings.Model
     }
@@ -35,7 +42,7 @@ type Screen
     | Playing Game.Model
 
 
-init : Settings.InitFlags -> ( Model, Cmd Msg )
+init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
         ( assets, sceneAssetsCmd ) =
@@ -43,8 +50,9 @@ init flags =
                 |> Assets.requestDependencies Menu.dependencies
     in
     ( { screen = Initialising
+      , savedGame = Maybe.withDefault Game.newGameState flags.save
       , assets = assets
-      , settings = Settings.init flags
+      , settings = Settings.init flags.settings
       }
     , Cmd.map AssetsMsg sceneAssetsCmd
     )
@@ -62,9 +70,9 @@ showGameCompletedMenu : Model -> ( Model, Cmd Msg )
 showGameCompletedMenu model =
     let
         ( menu, menuCmd ) =
-            Menu.init True
+            Menu.init { alternativeMenu = True, continuationAvailable = False }
     in
-    ( { model | screen = InMenu menu }, menuCmd |> Cmd.map MenuMsg )
+    ( { model | screen = InMenu menu, savedGame = Game.newGameState }, menuCmd |> Cmd.map MenuMsg )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -95,7 +103,7 @@ update msg model =
             if assetsReady then
                 let
                     ( menuModel, menuCmd ) =
-                        Menu.init False
+                        Menu.init { alternativeMenu = False, continuationAvailable = not (Game.isNewGameState model.savedGame) }
                 in
                 ( { assetsUpdatedModel | screen = InMenu menuModel }, Cmd.map MenuMsg menuCmd )
 
@@ -113,8 +121,18 @@ update msg model =
 
                 Menu.StartNewGame ->
                     let
+                        gameState =
+                            Game.newGameState
+
                         ( initializedGameModel, gameCmd ) =
-                            Game.init model.assets model.settings
+                            Game.init model.assets model.settings gameState
+                    in
+                    ( { model | screen = Playing initializedGameModel, savedGame = gameState }, Cmd.batch [ Game.saveGame initializedGameModel, Cmd.map GameMsg gameCmd ] )
+
+                Menu.ContinueGame ->
+                    let
+                        ( initializedGameModel, gameCmd ) =
+                            Game.init model.assets model.settings model.savedGame
                     in
                     ( { model | screen = Playing initializedGameModel }, Cmd.map GameMsg gameCmd )
 

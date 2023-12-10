@@ -22,12 +22,19 @@ import Vector3d
 import Viewpoint3d
 
 
+type alias InitFlags =
+    { alternativeMenu : Bool
+    , continuationAvailable : Bool
+    }
+
+
 type alias Model =
     { initialized : Bool
     , canvasSize : ( Int, Int )
     , offset : Float
     , state : MenuState
     , backward : Bool
+    , continuationAvailable : Bool
     }
 
 
@@ -35,17 +42,19 @@ type Msg
     = AnimationTick Float
     | WindowResize Int Int
     | NewGamePositionActivated
+    | ContinueGamePositionActivated
     | ShowSettingsPositionActivated
 
 
 type MenuState
     = Idle
-    | StartingNewGame Float
+    | StartingGame Float OutMsg
 
 
 type OutMsg
     = Noop
     | StartNewGame
+    | ContinueGame
     | ShowSettings
 
 
@@ -59,20 +68,21 @@ dependencies =
     tileDeps ++ [ Assets.MusicDep "menu.mp3", Assets.MusicDep "menu2.mp3" ]
 
 
-init : Bool -> ( Model, Cmd Msg )
-init backward =
+init : InitFlags -> ( Model, Cmd Msg )
+init { alternativeMenu, continuationAvailable } =
     ( { initialized = False
       , canvasSize = ( 800, 600 )
       , offset = 0
       , state = Idle
-      , backward = backward
+      , backward = alternativeMenu
+      , continuationAvailable = continuationAvailable
       }
     , Cmd.batch
         [ Task.perform
             (\viewportDetails -> WindowResize (floor viewportDetails.viewport.width) (floor viewportDetails.viewport.height))
             Browser.Dom.getViewport
         , Sound.playMusic
-            (if backward then
+            (if alternativeMenu then
                 "menu2.mp3"
 
              else
@@ -108,14 +118,14 @@ update msg model =
                 Idle ->
                     ( animatedModel, Noop )
 
-                StartingNewGame remainingFadeout ->
+                StartingGame remainingFadeout outMsg ->
                     let
                         newFadeout =
                             max 0 (remainingFadeout - delta * 0.002)
                     in
-                    ( { animatedModel | state = StartingNewGame newFadeout }
+                    ( { animatedModel | state = StartingGame newFadeout outMsg }
                     , if newFadeout == 0 then
-                        StartNewGame
+                        outMsg
 
                       else
                         Noop
@@ -125,7 +135,10 @@ update msg model =
             ( { model | canvasSize = ( width, height ) }, Noop )
 
         NewGamePositionActivated ->
-            ( { model | state = StartingNewGame 1.0 }, Noop )
+            ( { model | state = StartingGame 1.0 StartNewGame }, Noop )
+
+        ContinueGamePositionActivated ->
+            ( { model | state = StartingGame 1.0 ContinueGame }, Noop )
 
         ShowSettingsPositionActivated ->
             ( model, ShowSettings )
@@ -137,7 +150,7 @@ view assets model =
         opacity =
             String.fromFloat
                 (case model.state of
-                    StartingNewGame fadeOut ->
+                    StartingGame fadeOut _ ->
                         fadeOut
 
                     _ ->
@@ -193,6 +206,11 @@ view assets model =
                 )
             ]
             [ Html.div [ class "logo" ] []
+            , if model.continuationAvailable then
+                Html.div [ class "menuPosition", Html.Events.onClick ContinueGamePositionActivated ] [ Html.text "Continue game" ]
+
+              else
+                Html.text ""
             , Html.div [ class "menuPosition", Html.Events.onClick NewGamePositionActivated ] [ Html.text "New game" ]
             , Html.div [ class "menuPosition", Html.Events.onClick ShowSettingsPositionActivated ] [ Html.text "Settings" ]
             , Html.div [ class "menuPosition", class "disabled" ] [ Html.text "About" ]

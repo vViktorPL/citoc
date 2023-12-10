@@ -12,6 +12,7 @@ import Ending
 import Html exposing (Html)
 import Html.Attributes
 import Json.Decode as Decode
+import Json.Encode as E
 import Length
 import Level
 import Level.Index as LevelIndex
@@ -52,12 +53,23 @@ type GameState
     | GameEnding Ending.Model
 
 
+type alias SavedGameState =
+    { levelIndex : Int
+    }
+
+
+isNewGameState : SavedGameState -> Bool
+isNewGameState state =
+    state.levelIndex == 0
+
+
 type alias Model =
     { state : GameState
     , player : Player
     , previousLevel : Level.Model
     , level : Level.Model
     , levelsLeft : List ( Level.Model, List Assets.Dependency )
+    , levelIndex : Int
     , counters : Dict String Int
     , gestureHistory : List Gesture
     , canvasSize : ( Int, Int )
@@ -96,6 +108,11 @@ updateSettings model settings =
     }
 
 
+saveGame : Model -> Cmd msg
+saveGame model =
+    WebBrowser.saveState ( "save", E.object [ ( "levelIndex", E.int model.levelIndex ) ] )
+
+
 loadTargetLevel : TargetLevel -> Model -> ( Model, Cmd Msg )
 loadTargetLevel targetLevel model =
     case targetLevel of
@@ -115,6 +132,7 @@ loadTargetLevel targetLevel model =
                             | state = LoadingLevel
                             , previousLevel = model.level
                             , level = nextLevel
+                            , levelIndex = model.levelIndex + 1
                             , levelJustLoaded = True
                             , levelsLeft = List.drop 1 model.levelsLeft
                             , assets = updatedAssets
@@ -122,35 +140,65 @@ loadTargetLevel targetLevel model =
                         }
             in
             ( updatedModel
-            , Cmd.batch [ Cmd.map AssetsMsg assetsCmd, triggersCmd ]
+            , Cmd.batch [ Cmd.map AssetsMsg assetsCmd, triggersCmd, saveGame updatedModel ]
             )
 
         PreviousLevel ->
-            handleLevelLoadCompletion
-                { model
-                    | state = LoadingLevel
-                    , level = model.previousLevel
-                    , levelsLeft = ( model.level, [] ) :: model.levelsLeft
-                    , levelJustLoaded = True
-                    , player = Level.initPlayer model.mouseSensitivity model.previousLevel
-                }
+            let
+                updatedModel =
+                    { model
+                        | state = LoadingLevel
+                        , level = model.previousLevel
+                        , levelsLeft = ( model.level, [] ) :: model.levelsLeft
+                        , levelIndex = model.levelIndex - 1
+                        , levelJustLoaded = True
+                        , player = Level.initPlayer model.mouseSensitivity model.previousLevel
+                    }
+            in
+            updatedModel
+                |> handleLevelLoadCompletion
+                |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, saveGame updatedModel ])
 
 
-init : Assets.Model -> Settings.Model -> ( Model, Cmd Msg )
-init assets settings =
+newGameState : SavedGameState
+newGameState =
+    { levelIndex = 0
+    }
+
+
+init : Assets.Model -> Settings.Model -> SavedGameState -> ( Model, Cmd Msg )
+init assets settings savedGameState =
     let
+        relevantLevels =
+            [ LevelIndex.firstLevel, LevelIndex.firstLevel ]
+                ++ LevelIndex.restLevels
+                |> List.drop savedGameState.levelIndex
+
+        ( previousLevelWithDeps, currentLevelWithDeps, levelsLeft ) =
+            case relevantLevels of
+                prev :: rest ->
+                    ( prev, rest |> List.head |> Maybe.withDefault LevelIndex.firstLevel, rest |> List.drop 1 )
+
+                _ ->
+                    ( LevelIndex.firstLevel, LevelIndex.firstLevel, List.drop 1 relevantLevels )
+
         ( level, dependencies ) =
-            LevelIndex.firstLevel
+            currentLevelWithDeps
+
+        ( previousLevel, prevDependencies ) =
+            previousLevelWithDeps
 
         ( updatedAssets, assetsCmd ) =
-            Assets.requestDependencies dependencies assets
+            assets
+                |> Assets.requestDependencies (dependencies ++ prevDependencies)
     in
     ( { state = LoadingLevel
       , player = Level.initPlayer settings.mouseSensitivity level
-      , previousLevel = level
+      , previousLevel = previousLevel
       , level = level
       , levelJustLoaded = True
-      , levelsLeft = LevelIndex.restLevels
+      , levelsLeft = levelsLeft
+      , levelIndex = savedGameState.levelIndex
       , counters = Dict.empty
       , gestureHistory = []
       , canvasSize = ( 800, 600 )
