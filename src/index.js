@@ -214,6 +214,7 @@ function startNewMusic(filename, fadeInDuration = 0) {
   currentMusicSource = audioContext.createBufferSource();
   currentMusicSource.buffer = musicBuffers[filename];
   currentMusicSource.connect(currentGainNode).connect(audioContext.destination);
+  currentGainNode.gain.cancelScheduledValues(0);
   currentGainNode.gain.setValueAtTime(musicVolume, audioContext.currentTime);
   currentMusicSource.start(0);
 
