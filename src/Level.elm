@@ -170,9 +170,9 @@ fromData { tiles, triggers, playerStartPosition, playerStartingOrientation } =
     )
 
 
-initPlayer : Model -> Player
-initPlayer (Level { playerStartPosition, playerStartingOrientation }) =
-    Player.init playerStartPosition playerStartingOrientation
+initPlayer : Float -> Model -> Player
+initPlayer mouseSensitivity (Level { playerStartPosition, playerStartingOrientation }) =
+    Player.init mouseSensitivity playerStartPosition playerStartingOrientation
 
 
 getTriggersAt : Model -> SectorCoordinates -> List Trigger

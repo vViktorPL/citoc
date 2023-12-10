@@ -35,6 +35,7 @@ type Msg
     = AnimationTick Float
     | WindowResize Int Int
     | NewGamePositionActivated
+    | ShowSettingsPositionActivated
 
 
 type MenuState
@@ -45,6 +46,7 @@ type MenuState
 type OutMsg
     = Noop
     | StartNewGame
+    | ShowSettings
 
 
 dependencies : List Assets.Dependency
@@ -125,6 +127,9 @@ update msg model =
         NewGamePositionActivated ->
             ( { model | state = StartingNewGame 1.0 }, Noop )
 
+        ShowSettingsPositionActivated ->
+            ( model, ShowSettings )
+
 
 view : Assets.Model -> Model -> Html Msg
 view assets model =
@@ -189,7 +194,7 @@ view assets model =
             ]
             [ Html.div [ class "logo" ] []
             , Html.div [ class "menuPosition", Html.Events.onClick NewGamePositionActivated ] [ Html.text "New game" ]
-            , Html.div [ class "menuPosition", class "disabled" ] [ Html.text "Settings" ]
+            , Html.div [ class "menuPosition", Html.Events.onClick ShowSettingsPositionActivated ] [ Html.text "Settings" ]
             , Html.div [ class "menuPosition", class "disabled" ] [ Html.text "About" ]
             ]
         ]

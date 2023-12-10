@@ -2,16 +2,19 @@ module Main exposing (..)
 
 import Assets
 import Browser
+import Browser.Events
 import Game
 import Html exposing (Html)
 import Html.Attributes
+import Json.Decode as D
 import Menu
+import Settings
 
 
-main : Program () Model Msg
+main : Program Settings.InitFlags Model Msg
 main =
     Browser.element
-        { init = \_ -> init
+        { init = init
         , update = update
         , view = view
         , subscriptions = subscriptions
@@ -21,6 +24,7 @@ main =
 type alias Model =
     { screen : Screen
     , assets : Assets.Model
+    , settings : Settings.Model
     }
 
 
@@ -31,8 +35,8 @@ type Screen
     | Playing Game.Model
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Settings.InitFlags -> ( Model, Cmd Msg )
+init flags =
     let
         ( assets, sceneAssetsCmd ) =
             Assets.init
@@ -40,6 +44,7 @@ init =
     in
     ( { screen = Initialising
       , assets = assets
+      , settings = Settings.init flags
       }
     , Cmd.map AssetsMsg sceneAssetsCmd
     )
@@ -49,6 +54,8 @@ type Msg
     = GameMsg Game.Msg
     | AssetsMsg Assets.Msg
     | MenuMsg Menu.Msg
+    | SettingsMsg Settings.Msg
+    | EscapeKeyPressed
 
 
 showGameCompletedMenu : Model -> ( Model, Cmd Msg )
@@ -107,9 +114,33 @@ update msg model =
                 Menu.StartNewGame ->
                     let
                         ( initializedGameModel, gameCmd ) =
-                            Game.init model.assets
+                            Game.init model.assets model.settings
                     in
                     ( { model | screen = Playing initializedGameModel }, Cmd.map GameMsg gameCmd )
+
+                Menu.ShowSettings ->
+                    ( { model | settings = Settings.show model.settings }, Cmd.none )
+
+        ( SettingsMsg settingsMsg, screen ) ->
+            let
+                ( updatedSettings, settingsCmd ) =
+                    Settings.update settingsMsg model.settings
+            in
+            ( { model
+                | settings = updatedSettings
+                , screen =
+                    case screen of
+                        Playing game ->
+                            Playing (Game.updateSettings game updatedSettings)
+
+                        _ ->
+                            screen
+              }
+            , Cmd.map SettingsMsg settingsCmd
+            )
+
+        ( EscapeKeyPressed, Playing _ ) ->
+            ( { model | settings = Settings.show model.settings }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -117,40 +148,66 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.screen of
-        Playing game ->
-            Game.subscriptions game
-                |> Sub.map GameMsg
+    Sub.batch
+        [ Browser.Events.onKeyDown
+            (D.field "key" D.string
+                |> D.andThen
+                    (\key ->
+                        case key of
+                            "Escape" ->
+                                D.succeed EscapeKeyPressed
 
-        Initialising ->
-            Assets.subscription
-                |> Sub.map AssetsMsg
+                            _ ->
+                                D.fail "Unknown key"
+                    )
+            )
+        , case model.screen of
+            Playing game ->
+                Game.subscriptions game
+                    |> Sub.map GameMsg
 
-        InMenu menu ->
-            Menu.subscription menu
-                |> Sub.map MenuMsg
+            Initialising ->
+                Assets.subscription
+                    |> Sub.map AssetsMsg
 
-        _ ->
-            Sub.none
+            InMenu menu ->
+                Menu.subscription menu
+                    |> Sub.map MenuMsg
+
+            _ ->
+                Sub.none
+        ]
 
 
 view : Model -> Html Msg
 view model =
-    case model.screen of
-        Playing game ->
-            Game.view game
-                |> Html.map GameMsg
+    let
+        settingsExtraMessage =
+            case model.screen of
+                InMenu _ ->
+                    "(you can open settings at any time during the game by pressing the \"Escape\" button)"
 
-        Initialising ->
-            Html.div
-                [ Html.Attributes.class "loadingScreen" ]
-                [ Html.div [ Html.Attributes.class "loadingSpinner" ] []
-                , Html.text "Loading..."
-                ]
+                _ ->
+                    ""
+    in
+    Html.div []
+        [ Settings.view settingsExtraMessage model.settings |> Html.map SettingsMsg
+        , case model.screen of
+            Playing game ->
+                Game.view game
+                    |> Html.map GameMsg
 
-        InitError ->
-            Html.div [] [ Html.text "Error :-(" ]
+            Initialising ->
+                Html.div
+                    [ Html.Attributes.class "loadingScreen" ]
+                    [ Html.div [ Html.Attributes.class "loadingSpinner" ] []
+                    , Html.text "Loading..."
+                    ]
 
-        InMenu menu ->
-            Menu.view model.assets menu
-                |> Html.map MenuMsg
+            InitError ->
+                Html.div [] [ Html.text "Error :-(" ]
+
+            InMenu menu ->
+                Menu.view model.assets menu
+                    |> Html.map MenuMsg
+        ]

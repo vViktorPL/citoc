@@ -1,6 +1,7 @@
 module Player exposing
     ( OutMsg(..)
     , Player
+    , changeMouseSensitivity
     , comeBackDown
     , enableUpsideDownWalking
     , getHorizontalOrientation
@@ -59,6 +60,7 @@ type alias PlayerData =
     , lastStepSoundNumber : Int
     , will : PlayerWill
     , upsideDownMode : UpsideDownMode
+    , mouseSensitivity : Float
     }
 
 
@@ -122,8 +124,13 @@ playerHeightVector =
     Vector3d.xyz (Length.meters 0) (Length.meters 0) playerHeight
 
 
-init : SectorCoordinates -> Orientation -> Player
-init sector orientation =
+changeMouseSensitivity : Float -> Player -> Player
+changeMouseSensitivity newMouseSensitivity (Player model) =
+    Player { model | mouseSensitivity = newMouseSensitivity }
+
+
+init : Float -> SectorCoordinates -> Orientation -> Player
+init mouseSensitivity sector orientation =
     Player
         { position =
             Coordinates.sectorToWorldPosition sector
@@ -149,6 +156,7 @@ init sector orientation =
         , lastStepSoundNumber = 1
         , will = FreeWill
         , upsideDownMode = WalkOnFloor
+        , mouseSensitivity = mouseSensitivity
         }
 
 
@@ -280,8 +288,9 @@ turnRight (Player playerData) =
     Player { playerData | horizontalTurning = TurnRight }
 
 
-mouseSensitivity =
-    0.25
+
+--mouseSensitivity =
+--    0.25
 
 
 updateLookByMouseMovement : ( Int, Int ) -> Player -> Player
@@ -291,7 +300,7 @@ updateLookByMouseMovement ( dx, dy ) (Player playerData) =
             let
                 horizontalAngleDelta =
                     toFloat dx
-                        * mouseSensitivity
+                        * playerData.mouseSensitivity
                         * (if isUpsideDown (Player playerData) then
                             -1
 
@@ -305,7 +314,7 @@ updateLookByMouseMovement ( dx, dy ) (Player playerData) =
                         , verticalAngle =
                             playerData.verticalAngle
                                 |> Angle.inDegrees
-                                |> (\deg -> deg - toFloat dy * mouseSensitivity * 0.5)
+                                |> (\deg -> deg - toFloat dy * playerData.mouseSensitivity * 0.5)
                                 |> Angle.degrees
                                 |> limitVerticalAngle playerData
                     }

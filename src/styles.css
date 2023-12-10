@@ -235,3 +235,144 @@ body {
 .credits-3d-scene.visible {
     opacity: 1;
 }
+
+.settings {
+    text-transform: uppercase;
+    font-family: Verdana;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+    justify-content: center;
+    background: rgba(0,0,0,0.95);
+    flex-direction: column;
+}
+
+.settings h1 {
+    font-size: 48px;
+}
+
+.settings p {
+    font-size: 16px;
+    text-transform: none;
+    margin-bottom: 2em;
+}
+
+.settings.visible {
+    display: flex;
+}
+
+.settingsList {
+    display: flex;
+    justify-content: center;
+}
+
+.settingsList > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    font-size: 40px;
+}
+
+.settings button {
+    cursor: pointer;
+    text-transform: uppercase;
+    align-self: center;
+    background: black;
+    border: solid 2px white;
+    color: white;
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+    font-size: 32px;
+}
+
+.settings button:hover {
+    background: white;
+    color: black;
+    border-color: black;
+}
+
+.settingRow {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.settingRow > div:first-child {
+    margin-right: 1rem;
+}
+
+/* Slider */
+input[type="range"] {
+    margin: auto;
+    -webkit-appearance: none;
+    position: relative;
+    overflow: hidden;
+    height: 40px;
+    width: 200px;
+    cursor: pointer;
+    border-radius: 0;
+}
+
+::-webkit-slider-runnable-track {
+    background: #ddd;
+}
+
+::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 40px;
+    background: #fff;
+    box-shadow: -200px 0 0 200px white;
+    border: 2px solid #999;
+}
+
+::-moz-range-track {
+    height: 40px;
+    background: #ddd;
+}
+
+::-moz-range-thumb {
+    background: #fff;
+    height: 40px;
+    width: 20px;
+    border: 3px solid #999;
+    border-radius: 0 !important;
+    box-shadow: -200px 0 0 200px dodgerblue;
+    box-sizing: border-box;
+}
+
+::-ms-fill-lower {
+    background: dodgerblue;
+}
+
+::-ms-thumb {
+    background: #fff;
+    border: 2px solid #999;
+    height: 40px;
+    width: 20px;
+    box-sizing: border-box;
+}
+
+::-ms-ticks-after {
+    display: none;
+}
+
+::-ms-ticks-before {
+    display: none;
+}
+
+::-ms-track {
+    background: #ddd;
+    color: transparent;
+    height: 40px;
+    border: none;
+}
+
+::-ms-tooltip {
+    display: none;
+}

@@ -21,6 +21,7 @@ import Orientation exposing (Orientation(..))
 import Pixels
 import Player exposing (Player)
 import Scene3d
+import Settings
 import Sound
 import Task
 import Trigger exposing (TriggerCondition, TriggerEffect)
@@ -67,6 +68,7 @@ type alias Model =
     , assets : Assets.Model
     , levelJustLoaded : Bool
     , windowShaken : Bool
+    , mouseSensitivity : Float
     }
 
 
@@ -84,6 +86,14 @@ maxGestureHistory =
 type TargetLevel
     = NextLevel
     | PreviousLevel
+
+
+updateSettings : Model -> Settings.Model -> Model
+updateSettings model settings =
+    { model
+        | mouseSensitivity = settings.mouseSensitivity
+        , player = Player.changeMouseSensitivity settings.mouseSensitivity model.player
+    }
 
 
 loadTargetLevel : TargetLevel -> Model -> ( Model, Cmd Msg )
@@ -108,7 +118,7 @@ loadTargetLevel targetLevel model =
                             , levelJustLoaded = True
                             , levelsLeft = List.drop 1 model.levelsLeft
                             , assets = updatedAssets
-                            , player = Level.initPlayer nextLevel
+                            , player = Level.initPlayer model.mouseSensitivity nextLevel
                         }
             in
             ( updatedModel
@@ -122,12 +132,12 @@ loadTargetLevel targetLevel model =
                     , level = model.previousLevel
                     , levelsLeft = ( model.level, [] ) :: model.levelsLeft
                     , levelJustLoaded = True
-                    , player = Level.initPlayer model.previousLevel
+                    , player = Level.initPlayer model.mouseSensitivity model.previousLevel
                 }
 
 
-init : Assets.Model -> ( Model, Cmd Msg )
-init assets =
+init : Assets.Model -> Settings.Model -> ( Model, Cmd Msg )
+init assets settings =
     let
         ( level, dependencies ) =
             LevelIndex.firstLevel
@@ -136,7 +146,7 @@ init assets =
             Assets.requestDependencies dependencies assets
     in
     ( { state = LoadingLevel
-      , player = Level.initPlayer level
+      , player = Level.initPlayer settings.mouseSensitivity level
       , previousLevel = level
       , level = level
       , levelJustLoaded = True
@@ -150,6 +160,7 @@ init assets =
       , narration = Narration.init
       , assets = updatedAssets
       , windowShaken = False
+      , mouseSensitivity = settings.mouseSensitivity
       }
     , Cmd.batch
         [ Task.perform

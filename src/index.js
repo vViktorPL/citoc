@@ -1,5 +1,4 @@
 import ElmModule from './Main.elm';
-
 import { generateSignTexture } from './texture-generator';
 import { subscribeToWindowShaking, controlClipboard } from './browser-extra';
 
@@ -7,6 +6,23 @@ const soundBuffers = {};
 const musicBuffers = {};
 const audioContext = window.AudioContext && new AudioContext();
 let isAudioContextStarted = false;
+let currentMusicSource = null;
+let musicLoop = false;
+
+let musicVolume = 1;
+let currentGainNode = null;
+let soundGainNode = null;
+
+if (audioContext) {
+  currentGainNode = audioContext.createGain();
+  musicVolume = parseFloat(localStorage.getItem("musicVol") ?? "1");
+  currentGainNode.gain.value = musicVolume;
+  currentGainNode.connect(audioContext.destination);
+
+  soundGainNode = audioContext.createGain();
+  soundGainNode.gain.value = parseFloat(localStorage.getItem("soundVol") ?? "1");
+  soundGainNode.connect(audioContext.destination);
+}
 
 function startAudioContext() {
   if (!isAudioContextStarted && audioContext.state === 'suspended') {
@@ -20,7 +36,12 @@ function startAudioContext() {
 (async () => {
   const { Elm } = await ElmModule;
   const app = Elm.Main.init({
-    node: document.getElementById('game')
+    node: document.getElementById('game'),
+    flags: {
+      mouseSensitivity: 0.25,
+      musicVolume: currentGainNode ? currentGainNode.gain.value : 1,
+      soundVolume: soundGainNode ? soundGainNode.gain.value : 1
+    }
   });
 
   app.ports.generateTexturePort.subscribe(async ([fileName, text]) => {
@@ -42,7 +63,7 @@ function startAudioContext() {
         });
     }
     app.ports.soundPreloadedSub.send(filename);
-  })
+  });
 
   app.ports.playSound.subscribe(filename => {
     if (!audioContext || !(filename in soundBuffers)) {
@@ -51,7 +72,7 @@ function startAudioContext() {
 
     const source = audioContext.createBufferSource();
     source.buffer = soundBuffers[filename];
-    source.connect(audioContext.destination);
+    source.connect(soundGainNode);
     source.start(0);
   });
 
@@ -78,15 +99,32 @@ function startAudioContext() {
 
     playMusic(filename);
   });
+
   app.ports.stopMusic.subscribe(() => {
     if (!audioContext) {
       return;
     }
 
     fadeoutMusic();
-  })
+  });
 
-  // Prevent scrolling with arrow and space keys
+  app.ports.setSoundVolume.subscribe(volume => {
+    localStorage.setItem("soundVol", volume);
+
+    if (soundGainNode) {
+      soundGainNode.gain.value = volume;
+    }
+  });
+
+  app.ports.setMusicVolume.subscribe(volume => {
+    musicVolume = volume;
+    localStorage.setItem("musicVol", musicVolume);
+
+    if (currentGainNode) {
+      currentGainNode.gain.value = volume;
+    }
+  });
+
   window.addEventListener('keydown', e => {
     if ([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
       e.preventDefault();
@@ -127,11 +165,6 @@ function startAudioContext() {
   );
 })();
 
-// MUSIC
-let currentMusicSource = null;
-let currentGainNode = null;
-let musicLoop = false;
-
 async function playMusic(filename) {
   if (filename.startsWith('ending')) {
     await stopMusic();
@@ -151,7 +184,6 @@ async function stopMusic() {
 
 async function fadeoutMusic() {
   if (currentMusicSource && currentGainNode) {
-
     const fadeOutDuration = 1.5;
     const currentTime = audioContext.currentTime;
 
@@ -169,18 +201,15 @@ function startNewMusic(filename, fadeInDuration = 0) {
   musicLoop = true;
   startAudioContext();
 
-  const gainNode = audioContext.createGain();
+
   currentMusicSource = audioContext.createBufferSource();
   currentMusicSource.buffer = musicBuffers[filename];
-  currentMusicSource.connect(gainNode).connect(audioContext.destination);
-  gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+  currentMusicSource.connect(currentGainNode).connect(audioContext.destination);
+  currentGainNode.gain.setValueAtTime(musicVolume, audioContext.currentTime);
   currentMusicSource.start(0);
-
-  currentGainNode = gainNode;
 
   currentMusicSource.onended = function() {
     currentMusicSource = null;
-    currentGainNode = null;
 
     if (musicLoop) {
       startNewMusic(filename);
