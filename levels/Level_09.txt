@@ -175,14 +175,14 @@
 ######
 
 ---
-^ floor [] [PlayMusic "ending_loop0.mp3", RemoveAllTriggersInSector @^]
+^ floor [] [PlayMusic "ending_loop0.mp3", InitFog Color.white (Length.meters 10)]
 % sand
 o openFloor
 3 sand [SteppedIn] [StartNarration 3, RemoveAllTriggersInSectors @3]
 4 sand [SteppedIn] [StartNarration 4, RemoveAllTriggersInSectors @4]
 5 empty [SteppedIn] [StartNarration 5, RemoveAllTriggersInSector @5]
 1 sand [SteppedIn] [StartNarration 1, RemoveAllTriggersInSector @1]
-I sand [SteppedIn] [PlayMusic "ending_loop1.mp3", InitFog Color.white (Length.meters 10), RemoveAllTriggersInSector @I]
+I sand [SteppedIn] [PlayMusic "ending_loop1.mp3", RemoveAllTriggersInSector @I]
 T toyBucket [LookingAtGround] [StartNarration 2, InitFog Color.white (Length.meters 5), Teleport @t, PlayMusic "ending_loop2.mp3"]
 t toyBucket
 ! (invisibleWall LevelTile.sand)
