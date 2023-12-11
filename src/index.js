@@ -2,6 +2,8 @@ import ElmModule from './Main.elm';
 import { generateSignTexture } from './texture-generator';
 import { subscribeToWindowShaking, controlClipboard } from './browser-extra';
 
+const CURRENT_GAME_VERSION = 0.1;
+
 const soundBuffers = {};
 const musicBuffers = {};
 const audioContext = window.AudioContext && new AudioContext();
@@ -32,6 +34,18 @@ function startAudioContext() {
   }
 }
 
+function loadSave() {
+  const parsedSave = JSON.parse(localStorage.getItem("save") ?? 'null');
+
+  if (parsedSave && parsedSave.v !== CURRENT_GAME_VERSION) {
+    localStorage.removeItem('save');
+    alert("Sorry, your saved game cannot be loaded since game levels have been updated. Hence, your game state had to be reset :-(");
+    return null;
+  }
+
+  return parsedSave;
+}
+
 
 (async () => {
   const { Elm } = await ElmModule;
@@ -43,7 +57,7 @@ function startAudioContext() {
         musicVolume: currentGainNode ? currentGainNode.gain.value : 1,
         soundVolume: soundGainNode ? soundGainNode.gain.value : 1
       },
-      save: JSON.parse(localStorage.getItem("save") ?? 'null')
+      save: loadSave(),
     }
   });
 
@@ -169,6 +183,9 @@ function startAudioContext() {
 
   app.ports.saveState.subscribe(
     ([key, state]) => {
+      if (key === 'save') {
+        state.v = CURRENT_GAME_VERSION;
+      }
       localStorage.setItem(key, JSON.stringify(state));
     }
   );
