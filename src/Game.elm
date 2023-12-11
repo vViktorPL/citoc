@@ -81,6 +81,7 @@ type alias Model =
     , levelJustLoaded : Bool
     , windowShaken : Bool
     , mouseSensitivity : Float
+    , ctrlZPressed : Bool
     }
 
 
@@ -214,6 +215,7 @@ init assets settings savedGameState =
       , assets = updatedAssets
       , windowShaken = False
       , mouseSensitivity = settings.mouseSensitivity
+      , ctrlZPressed = False
       }
     , Cmd.batch
         [ Task.perform
@@ -504,6 +506,13 @@ update msg model =
 
                         _ ->
                             model.gestureHistory
+                , ctrlZPressed =
+                    case key of
+                        ControlCtrlZ ->
+                            True
+
+                        _ ->
+                            model.ctrlZPressed
               }
             , Cmd.none
             )
@@ -598,7 +607,7 @@ controlKeyToPlayerAction key =
         ControlStrafeRight ->
             Player.strafeRight
 
-        Unknown ->
+        _ ->
             identity
 
 
@@ -609,6 +618,7 @@ type ControlKey
     | ControlStrafeRight
     | ControlTurnLeft
     | ControlTurnRight
+    | ControlCtrlZ
     | Unknown
 
 
@@ -630,49 +640,64 @@ lockedMouseMovementDecoder =
 
 keyDecoder : Decode.Decoder ControlKey
 keyDecoder =
-    Decode.field "key" Decode.string
-        |> Decode.map
-            (\key ->
-                case key of
-                    "ArrowLeft" ->
-                        ControlTurnLeft
+    Decode.map2
+        (\key ctrlKey ->
+            case key of
+                "ArrowLeft" ->
+                    ControlTurnLeft
 
-                    "ArrowRight" ->
-                        ControlTurnRight
+                "ArrowRight" ->
+                    ControlTurnRight
 
-                    "ArrowUp" ->
-                        ControlForward
+                "ArrowUp" ->
+                    ControlForward
 
-                    "ArrowDown" ->
-                        ControlBackward
+                "ArrowDown" ->
+                    ControlBackward
 
-                    "w" ->
-                        ControlForward
+                "w" ->
+                    ControlForward
 
-                    "W" ->
-                        ControlForward
+                "W" ->
+                    ControlForward
 
-                    "a" ->
-                        ControlStrafeLeft
+                "a" ->
+                    ControlStrafeLeft
 
-                    "A" ->
-                        ControlStrafeLeft
+                "A" ->
+                    ControlStrafeLeft
 
-                    "s" ->
-                        ControlBackward
+                "s" ->
+                    ControlBackward
 
-                    "S" ->
-                        ControlBackward
+                "S" ->
+                    ControlBackward
 
-                    "d" ->
-                        ControlStrafeRight
+                "d" ->
+                    ControlStrafeRight
 
-                    "D" ->
-                        ControlStrafeRight
+                "D" ->
+                    ControlStrafeRight
 
-                    _ ->
+                "z" ->
+                    if ctrlKey then
+                        ControlCtrlZ
+
+                    else
                         Unknown
-            )
+
+                "Z" ->
+                    if ctrlKey then
+                        ControlCtrlZ
+
+                    else
+                        Unknown
+
+                _ ->
+                    Unknown
+        )
+        (Decode.field "key" Decode.string)
+        (Decode.field "ctrlKey" Decode.bool)
 
 
 transitionToNextLevel : Model -> Model
@@ -790,6 +815,9 @@ handleTriggers model newPlayer =
                                 Level.getSignTextAt model.level signSector
                                     |> Maybe.map (String.toLower >> String.startsWith (String.toLower textMatch))
                                     |> Maybe.withDefault False
+
+                            Trigger.CtrlZPressed ->
+                                model.ctrlZPressed
                     )
                     trigger.conditions
             )
@@ -805,6 +833,7 @@ handleTriggers model newPlayer =
                         model.gestureHistory
                 , windowShaken = False
                 , levelJustLoaded = False
+                , ctrlZPressed = False
             }
 
 

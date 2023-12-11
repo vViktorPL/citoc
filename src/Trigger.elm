@@ -115,6 +115,7 @@ type TriggerCondition
     | CounterEquals String Int
     | WindowShake
     | SignTextLike SectorCoordinates String
+    | CtrlZPressed
 
 
 type TriggerEffect
