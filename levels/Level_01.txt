@@ -50,13 +50,11 @@ t blackFloor [Nod, LookAngle North] [ActivateTile @T, RemoveAllTriggersInSectors
 - floor
 e floor [LookAngle North] [ChangeTile @- LevelTile.wall, RemoveAllTriggersInSector @e]
 b wall
-B floor [SteppedIn] [ChangeTile @b LevelTile.floor, ChangeTile @S (LevelTile.sign "Have you tried the other direction?" South), Teleport @b]
-C floor [SteppedIn] [Teleport @c, ChangeTile @S LevelTile.wall, CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
+B floor [SteppedIn] [ChangeTile @b LevelTile.floor, ChangeTile @S (LevelTile.sign "Have you tried\nthe other direction?" South), Teleport @b]
+C floor [SteppedIn] [Teleport @c, ChangeTile @S (LevelTile.sign "Come closer again" South), CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
 c floor
 D floor [SteppedIn] [ChangeTile @d LevelTile.floor, RemoveAllTriggersInSector @D]
-d wall [EnteredFrom South] [Teleport @x]
+d (sign "Come closer again" South) [EnteredFrom South] [Teleport @x]
 x floor
 q floor
 z (customizedSign "Just accept the terms\ndude" North LevelTile.blackWall)
-g greenWall
-r redWall

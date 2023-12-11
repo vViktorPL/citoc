@@ -1,18 +1,30 @@
 #######
-#...X.#
-#A###.#
-#v#  #
-#.#######
-#.......#
-#.......#
-#.......#
-#.##?##.#
-#.#.x.#.#
-#Q#2#1#W#
-#.#.#.#.#
-#.#.#.#.#
-#...#...#
-#########
+#.....s
+#B#####
+#v#
+#.#############
+#.......A.....#
+#.......#####.#
+#.......#   #.#
+#.##?##.#####.######
+#.#.x.#.#..........#
+#Q#2#1#W#..........#
+#.#.#.#.####.....###
+#.#.#.#.#  #..pZ.#
+#...#...#   #.#3#
+#########   #...#
+            #####
+
+
+
+    ####
+####z..#
+#....#.#
+#.##.#E#
+#.##...#
+#..#####.#
+##X......#
+ #########
 
 ---
 x floor [SteppedIn] [ChangeTile @A LevelTile.floor, RemoveAllTriggersInSector @x]
@@ -23,3 +35,11 @@ W floor
 X floor [SteppedIn] [NextLevel]
 A wall
 ? (sign "BEWARE OF\nCONFUSING\nCORRIDORS" South)
+p (sign "Go left, it's right.\nTrust me, I'm not playing\npolitics." North)
+3 floor [EnteredFrom North, LookAngle South] [Teleport @E, CreateTrigger (Trigger [CtrlZPressed] [SafeTeleport @Z, RemoveAllGlobalTriggers]), ChangeTile @B LevelTile.floor]
+3 floor [EnteredFrom North, LookAngle West] [Teleport @E, CreateTrigger (Trigger [CtrlZPressed] [SafeTeleport @Z, RemoveAllGlobalTriggers]), ChangeTile @B LevelTile.floor]
+E floor
+z (sign "There is no\nCtrl+Z" East)
+Z floor
+B wall
+s (sign "You've found\nsecret\n🤫" West)
