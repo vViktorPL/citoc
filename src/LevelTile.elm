@@ -10,17 +10,20 @@ module LevelTile exposing
     , breakableWall
     , chair
     , collision
+    , customizedSign
     , dependencies
     , empty
     , emptySandbox
     , floor
     , getSignText
     , glassWall
+    , greenWall
     , groundSound
     , hole
     , interact
     , invisibleWall
     , openFloor
+    , redWall
     , sand
     , sandboxWithCastle
     , sign
@@ -59,7 +62,9 @@ type Model
     = Floor
     | OpenFloor
     | Wall
-    | Sign String String Orientation
+    | Sign String String Orientation Model
+    | GreenWall
+    | RedWall
     | BlueWall
     | Sand
     | ToyBucket
@@ -98,15 +103,28 @@ wall =
     Wall
 
 
+greenWall =
+    GreenWall
+
+
+redWall =
+    RedWall
+
+
 sign : String -> Orientation -> Model
 sign text orientation =
+    customizedSign text orientation Wall
+
+
+customizedSign : String -> Orientation -> Model -> Model
+customizedSign text orientation baseTile =
     let
         name =
             text
                 |> Hash.fromString
                 |> Hash.toString
     in
-    Sign name text orientation
+    Sign name text orientation baseTile
 
 
 toyBucket =
@@ -180,7 +198,7 @@ isDynamic model =
         BreakableWall _ _ ->
             True
 
-        Sign _ _ _ ->
+        Sign _ _ _ _ ->
             True
 
         _ ->
@@ -204,10 +222,16 @@ collision model =
         Wall ->
             Collision
 
-        Sign _ _ _ ->
+        Sign _ _ _ _ ->
             Collision
 
         BlueWall ->
+            Collision
+
+        GreenWall ->
+            Collision
+
+        RedWall ->
             Collision
 
         BlackWall ->
@@ -263,8 +287,26 @@ horizontalTile z material =
         (Point3d.xyz x1 y2 z)
 
 
-wallBlockTile material { x1, x2, y1, y2, z1, z2 } =
+wallBlockTile material =
     let
+        x1 =
+            Length.meters -0.5
+
+        x2 =
+            Length.meters 0.5
+
+        y1 =
+            Length.meters -0.5
+
+        y2 =
+            Length.meters 0.5
+
+        z1 =
+            Length.meters 0
+
+        z2 =
+            Length.meters 1
+
         leftQuad =
             Scene3d.quad material
                 (Point3d.xyz x1 y1 z1)
@@ -406,13 +448,28 @@ view assets model =
             in
             wallBlockTile
                 material
-                { x1 = Length.meters -0.5
-                , x2 = Length.meters 0.5
-                , y1 = Length.meters -0.5
-                , y2 = Length.meters 0.5
-                , z1 = Length.meters 0
-                , z2 = Length.meters 1
-                }
+
+        GreenWall ->
+            let
+                material =
+                    Scene3d.Material.texturedNonmetal
+                        { baseColor = Assets.getColorTexture assets "PaintedPlaster003_4K_Color.jpg"
+                        , roughness = Assets.getOtherTexture assets "PaintedPlaster003_4K_Roughness.jpg"
+                        }
+            in
+            wallBlockTile
+                material
+
+        RedWall ->
+            let
+                material =
+                    Scene3d.Material.texturedNonmetal
+                        { baseColor = Assets.getColorTexture assets "PaintedPlaster001_4K_Color.jpg"
+                        , roughness = Assets.getOtherTexture assets "PaintedPlaster001_4K_Roughness.jpg"
+                        }
+            in
+            wallBlockTile
+                material
 
         BlueWall ->
             let
@@ -425,24 +482,10 @@ view assets model =
             in
             wallBlockTile
                 material
-                { x1 = Length.meters -0.5
-                , x2 = Length.meters 0.5
-                , y1 = Length.meters -0.5
-                , y2 = Length.meters 0.5
-                , z1 = Length.meters 0
-                , z2 = Length.meters 1
-                }
 
         BlackWall ->
             wallBlockTile
                 (Scene3d.Material.color Color.black)
-                { x1 = Length.meters -0.5
-                , x2 = Length.meters 0.5
-                , y1 = Length.meters -0.5
-                , y2 = Length.meters 0.5
-                , z1 = Length.meters 0
-                , z2 = Length.meters 1
-                }
 
         BlackFloor ->
             Scene3d.group
@@ -453,7 +496,7 @@ view assets model =
         Terms termsModel ->
             Scene3d.group [ Terms.view assets termsModel, view assets blackFloor ]
 
-        Sign name _ orientation ->
+        Sign name _ orientation baseTile ->
             let
                 material =
                     name
@@ -492,7 +535,7 @@ view assets model =
                         (Point3d.xyz x1 y z2)
                         |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle orientation))
             in
-            Scene3d.group [ view assets Wall, signEntity ]
+            Scene3d.group [ view assets baseTile, signEntity ]
 
         Sandbox withCastle ->
             viewSandbox assets withCastle
@@ -659,8 +702,13 @@ dependencies model =
             , Assets.OtherTextureDep "Bricks021_1K-JPG_Roughness.jpg"
             ]
 
-        Sign name text _ ->
-            Assets.SignTextureDep name text :: dependencies Wall
+        GreenWall ->
+            [ Assets.ColorTextureDep "PaintedPlaster003_4K_Color.jpg"
+            , Assets.OtherTextureDep "PaintedPlaster003_4K_Roughness.jpg"
+            ]
+
+        Sign name text _ baseTile ->
+            Assets.SignTextureDep name text :: dependencies baseTile
 
         BlueWall ->
             [ Assets.ColorTextureDep "CorrugatedSteel007B_1K-JPG_Color.jpg"
@@ -835,7 +883,7 @@ interact player model =
 getSignText : Model -> Maybe String
 getSignText model =
     case model of
-        Sign _ text _ ->
+        Sign _ text _ _ ->
             Just text
 
         _ ->
@@ -845,8 +893,8 @@ getSignText model =
 updateSignText : String -> Model -> Model
 updateSignText newText model =
     case model of
-        Sign _ _ orientation ->
-            sign newText orientation
+        Sign _ _ orientation baseTile ->
+            customizedSign newText orientation baseTile
 
         _ ->
             model

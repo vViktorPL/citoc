@@ -2,17 +2,17 @@
 ..#
 #C#
 #b####  #s###
-#.#..#  #...#
-#.#######A#.####
-#.........#....#
-#.........####c#
-#..e......#  #B#
-###-###S#.#  #.#
-  !T! #Q#.#  #.#
-  !t! #.#.#  #.........#
-  !^! #...#  #.........#
-  !z! #####  #.........#
-             #########.#
+#.#..#  #....#
+#.#######A##.####
+#.........##....#
+#.........#####c#
+#..e......#   #B#
+###-###S#.#   #.#
+  !T! #Q#.#   #.#
+  !t! #.#.#   #.........#
+  !^! #...#   #.........#
+  !z! #####   #.........#
+              #########.#
 
 
 #####
@@ -54,7 +54,9 @@ B floor [SteppedIn] [ChangeTile @b LevelTile.floor, ChangeTile @S (LevelTile.sig
 C floor [SteppedIn] [Teleport @c, ChangeTile @S LevelTile.wall, CreateTrigger (Trigger.localTrigger @Q [SteppedIn] [Teleport @q])]
 c floor
 D floor [SteppedIn] [ChangeTile @d LevelTile.floor, RemoveAllTriggersInSector @D]
-d wall [LookAngle North] [Teleport @x]
+d wall [EnteredFrom South] [Teleport @x]
 x floor
 q floor
-z (sign "Just accept the terms\ndude" North)
+z (customizedSign "Just accept the terms\ndude" North LevelTile.blackWall)
+g greenWall
+r redWall
