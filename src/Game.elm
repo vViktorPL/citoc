@@ -10,7 +10,7 @@ import Dict exposing (Dict)
 import Direction3d
 import Ending
 import Html exposing (Html)
-import Html.Attributes
+import Html.Attributes as Attr
 import Json.Decode as Decode
 import Json.Encode as E
 import Length
@@ -82,6 +82,8 @@ type alias Model =
     , windowShaken : Bool
     , mouseSensitivity : Float
     , ctrlZPressed : Bool
+    , clipboardContent : String
+    , clipboardTimeLeft : Float
     }
 
 
@@ -216,6 +218,8 @@ init assets settings savedGameState =
       , windowShaken = False
       , mouseSensitivity = settings.mouseSensitivity
       , ctrlZPressed = False
+      , clipboardContent = ""
+      , clipboardTimeLeft = 0
       }
     , Cmd.batch
         [ Task.perform
@@ -290,6 +294,11 @@ handleStepSounds level player outmsg =
 
         _ ->
             Cmd.none
+
+
+updateClipboard : Float -> Model -> Model
+updateClipboard delta model =
+    { model | clipboardTimeLeft = max 0 (model.clipboardTimeLeft - delta) }
 
 
 updateAnimation : Float -> Model -> ( Model, Cmd Msg )
@@ -431,7 +440,9 @@ update msg model =
         AnimationTick delta ->
             let
                 ( animatedModel, animationCmd ) =
-                    updateAnimation delta model
+                    model
+                        |> updateClipboard delta
+                        |> updateAnimation delta
 
                 ( updatedNarration, narrationCmd ) =
                     Narration.update delta animatedModel.narration
@@ -447,7 +458,7 @@ update msg model =
                     Level.getSignTextAt model.level sector
                         |> Maybe.withDefault ""
             in
-            ( model, WebBrowser.setClipboardCopyableText signText )
+            ( { model | clipboardContent = signText, clipboardTimeLeft = 3000 }, WebBrowser.setClipboardCopyableText signText )
 
         Clipboard WebBrowser.ClipboardCut ->
             let
@@ -953,10 +964,10 @@ viewGame model opacity =
                 |> String.fromInt
                 |> (\percentageNumberString -> percentageNumberString ++ "%")
     in
-    Html.div [ Html.Attributes.style "background" model.fadeColor ]
+    Html.div [ Attr.style "background" model.fadeColor ]
         [ Html.div
-            [ Html.Attributes.style "opacity" (String.fromFloat opacity)
-            , Html.Attributes.style "visibility"
+            [ Attr.style "opacity" (String.fromFloat opacity)
+            , Attr.style "visibility"
                 (if model.state == LoadingLevel then
                     "hidden"
 
@@ -978,8 +989,8 @@ viewGame model opacity =
             ]
         , Narration.view model.narration
         , Html.div
-            [ Html.Attributes.class "loadingScreen"
-            , Html.Attributes.style
+            [ Attr.class "loadingScreen"
+            , Attr.style
                 "visibility"
                 (if model.state == LoadingLevel then
                     "visible"
@@ -988,10 +999,19 @@ viewGame model opacity =
                     "hidden"
                 )
             ]
-            [ Html.div [ Html.Attributes.class "loadingSpinner" ] []
+            [ Html.div [ Attr.class "loadingSpinner" ] []
             , Html.text "Loading..."
             , Html.br [] []
             , Html.text loadingProgress
+            ]
+        , Html.div
+            [ Attr.classList
+                [ ( "clipboardTip", True )
+                , ( "active", model.clipboardTimeLeft > 0 && model.clipboardContent /= "" )
+                ]
+            ]
+            [ Html.h1 [] [ Html.text "Clipboard:" ]
+            , Html.p [] [ Html.text model.clipboardContent ]
             ]
         ]
 
