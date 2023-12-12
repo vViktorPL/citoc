@@ -6,7 +6,7 @@ E4D#.........# ER.....K
  #B#.#.#v#.#.#     ####
  #1#.#.#...#.#
  #A#.#.#####.#
- #0#.#.......#
+ #0#.H.......#
  #...#########
  #####
 
@@ -38,3 +38,4 @@ X floor [SteppedIn] [NextLevel]
 q floor
 Q (sign "3" South)
 s (sign "You've found\nsecret\n🤫" North)
+H (hole { walls = [North, South, West, East], barriers = [West, East]})
