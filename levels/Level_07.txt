@@ -18,7 +18,7 @@
 ---
 v floor [] [PlayMusic "funky.mp3", CreateTrigger (Trigger [WindowShake] [PlaySound "rumble.mp3", ActivateTile @b, RemoveAllGlobalTriggers])]
 s (sign "Sometimes, a digital window\nneeds a nudge to respond." South)
-b breakableWall
+b (breakableWall South)
 C wall [SteppedIn] [CreateTrigger (Trigger.localTrigger @d [SteppedIn] [ChangeTile @D LevelTile.floor, RemoveAllTriggersInSector @d])]
 c floor [SteppedIn] [ChangeTile @C LevelTile.floor, RemoveAllTriggersInSector @c]
 d floor
@@ -29,7 +29,7 @@ E floor [SteppedIn] [PlaySound "rumble.mp3", ChangeTile @G LevelTile.floor, Remo
 F floor
 3 wall
 + (invisibleWall LevelTile.floor)
-B breakableWall
+B (breakableWall South)
 G wall
 H floor [SteppedIn] [ChangeTile @h LevelTile.floor, ChangeTile @s (LevelTile.sign "Okay, this gets boring right?\nShake it again." South), CreateTrigger (Trigger [WindowShake] [PlaySound "rumble.mp3", ActivateTile @B, RemoveAllGlobalTriggers]), RemoveAllTriggersInSector @H]
 h wall

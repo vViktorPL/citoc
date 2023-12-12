@@ -882,13 +882,25 @@ executeEffects model effects =
                         ( { modelAcc | level = Level.removeAllGlobalTriggers modelAcc.level }, cmdAcc )
 
                     Trigger.IncrementCounter counterName ->
-                        ( { modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1)) modelAcc.counters }
-                        , Cmd.batch [ cmdAcc, Sound.playSound "notify-up.mp3" ]
+                        ( { modelAcc
+                            | counters =
+                                Dict.update
+                                    counterName
+                                    (\prevCount -> Just (Maybe.withDefault 0 prevCount + 1))
+                                    modelAcc.counters
+                          }
+                        , cmdAcc
                         )
 
                     Trigger.DecrementCounter counterName ->
-                        ( { modelAcc | counters = Dict.update counterName (\prevCount -> Just (Maybe.withDefault 0 prevCount - 1)) modelAcc.counters }
-                        , Cmd.batch [ cmdAcc, Sound.playSound "notify-down.mp3" ]
+                        ( { modelAcc
+                            | counters =
+                                Dict.update
+                                    counterName
+                                    (\prevCount -> Just (Maybe.withDefault 0 prevCount - 1))
+                                    modelAcc.counters
+                          }
+                        , cmdAcc
                         )
 
                     Trigger.PlaySound fileName ->
@@ -925,6 +937,28 @@ executeEffects model effects =
 
                     Trigger.ComeBackDown ->
                         ( { modelAcc | player = Player.comeBackDown modelAcc.player }, cmdAcc )
+
+                    Trigger.UpdateCounterOnTile sector { counterName, pattern } ->
+                        let
+                            counterValue =
+                                modelAcc.counters
+                                    |> Dict.get counterName
+                                    |> Maybe.withDefault 0
+                                    |> String.fromInt
+
+                            text =
+                                String.replace "$" counterValue pattern
+
+                            newSignTile =
+                                Level.getTileAt modelAcc.level sector
+                                    |> LevelTile.updateSignText text
+
+                            ( updatedAssets, assetsCmd ) =
+                                Assets.requestDependencies (LevelTile.dependencies newSignTile) model.assets
+                        in
+                        ( { modelAcc | level = Level.updateTile sector newSignTile modelAcc.level, assets = updatedAssets }
+                        , Cmd.batch [ cmdAcc, Cmd.map AssetsMsg assetsCmd ]
+                        )
             )
             ( model, Cmd.none )
 

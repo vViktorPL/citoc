@@ -73,7 +73,7 @@ type Model
     | Chair
     | Sandbox Bool
     | Terms Terms.Model
-    | BreakableWall BreakableWallType BreakableWall.Model
+    | BreakableWall BreakableWallType Orientation BreakableWall.Model
     | BlackWall
     | BlackFloor
     | Hole HoleTileData
@@ -181,12 +181,12 @@ hole =
 
 glassWall : Model
 glassWall =
-    BreakableWall GlassWall (BreakableWall.init 0.01)
+    BreakableWall GlassWall South (BreakableWall.init 0.01)
 
 
-breakableWall : Model
-breakableWall =
-    BreakableWall HeavyWall (BreakableWall.init 0.05)
+breakableWall : Orientation -> Model
+breakableWall orientation =
+    BreakableWall HeavyWall orientation (BreakableWall.init 0.05)
 
 
 isDynamic : Model -> Bool
@@ -195,7 +195,7 @@ isDynamic model =
         Terms _ ->
             True
 
-        BreakableWall _ _ ->
+        BreakableWall _ _ _ ->
             True
 
         Sign _ _ _ _ ->
@@ -254,7 +254,7 @@ collision model =
                 False ->
                     NoCollision
 
-        BreakableWall _ breakableWallModel ->
+        BreakableWall _ _ breakableWallModel ->
             case BreakableWall.isBroken breakableWallModel of
                 True ->
                     NoCollision
@@ -550,9 +550,10 @@ view assets model =
             in
             horizontalTile (Length.meters 0) material
 
-        BreakableWall _ breakableWallModel ->
+        BreakableWall _ orientation breakableWallModel ->
             Scene3d.group
                 [ BreakableWall.view assets breakableWallModel
+                    |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle orientation))
                 , view assets floor
                 ]
 
@@ -745,7 +746,7 @@ dependencies model =
                         []
                    )
 
-        BreakableWall wallType _ ->
+        BreakableWall wallType _ _ ->
             Assets.SoundEffectDep
                 (case wallType of
                     GlassWall ->
@@ -807,7 +808,7 @@ groundSound model =
         Wall ->
             SolidFloor
 
-        BreakableWall _ _ ->
+        BreakableWall _ _ _ ->
             SolidFloor
 
         _ ->
@@ -820,8 +821,8 @@ update delta model =
         Terms termsModel ->
             Terms (Terms.update delta termsModel)
 
-        BreakableWall wallType breakableWallModel ->
-            BreakableWall wallType (BreakableWall.update delta breakableWallModel)
+        BreakableWall wallType orientation breakableWallModel ->
+            BreakableWall wallType orientation (BreakableWall.update delta breakableWallModel)
 
         _ ->
             model
@@ -833,8 +834,8 @@ activate model =
         Terms termsModel ->
             ( Terms (Terms.open termsModel), Sound.playSound "elevator_door.mp3" )
 
-        BreakableWall wallType breakableWallModel ->
-            ( BreakableWall wallType (BreakableWall.break (Point2d.meters 0.5 0.5) Vector3d.zero breakableWallModel)
+        BreakableWall wallType orientation breakableWallModel ->
+            ( BreakableWall wallType orientation (BreakableWall.break (Point2d.meters 0.5 0.5) Vector3d.zero breakableWallModel)
             , Sound.playSound
                 (case wallType of
                     GlassWall ->
@@ -852,7 +853,7 @@ activate model =
 interact : Player -> Model -> Maybe ( Model, Cmd msg )
 interact player model =
     case model of
-        BreakableWall GlassWall breakableWallModel ->
+        BreakableWall GlassWall orientation breakableWallModel ->
             if BreakableWall.isBroken breakableWallModel then
                 Nothing
 
@@ -874,7 +875,7 @@ interact player model =
                     wallCollisionPoint =
                         Point2d.meters wallCollisionPointX wallCollisionPointY
                 in
-                Just ( BreakableWall GlassWall (BreakableWall.break wallCollisionPoint v breakableWallModel), Sound.playSound "glass-break.mp3" )
+                Just ( BreakableWall GlassWall orientation (BreakableWall.break wallCollisionPoint v breakableWallModel), Sound.playSound "glass-break.mp3" )
 
         _ ->
             Nothing

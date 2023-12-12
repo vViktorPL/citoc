@@ -139,3 +139,4 @@ type TriggerEffect
     | ShowGameEndingScreen
     | EnableUpsideDownWalking
     | ComeBackDown
+    | UpdateCounterOnTile SectorCoordinates { counterName : String, pattern : String }

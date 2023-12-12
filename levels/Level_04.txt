@@ -1,0 +1,51 @@
+       #.# #.# #.#
+       #.###.###.##
+       #...#...#...#
+        ##q###w###e#  #.#
+       ###Q###W###E#  #.#
+       #...#...#...#  #.##
+       #.###.###.###  #...#
+   #.# #.# #.# #.#     ##m#
+####.##1.##2.##3.###  ###M#
+#....#.............#  #...#
+#x####.............#  #.##
+#....*.............####.#
+#####?!............|....#
+     #.............-####
+     #......^......#
+     #######_#######
+           #.#
+           #.#
+           #.#
+           #.###
+           #...#
+            ##F#
+            ##B#
+           #...#
+           #.###
+           #.#
+           ###
+
+---
+F floor
+B floor
+q floor [SteppedIn] [ChangeTile @_ LevelTile.floor, IncrementCounter "entry_1", UpdateCounterOnTile @1 { counterName = "entry_1", pattern = "$/1" }, RemoveAllTriggersInSector @B, CreateTrigger (Trigger.localTrigger @B [SteppedIn] [DecrementCounter "entry_1", UpdateCounterOnTile @1 { counterName = "entry_1", pattern = "$/1" }, Teleport @Q]), Teleport @F ]
+w floor [SteppedIn] [ChangeTile @_ LevelTile.floor, IncrementCounter "entry_2", UpdateCounterOnTile @2 { counterName = "entry_2", pattern = "$/2" }, RemoveAllTriggersInSector @B, CreateTrigger (Trigger.localTrigger @B [SteppedIn] [DecrementCounter "entry_2", UpdateCounterOnTile @2 { counterName = "entry_2", pattern = "$/2" }, Teleport @W]), Teleport @F ]
+e floor [SteppedIn] [ChangeTile @_ LevelTile.floor, IncrementCounter "entry_3", UpdateCounterOnTile @3 { counterName = "entry_3", pattern = "$/3" }, RemoveAllTriggersInSector @B, CreateTrigger (Trigger.localTrigger @B [SteppedIn] [DecrementCounter "entry_3", UpdateCounterOnTile @3 { counterName = "entry_3", pattern = "$/3" }, Teleport @E]), Teleport @F ]
+m floor [SteppedIn] [IncrementCounter "entry_-2", UpdateCounterOnTile @- { counterName = "entry_-2", pattern = "$/-2" }, RemoveAllTriggersInSector @B, CreateTrigger (Trigger.localTrigger @B [SteppedIn] [DecrementCounter "entry_-2", UpdateCounterOnTile @- { counterName = "entry_-2", pattern = "$/-2" }, Teleport @M]), Teleport @F ]
+Q floor
+W floor
+E floor
+M floor
+1 (sign "0/1" South)
+2 (sign "0/2" South)
+3 (sign "0/3" South)
+_ wall
+^ floor [LevelLoaded] [CreateTrigger (Trigger.Trigger [CounterEquals "entry_1" 1, CounterEquals "entry_2" 2, CounterEquals "entry_3" 3] [ChangeTile @| LevelTile.floor, ChangeTile @- (LevelTile.sign "0/-2" West), RemoveAllGlobalTriggers, CreateTrigger (Trigger.Trigger [CounterEquals "entry_-2" -2] [ChangeTile @? (LevelTile.sign "Seems like you\nare good at maths.\n\n2+2=5 ?" East), CreateTrigger (Trigger.localTrigger @! [NegativeHeadshake] [ActivateTile @*, RemoveAllTriggersInSector @!]), RemoveAllGlobalTriggers] )])]
+- wall
+| wall
+f floor
+? wall
+* (breakableWall East)
+x floor [SteppedIn] [NextLevel]
+! floor
