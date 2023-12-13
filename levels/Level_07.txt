@@ -10,7 +10,7 @@
  #####B#Csb###.###
  #.Gv#.......#...#
  #.#.#.......###F#####
- #.#.........h.#e....#
+ #.a.........h.#e....#
  #.###########.###.#.#
  #...........H.# #.#.#
  ###############
@@ -25,7 +25,7 @@ d floor
 D wall
 e floor [SteppedIn] [ChangeTile @3 LevelTile.floor, Teleport @E]
 f floor [SteppedIn] [Teleport @F]
-E floor [SteppedIn] [PlaySound "rumble.mp3", ChangeTile @G LevelTile.floor, RemoveAllTriggersInSector @E]
+E floor [SteppedIn] [PlaySound "rumble.mp3", ChangeTile @G LevelTile.floor, ChangeTile @a (LevelTile.sign "→" East), RemoveAllTriggersInSector @E]
 F floor
 3 wall
 + (invisibleWall LevelTile.floor)
@@ -34,3 +34,4 @@ G wall
 H floor [SteppedIn] [ChangeTile @h LevelTile.floor, ChangeTile @s (LevelTile.sign "Okay, this gets boring right?\nShake it again." South), CreateTrigger (Trigger [WindowShake] [PlaySound "rumble.mp3", ActivateTile @B, RemoveAllGlobalTriggers]), RemoveAllTriggersInSector @H]
 h wall
 X floor [SteppedIn] [NextLevel]
+a wall
