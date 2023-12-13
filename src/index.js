@@ -183,7 +183,7 @@ function loadSave() {
 
   app.ports.saveState.subscribe(
     ([key, state]) => {
-      if (key === 'save') {
+      if (key === 'save' && state !== null) {
         state.v = CURRENT_GAME_VERSION;
       }
       localStorage.setItem(key, JSON.stringify(state));
