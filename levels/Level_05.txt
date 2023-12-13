@@ -1,0 +1,96 @@
+
+      #####M
+     #.....m#
+     #.####w#
+     #.#  #.#
+     #.#  #.#
+   ###.####.# #.#
+  #..#....#.# #.#
+  ####←##.#.###.#
+  #...l...#...X.#
+   ###.#########
+     #.#
+     #.###
+     #....#
+  ####←##.#
+  #...l...#
+   ###.###
+     #.#
+   ###.#
+  #....#
+  #.##→####
+  #...r...#
+   ###.###
+     #.#
+     #.###
+     #....#
+  ####←##.#
+  #...l...#
+   ###.###
+     #.#
+   ###.#
+  #....#
+  #.##→####
+  #...r...#
+   ###.###
+     #.#
+   ###.#
+  #....#
+  #.##→####
+  #...r...#
+   ###.###
+     #^#
+     #-###
+     #....#
+     ####.#
+         #
+
+  ####→####
+  #.......#
+   ###.###
+     #x#
+     #.###
+     #....#
+     #→##.#
+     #R...#
+     #.###
+     #.#
+     #.###
+     #....#
+     ####.#
+         #
+
+  ####→####
+  #.......#
+   ###.###
+     #x#
+   ###.#
+  #....#
+  #.##←#
+  #...L#
+   ###.#
+     #.#
+     #.###
+     #....#
+     ####.#
+         #
+
+---
+- wall
+→ (sign "Don't look →" South)
+← (sign "← Don't look" South)
+i (invisibleWall LevelTile.floor)
+x floor [SteppedIn] [ChangeTile @- LevelTile.floor, Teleport @^]
+
+r floor [LookAngle East] [Teleport @R]
+l floor [LookAngle West] [Teleport @L]
+R floor
+L floor
+
+M (sign "MOONWALKERS\nONLY" South)
+m floor [LookAngle North] [ChangeTile @w LevelTile.floor]
+m floor [LookAngle East] [ChangeTile @w LevelTile.wall]
+m floor [LookAngle West] [ChangeTile @w LevelTile.wall]
+m floor [LookAngle North] [ChangeTile @w LevelTile.wall]
+w wall
+X floor [SteppedIn] [NextLevel]
