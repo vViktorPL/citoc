@@ -24,6 +24,15 @@ body {
     background-position: center;
 }
 
+.logo::after {
+    content: "BETA";
+    font-size: 24px;
+    position: absolute;
+    transform: translate(170px, -45px) rotate(20deg);
+    font-weight: 600;
+    -webkit-text-stroke: 2px black;
+}
+
 .mainMenu {
     position: absolute;
     left: 0;
