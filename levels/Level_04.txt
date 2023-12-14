@@ -41,7 +41,7 @@ M floor
 2 (sign "0/2" South)
 3 (sign "0/3" South)
 _ wall
-^ floor [LevelLoaded] [CreateTrigger (Trigger.Trigger [CounterEquals "entry_1" 1, CounterEquals "entry_2" 2, CounterEquals "entry_3" 3] [ChangeTile @| LevelTile.floor, ChangeTile @- (LevelTile.sign "0/-2" West), RemoveAllGlobalTriggers, CreateTrigger (Trigger.Trigger [CounterEquals "entry_-2" -2] [ChangeTile @? (LevelTile.sign "Seems like you\nare good at maths.\n\n2+2=5 ?" East), CreateTrigger (Trigger.localTrigger @! [NegativeHeadshake] [ActivateTile @*, RemoveAllTriggersInSector @!]), RemoveAllGlobalTriggers] )])]
+^ floor [LevelLoaded] [PlayMusic "relax_3.mp3", CreateTrigger (Trigger.Trigger [CounterEquals "entry_1" 1, CounterEquals "entry_2" 2, CounterEquals "entry_3" 3] [ChangeTile @| LevelTile.floor, ChangeTile @- (LevelTile.sign "0/-2" West), RemoveAllGlobalTriggers, CreateTrigger (Trigger.Trigger [CounterEquals "entry_-2" -2] [ChangeTile @? (LevelTile.sign "Seems like you\nare good at maths.\n\n2+2=5 ?" East), CreateTrigger (Trigger.localTrigger @! [NegativeHeadshake] [ActivateTile @*, RemoveAllTriggersInSector @!]), RemoveAllGlobalTriggers] )])]
 - wall
 | wall
 f floor

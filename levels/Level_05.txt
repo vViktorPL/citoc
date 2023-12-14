@@ -94,3 +94,4 @@ m floor [LookAngle West] [ChangeTile @w LevelTile.wall]
 m floor [LookAngle North] [ChangeTile @w LevelTile.wall]
 w wall
 X floor [SteppedIn] [NextLevel]
+^ floor [] [PlayMusic "relax_2.mp3"]

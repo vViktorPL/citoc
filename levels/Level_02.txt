@@ -43,3 +43,4 @@ z (sign "There is no\nCtrl+Z" East)
 Z floor
 B wall
 s (sign "You've found\nsecret\n🤫" West)
+v floor [] [PlayMusic "relax_1.mp3"]
