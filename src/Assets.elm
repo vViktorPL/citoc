@@ -259,7 +259,7 @@ update msg (Assets queue data) =
         SignTextureGenerated { name, dataUri } ->
             ( Assets queue data
             , dataUri
-                |> Scene3d.Material.load
+                |> Scene3d.Material.loadWith Scene3d.Material.trilinearFiltering
                 |> Task.attempt
                     (\result ->
                         case result of
