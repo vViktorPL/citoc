@@ -245,6 +245,39 @@ interact model player v =
         adjustedVector =
             applyCollision upsideDown radius model center v
 
+        vx =
+            Vector3d.xComponent v
+                |> Length.inMeters
+
+        vy =
+            Vector3d.yComponent v
+                |> Length.inMeters
+
+        len =
+            Vector3d.length v
+                |> Length.inMeters
+
+        adjustedVectorX =
+            Vector3d.meters
+                (if vx > 0 then
+                    len
+
+                 else
+                    -len
+                )
+                0
+                0
+
+        adjustedVectorY =
+            Vector3d.meters 0
+                (if vy > 0 then
+                    len
+
+                 else
+                    -len
+                )
+                0
+
         targetSectorCollision =
             center
                 |> Point3d.translateBy v
@@ -254,18 +287,39 @@ interact model player v =
             center
                 |> Point3d.translateBy adjustedVector
                 |> cylinderCollisionSector model upsideDown radius
+
+        adjustedSectorCollisionX =
+            center
+                |> Point3d.translateBy adjustedVectorX
+                |> cylinderCollisionSector model upsideDown radius
+
+        adjustedSectorCollisionY =
+            center
+                |> Point3d.translateBy adjustedVectorY
+                |> cylinderCollisionSector model upsideDown radius
+
+        bestAdjustedVector =
+            case ( adjustedSectorCollision, adjustedSectorCollisionX, adjustedSectorCollisionY ) of
+                ( Nothing, _, _ ) ->
+                    adjustedVector
+
+                ( Just _, Nothing, _ ) ->
+                    adjustedVectorX
+
+                ( Just _, Just _, Nothing ) ->
+                    adjustedVectorY
+
+                ( Just _, Just _, Just _ ) ->
+                    Vector3d.zero
     in
     case targetSectorCollision of
         Just sector ->
-            case ( LevelTile.interact player (getTileAt model sector), adjustedSectorCollision ) of
-                ( Just ( tileAfterInteraction, tileCmd ), _ ) ->
+            case LevelTile.interact player (getTileAt model sector) of
+                Just ( tileAfterInteraction, tileCmd ) ->
                     ( LevelUpdated (updateTile sector tileAfterInteraction model), tileCmd )
 
-                ( _, Just _ ) ->
-                    ( LevelCollision Vector3d.zero, Cmd.none )
-
-                _ ->
-                    ( LevelCollision adjustedVector, Cmd.none )
+                Nothing ->
+                    ( LevelCollision bestAdjustedVector, Cmd.none )
 
         Nothing ->
             ( NoInteraction, Cmd.none )
@@ -374,6 +428,58 @@ addTrigger trigger (Level data) =
             Level { data | globalTriggers = trigger :: data.globalTriggers }
 
 
+collisionNormalForSector : Point3d Length.Meters WorldCoordinates -> Float -> ( Int, Int ) -> Maybe (Vector3d Length.Meters WorldCoordinates)
+collisionNormalForSector position r ( sx, sy ) =
+    let
+        left =
+            right - 1
+
+        right =
+            -(toFloat sx)
+
+        top =
+            toFloat sy
+
+        bottom =
+            top + 1
+
+        cx =
+            position
+                |> Point3d.xCoordinate
+                |> Length.inMeters
+
+        cy =
+            position
+                |> Point3d.yCoordinate
+                |> Length.inMeters
+
+        closestX =
+            max left (min cx right)
+
+        closestY =
+            max top (min cy bottom)
+
+        distanceX =
+            cx - closestX
+
+        distanceY =
+            cy - closestY
+
+        distanceSquared =
+            distanceX ^ 2 + distanceY ^ 2
+    in
+    if distanceSquared < (r ^ 2) then
+        { x = closestX - cx, y = closestY - cy, z = 0 }
+            |> Vector3d.fromMeters
+            |> Vector3d.normalize
+            |> Vector3d.unwrap
+            |> Vector3d.unsafe
+            |> Just
+
+    else
+        Nothing
+
+
 applyCollision : Bool -> Length.Length -> Model -> Point3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates -> Vector3d Length.Meters WorldCoordinates
 applyCollision upsideDown bodyRadius (Level levelData) position v =
     let
@@ -400,46 +506,9 @@ applyCollision upsideDown bodyRadius (Level levelData) position v =
         Just ( sx, sy ) ->
             -- Slide
             let
-                dx =
-                    sx - cx
-
-                dy =
-                    sy - cy
-
                 collisionNormal =
-                    Vector3d.fromMeters
-                        (if dx < 0 && dy < 0 then
-                            -- TL
-                            { x = -sqrt2, y = sqrt2, z = 0 }
-
-                         else if dx == 0 && dy < 0 then
-                            -- T
-                            { x = 0, y = 1, z = 0 }
-
-                         else if dx > 0 && dy < 0 then
-                            -- TR
-                            { x = sqrt2, y = sqrt2, z = 0 }
-
-                         else if dx < 0 && dy == 0 then
-                            -- L
-                            { x = -1, y = 0, z = 0 }
-
-                         else if dx > 0 && dy == 0 then
-                            -- R
-                            { x = 1, y = 0, z = 0 }
-
-                         else if dx < 0 && dy > 0 then
-                            -- BL
-                            { x = -sqrt2, y = -sqrt2, z = 0 }
-
-                         else if dx == 0 && dy > 0 then
-                            -- B
-                            { x = 0, y = -1, z = 0 }
-
-                         else
-                            -- BR
-                            { x = sqrt2, y = -sqrt2, z = 0 }
-                        )
+                    collisionNormalForSector desiredPosition (Length.inMeters bodyRadius) ( sx, sy )
+                        |> Maybe.withDefault Vector3d.zero
 
                 velocityProjection =
                     Vector3d.dot v collisionNormal
