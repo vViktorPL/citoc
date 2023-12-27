@@ -8,7 +8,7 @@
     "build": "NODE_ENV=production npm run build:levels && parcel build --no-source-maps --public-url ./ && npm run build:assets && bestzip build.zip dist",
     "build:levels": "node tools/map-compiler.js",
     "build:assets": "ncp assets dist/assets",
-    "dev": "rm -Rf .parcel-cache && npm run build:levels && npm run build:assets && PARCEL_ELM_NO_DEBUG=1 parcel"
+    "dev": "rm -Rf .parcel-cache && npm run build:levels && npm run build:assets && parcel"
   },
   "repository": {
     "type": "git",

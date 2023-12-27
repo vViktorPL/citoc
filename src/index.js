@@ -153,7 +153,7 @@ function loadSave() {
 
   // Pointer locking
   document.addEventListener('click', function (event) {
-    if (event.target.tagName === 'CANVAS') {
+    if (event.target.tagName === 'CANVAS' && event.target.parentElement.parentElement.id !== 'editor') {
       const canvasElement = event.target;
       canvasElement.requestPointerLock();
     }

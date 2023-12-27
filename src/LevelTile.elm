@@ -1,5 +1,6 @@
 module LevelTile exposing
-    ( GroundSound(..)
+    ( ConfigMsg
+    , GroundSound(..)
     , Model
     , TileCollisionType(..)
     , activate
@@ -30,8 +31,10 @@ module LevelTile exposing
     , terms
     , toyBucket
     , update
+    , updateConfig
     , updateSignText
     , view
+    , viewConfig
     , wall
     )
 
@@ -43,8 +46,12 @@ import BreakableWall
 import Castle
 import Color
 import Coordinates exposing (ObjectCoordinates, WorldCoordinates)
+import Dict
 import Frame3d
 import Hash exposing (Hash)
+import Html exposing (Html)
+import Html.Attributes as Attr
+import Html.Events
 import Length
 import Luminance
 import Orientation exposing (Orientation(..))
@@ -905,3 +912,55 @@ type alias HoleTileData =
     { walls : List Orientation
     , barriers : List Orientation
     }
+
+
+type ConfigMsg
+    = SelectTileType String
+    | SignTextChange String
+
+
+tilesAvailableForEditor =
+    Dict.fromList
+        [ ( "Empty", empty )
+        , ( "Wall", wall )
+        , ( "Floor", floor )
+        , ( "Sign", sign "Insert text" Orientation.South )
+        ]
+
+
+updateConfig : ConfigMsg -> Model -> Model
+updateConfig msg model =
+    case msg of
+        SelectTileType tileName ->
+            Dict.get tileName tilesAvailableForEditor
+                |> Maybe.withDefault model
+
+        SignTextChange newText ->
+            case model of
+                Sign _ _ orientation baseTile ->
+                    customizedSign newText orientation baseTile
+
+                _ ->
+                    model
+
+
+viewConfig : Model -> Html ConfigMsg
+viewConfig model =
+    Html.div []
+        [ Html.select [ Html.Events.onInput SelectTileType ]
+            (tilesAvailableForEditor
+                |> Dict.keys
+                |> List.map (\tileName -> Html.option [ Attr.value tileName ] [ Html.text tileName ])
+            )
+        , case model of
+            Sign name text orientation baseTile ->
+                Html.div [ Attr.style "display" "flex", Attr.style "flex-direction" "column" ]
+                    [ Html.div [ Attr.style "display" "flex", Attr.style "flex-direction" "row" ]
+                        [ Html.span [] [ Html.text "Content:" ]
+                        , Html.textarea [ Html.Events.onInput SignTextChange ] [ Html.text text ]
+                        ]
+                    ]
+
+            _ ->
+                Html.div [] []
+        ]

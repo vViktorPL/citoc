@@ -1,4 +1,15 @@
-module Coordinates exposing (ObjectCoordinates(..), SectorCoordinates, WorldCoordinates(..), sectorToWorldPosition, worldPositionToSector, worldPositionToSectorOffsetX, worldPositionToSectorOffsetY)
+module Coordinates exposing
+    ( EditorScreenCoordinates(..)
+    , EditorWorldCoordinates(..)
+    , ObjectCoordinates(..)
+    , SectorCoordinates
+    , WorldCoordinates(..)
+    , sectorToEditorWorldPosition
+    , sectorToWorldPosition
+    , worldPositionToSector
+    , worldPositionToSectorOffsetX
+    , worldPositionToSectorOffsetY
+    )
 
 import Length exposing (Meters)
 import Point3d exposing (Point3d)
@@ -12,12 +23,25 @@ type WorldCoordinates
     = WorldCoordinates
 
 
+type EditorScreenCoordinates
+    = EditorScreenCoordinates
+
+
+type EditorWorldCoordinates
+    = EditorWorldCoordinates
+
+
 type alias SectorCoordinates =
     ( Int, Int )
 
 
 sectorToWorldPosition : SectorCoordinates -> Point3d Meters WorldCoordinates
 sectorToWorldPosition ( sectorX, sectorY ) =
+    Point3d.meters (toFloat -sectorX - 0.5) (toFloat sectorY + 0.5) 0
+
+
+sectorToEditorWorldPosition : SectorCoordinates -> Point3d Meters EditorWorldCoordinates
+sectorToEditorWorldPosition ( sectorX, sectorY ) =
     Point3d.meters (toFloat -sectorX - 0.5) (toFloat sectorY + 0.5) 0
 
 

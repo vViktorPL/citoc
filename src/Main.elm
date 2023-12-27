@@ -7,6 +7,7 @@ import Game
 import Html exposing (Html)
 import Html.Attributes
 import Json.Decode as D
+import LevelEditor
 import Menu
 import Settings
 
@@ -40,6 +41,7 @@ type Screen
     | InitError
     | InMenu Menu.Model
     | Playing Game.Model
+    | InEditor LevelEditor.Model
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -48,13 +50,17 @@ init flags =
         ( assets, sceneAssetsCmd ) =
             Assets.init
                 |> Assets.requestDependencies Menu.dependencies
+
+        ( levelEditor, levelEditorCmd ) =
+            LevelEditor.init ( 800, 600 )
     in
-    ( { screen = Initialising
+    ( { screen = InEditor levelEditor
       , savedGame = Maybe.withDefault Game.newGameState flags.save
       , assets = assets
       , settings = Settings.init flags.settings
       }
-    , Cmd.map AssetsMsg sceneAssetsCmd
+    , Cmd.map EditorMsg levelEditorCmd
+      --Cmd.map AssetsMsg sceneAssetsCmd
     )
 
 
@@ -63,6 +69,7 @@ type Msg
     | AssetsMsg Assets.Msg
     | MenuMsg Menu.Msg
     | SettingsMsg Settings.Msg
+    | EditorMsg LevelEditor.Msg
     | EscapeKeyPressed
 
 
@@ -165,6 +172,13 @@ update msg model =
         ( EscapeKeyPressed, Playing _ ) ->
             ( { model | settings = Settings.show model.settings }, Cmd.none )
 
+        ( EditorMsg editorMsg, InEditor editor ) ->
+            let
+                ( updatedEditor, editorCmd ) =
+                    LevelEditor.update editorMsg editor
+            in
+            ( { model | screen = InEditor updatedEditor }, Cmd.map EditorMsg editorCmd )
+
         _ ->
             ( model, Cmd.none )
 
@@ -196,6 +210,10 @@ subscriptions model =
             InMenu menu ->
                 Menu.subscription menu
                     |> Sub.map MenuMsg
+
+            InEditor _ ->
+                LevelEditor.subscription
+                    |> Sub.map EditorMsg
 
             _ ->
                 Sub.none
@@ -233,4 +251,8 @@ view model =
             InMenu menu ->
                 Menu.view model.assets menu
                     |> Html.map MenuMsg
+
+            InEditor editor ->
+                LevelEditor.view editor
+                    |> Html.map EditorMsg
         ]
