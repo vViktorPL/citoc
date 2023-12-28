@@ -12,9 +12,12 @@ module LevelTile exposing
     , chair
     , collision
     , customizedSign
+    , decoder
     , dependencies
+    , editorView
     , empty
     , emptySandbox
+    , encode
     , floor
     , getSignText
     , glassWall
@@ -52,6 +55,8 @@ import Hash exposing (Hash)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events
+import Json.Decode as D
+import Json.Encode as E
 import Length
 import Luminance
 import Orientation exposing (Orientation(..))
@@ -345,10 +350,14 @@ wallBlockTile material =
     Scene3d.group [ leftQuad, frontQuad, behindQuad, rightQuad ]
 
 
-getCeilingMaterial assets =
-    Scene3d.Material.texturedEmissive
-        (Assets.getColorTexture assets "OfficeCeiling005_4K_Color.jpg")
-        (Luminance.footLamberts 100)
+getCeilingMaterial assets editorMode =
+    if editorMode then
+        Scene3d.Material.matte (Color.rgba 1 1 1 0.4)
+
+    else
+        Scene3d.Material.texturedEmissive
+            (Assets.getColorTexture assets "OfficeCeiling005_4K_Color.jpg")
+            (Luminance.footLamberts 100)
 
 
 viewSandbox : Assets.Model -> Bool -> Scene3d.Entity ObjectCoordinates
@@ -404,7 +413,7 @@ viewSandbox assets withCastle =
         (Point3d.xyz x2 y1 z)
         (Point3d.xyz x2 y2 z)
         (Point3d.xyz x1 y2 z)
-    , horizontalTile (Length.meters 1) (getCeilingMaterial assets)
+    , horizontalTile (Length.meters 1) (getCeilingMaterial assets False)
     ]
         ++ (if withCastle then
                 [ Castle.view assets False
@@ -421,17 +430,27 @@ viewSandbox assets withCastle =
 
 view : Assets.Model -> Model -> Scene3d.Entity ObjectCoordinates
 view assets model =
+    viewInternal assets False model
+
+
+editorView : Assets.Model -> Model -> Scene3d.Entity ObjectCoordinates
+editorView assets model =
+    viewInternal assets True model
+
+
+viewInternal : Assets.Model -> Bool -> Model -> Scene3d.Entity ObjectCoordinates
+viewInternal assets editorMode model =
     case model of
         Floor ->
             let
                 ceilingMaterial =
-                    getCeilingMaterial assets
+                    getCeilingMaterial assets editorMode
 
                 ceilingEntity =
                     horizontalTile (Length.meters 1) ceilingMaterial
             in
             Scene3d.group
-                [ view assets OpenFloor
+                [ viewInternal assets editorMode OpenFloor
                 , ceilingEntity
                 ]
 
@@ -501,7 +520,7 @@ view assets model =
                 ]
 
         Terms termsModel ->
-            Scene3d.group [ Terms.view assets termsModel, view assets blackFloor ]
+            Scene3d.group [ Terms.view assets termsModel, viewInternal assets editorMode blackFloor ]
 
         Sign name _ orientation baseTile ->
             let
@@ -542,7 +561,7 @@ view assets model =
                         (Point3d.xyz x1 y z2)
                         |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle orientation))
             in
-            Scene3d.group [ view assets baseTile, signEntity ]
+            Scene3d.group [ viewInternal assets editorMode baseTile, signEntity ]
 
         Sandbox withCastle ->
             viewSandbox assets withCastle
@@ -561,7 +580,7 @@ view assets model =
             Scene3d.group
                 [ BreakableWall.view assets breakableWallModel
                     |> Scene3d.rotateAround Axis3d.z (Angle.degrees (orientationToRotationAngle orientation))
-                , view assets floor
+                , viewInternal assets editorMode floor
                 ]
 
         BigCastle ->
@@ -569,7 +588,7 @@ view assets model =
                 [ Castle.view assets True
                     |> Scene3d.rotateAround Axis3d.z (Angle.degrees -90)
                     |> Scene3d.scaleAbout Point3d.origin 3
-                , view assets Sand
+                , viewInternal assets editorMode Sand
                 ]
 
         Hole { walls, barriers } ->
@@ -624,7 +643,7 @@ view assets model =
                     horizontalTile (Length.meters -levels) concreteMaterial
 
                 ceilingEntity =
-                    horizontalTile (Length.meters 1) (getCeilingMaterial assets)
+                    horizontalTile (Length.meters 1) (getCeilingMaterial assets editorMode)
 
                 barrierEntities =
                     barriers
@@ -652,11 +671,11 @@ view assets model =
             Scene3d.group
                 [ bucketEntity
                     |> Scene3d.scaleAbout Point3d.origin 0.3
-                , view assets Sand
+                , viewInternal assets editorMode Sand
                 ]
 
         InvisibleWall subModel ->
-            view assets subModel
+            viewInternal assets editorMode subModel
 
         Chair ->
             let
@@ -964,3 +983,200 @@ viewConfig model =
             _ ->
                 Html.div [] []
         ]
+
+
+decoder : D.Decoder Model
+decoder =
+    D.oneOf
+        [ D.string
+            |> D.andThen
+                (\str ->
+                    case str of
+                        "o" ->
+                            D.succeed OpenFloor
+
+                        "." ->
+                            D.succeed Floor
+
+                        "#" ->
+                            D.succeed Wall
+
+                        "#r" ->
+                            D.succeed RedWall
+
+                        "#g" ->
+                            D.succeed GreenWall
+
+                        "#b" ->
+                            D.succeed BlueWall
+
+                        "#0" ->
+                            D.succeed BlackWall
+
+                        " " ->
+                            D.succeed Empty
+
+                        _ ->
+                            D.fail "Invalid tile string"
+                )
+        , signTileDecoder
+        , holeTileDecoder
+        , breakableWallTileDecoder
+        , invisibleWallTileDecoder
+        ]
+
+
+signTileDecoder =
+    D.map4
+        (\_ text side base ->
+            customizedSign text side base
+        )
+        (D.field "type" (literalStringDecoder "sign"))
+        (D.field "text" D.string)
+        (D.field "side" Orientation.decoder)
+        (D.field "base" (D.lazy (\() -> decoder)))
+
+
+holeTileDecoder =
+    D.map3
+        (\_ walls barriers ->
+            hole { walls = walls, barriers = barriers }
+        )
+        (D.field "type" (literalStringDecoder "hole"))
+        (D.field "walls" (D.list Orientation.decoder))
+        (D.field "bars" (D.list Orientation.decoder))
+
+
+breakableWallTileDecoder =
+    D.map3
+        (\_ subtype orientation ->
+            case subtype of
+                GlassWall ->
+                    glassWall
+
+                HeavyWall ->
+                    breakableWall orientation
+        )
+        (D.field "type" (literalStringDecoder "breakableWall"))
+        (D.field "subtype"
+            (D.string
+                |> D.andThen
+                    (\str ->
+                        case str of
+                            "glass" ->
+                                D.succeed GlassWall
+
+                            "heavy" ->
+                                D.succeed HeavyWall
+
+                            _ ->
+                                D.fail "Invalid breakable wall type"
+                    )
+            )
+        )
+        (D.field "side" Orientation.decoder)
+
+
+invisibleWallTileDecoder =
+    D.map2
+        (\_ tile -> tile)
+        (D.field "type" (literalStringDecoder "invisibleWall"))
+        (D.field "tile" (D.lazy (\() -> decoder)))
+
+
+literalStringDecoder : String -> D.Decoder ()
+literalStringDecoder literal =
+    D.string
+        |> D.andThen
+            (\str ->
+                if str == literal then
+                    D.succeed ()
+
+                else
+                    D.fail "Expected string literal"
+            )
+
+
+encode : Model -> E.Value
+encode model =
+    case model of
+        OpenFloor ->
+            E.string "o"
+
+        Floor ->
+            E.string "."
+
+        Wall ->
+            E.string "#"
+
+        Sign _ text orientation baseTile ->
+            E.object
+                [ ( "type", E.string "sign" )
+                , ( "text", E.string text )
+                , ( "side", Orientation.encode orientation )
+                , ( "base", encode baseTile )
+                ]
+
+        Hole { walls, barriers } ->
+            E.object
+                [ ( "type", E.string "hole" )
+                , ( "walls", E.list Orientation.encode walls )
+                , ( "bars", E.list Orientation.encode barriers )
+                ]
+
+        RedWall ->
+            E.string "#r"
+
+        GreenWall ->
+            E.string "#g"
+
+        BlueWall ->
+            E.string "#b"
+
+        BlackWall ->
+            E.string "#0"
+
+        BreakableWall wallType orientation _ ->
+            E.object
+                [ ( "type", E.string "breakableWall" )
+                , ( "subtype"
+                  , case wallType of
+                        GlassWall ->
+                            E.string "glass"
+
+                        HeavyWall ->
+                            E.string "heavy"
+                  )
+                , ( "side", Orientation.encode orientation )
+                ]
+
+        InvisibleWall innerTile ->
+            E.object
+                [ ( "type", E.string "invisibleWall" )
+                , ( "tile", encode innerTile )
+                ]
+
+        _ ->
+            E.string " "
+
+
+
+--    = Floor
+--    | OpenFloor
+--    | Wall
+--    | Sign String String Orientation Model
+--    | GreenWall
+--    | RedWall
+--    | BlueWall
+--    | Sand
+--    | ToyBucket
+--    | InvisibleWall Model
+--    | BigCastle
+--    | Chair
+--    | Sandbox Bool
+--    | Terms Terms.Model
+--    | BreakableWall BreakableWallType Orientation BreakableWall.Model
+--    | BlackWall
+--    | BlackFloor
+--    | Hole HoleTileData
+--    | Empty

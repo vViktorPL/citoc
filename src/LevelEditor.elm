@@ -13,6 +13,7 @@ import Direction3d
 import Frame3d
 import Html exposing (Html)
 import Html.Attributes as Attr
+import Html.Events
 import Json.Decode as D
 import Length exposing (Length, Meters)
 import LevelTile
@@ -33,9 +34,17 @@ type Model
     = LevelEditor EditorState
 
 
+type EditorTool
+    = LevelSettings
+    | Camera
+    | TilePainter
+    | TriggersManager
+
+
 type alias EditorState =
     { assets : Assets.Model
     , tiles : Dict SectorCoordinates ( LevelTile.Model, List Trigger.Trigger )
+    , selectedTool : EditorTool
     , currentTile : LevelTile.Model
     , triggers : List Trigger.Trigger
     , globalTriggers : List Trigger.Trigger
@@ -43,7 +52,8 @@ type alias EditorState =
     , focalPoint : Point3d Meters EditorWorldCoordinates
     , windowSize : ( Int, Int )
     , selectedSector : SectorCoordinates
-    , paintingTiles : Bool
+    , isMouseDown : Bool
+    , mouseDownAtPoint : Maybe (Point3d Meters EditorWorldCoordinates)
     }
 
 
@@ -66,9 +76,11 @@ type Msg
     | AssetsMsg Assets.Msg
     | WindowResize Int Int
     | MouseMove Int Int
-    | MouseDown
+    | MouseDown Int Int
     | MouseUp
     | TileConfigMsg LevelTile.ConfigMsg
+    | SelectTool EditorTool
+    | ZoomChange Float
 
 
 init : ( Int, Int ) -> ( Model, Cmd Msg )
@@ -81,6 +93,7 @@ init windowSize =
     ( LevelEditor
         { assets = assets
         , windowSize = windowSize
+        , selectedTool = LevelSettings
         , tiles = Dict.fromList [ ( ( 0, 0 ), ( LevelTile.wall, [] ) ), ( ( 0, 1 ), ( LevelTile.floor, [] ) ) ]
         , currentTile = LevelTile.wall
         , globalTriggers = []
@@ -88,7 +101,8 @@ init windowSize =
         , zoom = Length.meters 10
         , focalPoint = Point3d.meters 2 7 0
         , selectedSector = ( 0, 0 )
-        , paintingTiles = False
+        , isMouseDown = False
+        , mouseDownAtPoint = Nothing
         }
     , Cmd.batch
         [ assetsCmd |> Cmd.map AssetsMsg
@@ -117,9 +131,33 @@ placeTile state =
     }
 
 
+mouseCoordinatesToWorldCoordinates : EditorState -> Int -> Int -> Maybe (Point3d Meters EditorWorldCoordinates)
+mouseCoordinatesToWorldCoordinates state x y =
+    let
+        ( width, height ) =
+            state.windowSize
+
+        ray =
+            Camera3d.ray
+                (camera state)
+                (Rectangle2d.with
+                    { x1 = pixels 0
+                    , y1 = pixels (toFloat height)
+                    , x2 = pixels (toFloat width)
+                    , y2 = pixels 0
+                    }
+                )
+                (Point2d.pixels (toFloat x) (toFloat y))
+    in
+    Axis3d.intersectionWithPlane Plane3d.xy ray
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg (LevelEditor state) =
     case msg of
+        SelectTool newTool ->
+            ( LevelEditor { state | selectedTool = newTool }, Cmd.none )
+
         AssetsMsg assetsMsg ->
             let
                 ( updatedAssets, assetsCmd ) =
@@ -130,41 +168,33 @@ update msg (LevelEditor state) =
         WindowResize width height ->
             ( LevelEditor { state | windowSize = ( width, height ) }, Cmd.none )
 
-        MouseDown ->
-            let
-                requiredDeps =
-                    LevelTile.dependencies state.currentTile
+        MouseDown x y ->
+            case state.selectedTool of
+                TilePainter ->
+                    let
+                        requiredDeps =
+                            LevelTile.dependencies state.currentTile
 
-                ( updatedAssets, assetsCmd ) =
-                    Assets.requestDependencies requiredDeps state.assets
-            in
-            ( LevelEditor (placeTile { state | paintingTiles = True, assets = updatedAssets }), assetsCmd |> Cmd.map AssetsMsg )
+                        ( updatedAssets, assetsCmd ) =
+                            Assets.requestDependencies requiredDeps state.assets
+                    in
+                    ( LevelEditor (placeTile { state | isMouseDown = True, assets = updatedAssets }), assetsCmd |> Cmd.map AssetsMsg )
+
+                _ ->
+                    ( LevelEditor
+                        { state
+                            | isMouseDown = True
+                            , mouseDownAtPoint = mouseCoordinatesToWorldCoordinates state x y
+                        }
+                    , Cmd.none
+                    )
 
         MouseUp ->
-            ( LevelEditor { state | paintingTiles = False }, Cmd.none )
+            ( LevelEditor { state | isMouseDown = False, mouseDownAtPoint = Nothing }, Cmd.none )
 
         MouseMove x y ->
-            let
-                ( width, height ) =
-                    state.windowSize
-
-                ray =
-                    Camera3d.ray
-                        (camera state)
-                        (Rectangle2d.with
-                            { x1 = pixels 0
-                            , y1 = pixels (toFloat height)
-                            , x2 = pixels (toFloat width)
-                            , y2 = pixels 0
-                            }
-                        )
-                        (Point2d.pixels (toFloat x) (toFloat y))
-
-                maybeIntersectionPoint =
-                    Axis3d.intersectionWithPlane Plane3d.xy ray
-            in
-            case maybeIntersectionPoint of
-                Just intersectionPoint ->
+            case ( mouseCoordinatesToWorldCoordinates state x y, state.selectedTool ) of
+                ( Just intersectionPoint, TilePainter ) ->
                     let
                         sectorX =
                             intersectionPoint
@@ -180,7 +210,7 @@ update msg (LevelEditor state) =
                                 |> floor
                     in
                     ( { state | selectedSector = ( sectorX, sectorY ) }
-                        |> (if state.paintingTiles then
+                        |> (if state.isMouseDown then
                                 placeTile
 
                             else
@@ -190,11 +220,71 @@ update msg (LevelEditor state) =
                     , Cmd.none
                     )
 
-                Nothing ->
+                ( Just intersectionPoint, Camera ) ->
+                    case state.mouseDownAtPoint of
+                        Just mouseDownAtPoint ->
+                            let
+                                currentX =
+                                    state.focalPoint
+                                        |> Point3d.xCoordinate
+                                        |> Length.inMeters
+
+                                currentY =
+                                    state.focalPoint
+                                        |> Point3d.yCoordinate
+                                        |> Length.inMeters
+
+                                mouseDownX =
+                                    mouseDownAtPoint
+                                        |> Point3d.xCoordinate
+                                        |> Length.inMeters
+
+                                mouseDownY =
+                                    mouseDownAtPoint
+                                        |> Point3d.yCoordinate
+                                        |> Length.inMeters
+
+                                intersectionX =
+                                    intersectionPoint
+                                        |> Point3d.xCoordinate
+                                        |> Length.inMeters
+
+                                intersectionY =
+                                    intersectionPoint
+                                        |> Point3d.yCoordinate
+                                        |> Length.inMeters
+                            in
+                            ( LevelEditor
+                                { state
+                                    | focalPoint =
+                                        Point3d.meters
+                                            (currentX - (intersectionX - mouseDownX))
+                                            (currentY - (intersectionY - mouseDownY))
+                                            0
+                                }
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ( LevelEditor state, Cmd.none )
+
+                _ ->
                     ( LevelEditor state, Cmd.none )
 
         TileConfigMsg tileConfigMsg ->
             ( LevelEditor { state | currentTile = LevelTile.updateConfig tileConfigMsg state.currentTile }, Cmd.none )
+
+        ZoomChange multiplier ->
+            ( LevelEditor
+                { state
+                    | zoom =
+                        state.zoom
+                            |> Length.inMeters
+                            |> (*) multiplier
+                            |> Length.meters
+                }
+            , Cmd.none
+            )
 
         _ ->
             ( LevelEditor state, Cmd.none )
@@ -206,7 +296,11 @@ camera { zoom, focalPoint } =
         { viewpoint =
             Viewpoint3d.isometric
                 { focalPoint = focalPoint
-                , distance = zoom
+                , distance =
+                    zoom
+                        |> Length.inMeters
+                        |> max 10
+                        |> Length.meters
                 }
         , viewportHeight = zoom
         }
@@ -231,11 +325,17 @@ view (LevelEditor state) =
                 |> Dict.toList
                 |> List.map
                     (\( sector, ( tile, triggers ) ) ->
-                        LevelTile.view state.assets tile
+                        LevelTile.editorView state.assets tile
                             |> Scene3d.placeIn (Frame3d.atPoint (Coordinates.sectorToEditorWorldPosition sector))
                     )
     in
-    Html.div [ Attr.id "editor", Attr.style "position" "relative" ]
+    Html.div
+        [ Attr.id "editor"
+        , Attr.classList
+            [ ( "cameraMode", state.selectedTool == Camera )
+            , ( "crosshair", state.selectedTool == TilePainter )
+            ]
+        ]
         [ Scene3d.cloudy
             { entities =
                 [ tileSelectionEntity
@@ -250,17 +350,72 @@ view (LevelEditor state) =
             , visibility = Scene3d.clearView
             }
         , Html.div
-            [ Attr.style "position" "fixed"
-            , Attr.style "right" "0"
-            , Attr.style "top" "0"
-            , Attr.style "height" "100vh"
-            , Attr.style "min-width" "150px"
-            , Attr.style "width" "20vw"
-            , Attr.style "background" "rgba(128, 128, 128, 0.8)"
+            [ Attr.class "panel" ]
+            [ Html.div []
+                [ toolButton state LevelSettings "⚙️ _S_ettings"
+                , toolButton state Camera "🎥 _C_amera"
+                , toolButton state TilePainter "🖌️ Tile _p_ainter"
+                , toolButton state TriggersManager "✨ _T_riggers"
+                ]
+            , case state.selectedTool of
+                TilePainter ->
+                    viewTilePainterTool state
+
+                Camera ->
+                    viewCameraTool state
+
+                _ ->
+                    Html.div [] [ Html.text "TODO" ]
             ]
-            [ Html.h2 [ Attr.style "font-size" "20px" ] [ Html.text "Tile to place:" ]
-            , LevelTile.viewConfig state.currentTile
-                |> Html.map TileConfigMsg
+        ]
+
+
+toolButton : EditorState -> EditorTool -> String -> Html Msg
+toolButton state tool label =
+    Html.button
+        [ Html.Events.onClick (SelectTool tool), Attr.classList [ ( "active", state.selectedTool == tool ) ] ]
+        (String.split "_" label
+            |> List.indexedMap
+                (\index text ->
+                    if index == 1 then
+                        Html.u [] [ Html.text text ]
+
+                    else
+                        Html.text text
+                )
+        )
+
+
+viewTilePainterTool state =
+    Html.div []
+        [ Html.h2 [ Attr.style "font-size" "20px" ] [ Html.text "Tile to place:" ]
+        , LevelTile.viewConfig state.currentTile
+            |> Html.map TileConfigMsg
+        ]
+
+
+viewCameraTool state =
+    Html.div []
+        [ Html.div []
+            [ Html.div []
+                [ Html.span [] [ Html.text "Camera mode" ]
+                ]
+            , Html.div []
+                [ Html.select []
+                    [ Html.option [] [ Html.text "Isometric" ]
+                    , Html.option [] [ Html.text "Top-down" ]
+                    , Html.option [] [ Html.text "First person perspective" ]
+                    ]
+                ]
+            ]
+        , Html.div []
+            [ Html.div []
+                [ Html.span [] [ Html.text "Zoom level" ]
+                ]
+            , Html.div []
+                [ Html.button [ Html.Events.onClick (ZoomChange 2) ] [ Html.text "-" ]
+                , Html.button [ Html.Events.onClick (ZoomChange 0.5) ] [ Html.text "+" ]
+                ]
             ]
         ]
 
@@ -275,21 +430,62 @@ subscription =
                 (D.field "x" D.int)
                 (D.field "y" D.int)
             )
-        , Browser.Events.onMouseDown (canvasEventDecoder MouseDown)
+        , Browser.Events.onMouseDown (canvasMouseEventDecoder MouseDown)
         , Browser.Events.onMouseUp (D.succeed MouseUp)
+        , Browser.Events.onKeyDown keyToMsgDecoder
         , Assets.subscription
             |> Sub.map AssetsMsg
         ]
 
 
-canvasEventDecoder : msg -> D.Decoder msg
-canvasEventDecoder msg =
+keyToMsgDecoder : D.Decoder Msg
+keyToMsgDecoder =
+    D.map2 Tuple.pair
+        (D.at [ "target", "nodeName" ] D.string)
+        (D.field "key" D.string)
+        |> D.andThen
+            (\( targetTag, key ) ->
+                if List.member targetTag [ "INPUT", "TEXTAREA" ] then
+                    D.fail "Ignoring hotkeys on input"
+
+                else
+                    case String.toUpper key of
+                        "S" ->
+                            D.succeed (SelectTool LevelSettings)
+
+                        "C" ->
+                            D.succeed (SelectTool Camera)
+
+                        "P" ->
+                            D.succeed (SelectTool TilePainter)
+
+                        "T" ->
+                            D.succeed (SelectTool TriggersManager)
+
+                        _ ->
+                            D.fail "Unknown key"
+            )
+
+
+canvasMouseEventDecoder : (Int -> Int -> msg) -> D.Decoder msg
+canvasMouseEventDecoder msg =
     D.at [ "target", "nodeName" ] D.string
         |> D.andThen
             (\nodeName ->
                 if nodeName == "CANVAS" then
-                    D.succeed msg
+                    D.map2
+                        msg
+                        (D.field "x" D.int)
+                        (D.field "y" D.int)
 
                 else
                     D.fail "Non-canvas event"
             )
+
+
+
+--normalizeSectorCoordinates : Dict SectorCoordinates a -> Dict SectorCoordinates a
+--normalizeSectorCoordinates dict =
+--    let
+--
+--    in
