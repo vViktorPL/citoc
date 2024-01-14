@@ -1,5 +1,6 @@
 module LevelEditor exposing (Model, Msg, init, subscription, update, view)
 
+import Angle
 import Assets
 import Axis3d
 import Block3d
@@ -26,6 +27,7 @@ import Rectangle2d
 import Scene3d
 import Scene3d.Material
 import Task
+import Triangle3d
 import Trigger
 import Viewpoint3d
 
@@ -50,10 +52,13 @@ type alias EditorState =
     , globalTriggers : List Trigger.Trigger
     , zoom : Length
     , focalPoint : Point3d Meters EditorWorldCoordinates
+    , playerStartPosition : SectorCoordinates
+    , playerStartingOrientation : Orientation
     , windowSize : ( Int, Int )
     , selectedSector : SectorCoordinates
     , isMouseDown : Bool
     , mouseDownAtPoint : Maybe (Point3d Meters EditorWorldCoordinates)
+    , selectingPlayerPosition : Bool
     }
 
 
@@ -81,6 +86,9 @@ type Msg
     | TileConfigMsg LevelTile.ConfigMsg
     | SelectTool EditorTool
     | ZoomChange Float
+    | TogglePlayerPositionSelection
+    | ChangePlayerStartingOrientation Orientation
+    | UpdateTriggerCondition (Maybe SectorCoordinates) Int TriggerConditionMsg
 
 
 init : ( Int, Int ) -> ( Model, Cmd Msg )
@@ -103,6 +111,9 @@ init windowSize =
         , selectedSector = ( 0, 0 )
         , isMouseDown = False
         , mouseDownAtPoint = Nothing
+        , playerStartPosition = ( 0, 0 )
+        , playerStartingOrientation = Orientation.South
+        , selectingPlayerPosition = False
         }
     , Cmd.batch
         [ assetsCmd |> Cmd.map AssetsMsg
@@ -152,6 +163,25 @@ mouseCoordinatesToWorldCoordinates state x y =
     Axis3d.intersectionWithPlane Plane3d.xy ray
 
 
+pointToSector : Point3d Meters Coordinates.EditorWorldCoordinates -> SectorCoordinates
+pointToSector p =
+    let
+        sectorX =
+            p
+                |> Point3d.xCoordinate
+                |> Length.inMeters
+                |> ceiling
+                |> (\n -> -n)
+
+        sectorY =
+            p
+                |> Point3d.yCoordinate
+                |> Length.inMeters
+                |> floor
+    in
+    ( sectorX, sectorY )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg (LevelEditor state) =
     case msg of
@@ -180,6 +210,13 @@ update msg (LevelEditor state) =
                     in
                     ( LevelEditor (placeTile { state | isMouseDown = True, assets = updatedAssets }), assetsCmd |> Cmd.map AssetsMsg )
 
+                LevelSettings ->
+                    if state.selectingPlayerPosition then
+                        ( LevelEditor { state | playerStartPosition = state.selectedSector, selectingPlayerPosition = False }, Cmd.none )
+
+                    else
+                        ( LevelEditor state, Cmd.none )
+
                 _ ->
                     ( LevelEditor
                         { state
@@ -195,21 +232,7 @@ update msg (LevelEditor state) =
         MouseMove x y ->
             case ( mouseCoordinatesToWorldCoordinates state x y, state.selectedTool ) of
                 ( Just intersectionPoint, TilePainter ) ->
-                    let
-                        sectorX =
-                            intersectionPoint
-                                |> Point3d.xCoordinate
-                                |> Length.inMeters
-                                |> ceiling
-                                |> (\n -> -n)
-
-                        sectorY =
-                            intersectionPoint
-                                |> Point3d.yCoordinate
-                                |> Length.inMeters
-                                |> floor
-                    in
-                    ( { state | selectedSector = ( sectorX, sectorY ) }
+                    ( { state | selectedSector = pointToSector intersectionPoint }
                         |> (if state.isMouseDown then
                                 placeTile
 
@@ -219,6 +242,13 @@ update msg (LevelEditor state) =
                         |> LevelEditor
                     , Cmd.none
                     )
+
+                ( Just intersectionPoint, LevelSettings ) ->
+                    if state.selectingPlayerPosition then
+                        ( LevelEditor { state | selectedSector = pointToSector intersectionPoint }, Cmd.none )
+
+                    else
+                        ( LevelEditor state, Cmd.none )
 
                 ( Just intersectionPoint, Camera ) ->
                     case state.mouseDownAtPoint of
@@ -286,6 +316,20 @@ update msg (LevelEditor state) =
             , Cmd.none
             )
 
+        TogglePlayerPositionSelection ->
+            ( LevelEditor
+                { state
+                    | selectingPlayerPosition = not state.selectingPlayerPosition
+                }
+            , Cmd.none
+            )
+
+        ChangePlayerStartingOrientation newOrientation ->
+            ( LevelEditor
+                { state | playerStartingOrientation = newOrientation }
+            , Cmd.none
+            )
+
         _ ->
             ( LevelEditor state, Cmd.none )
 
@@ -317,9 +361,38 @@ tileSelectionEntity =
         |> Scene3d.block tileSelectionMaterial
 
 
+viewPlayer state =
+    Scene3d.triangle
+        (Scene3d.Material.color Color.red)
+        (Triangle3d.from
+            (Point3d.meters 0 -0.2 0.01)
+            (Point3d.meters 0.15 0.2 0.01)
+            (Point3d.meters -0.15 0.2 0.01)
+        )
+        |> Scene3d.rotateAround
+            Axis3d.z
+            (case state.playerStartingOrientation of
+                Orientation.North ->
+                    Angle.degrees 0
+
+                Orientation.East ->
+                    Angle.degrees -90
+
+                Orientation.South ->
+                    Angle.degrees 180
+
+                Orientation.West ->
+                    Angle.degrees 90
+            )
+        |> Scene3d.placeIn (Frame3d.atPoint (Coordinates.sectorToEditorWorldPosition state.playerStartPosition))
+
+
 view : Model -> Html Msg
 view (LevelEditor state) =
     let
+        showTileSelection =
+            state.selectedTool == TilePainter || state.selectedTool == LevelSettings && state.selectingPlayerPosition
+
         tileEntities =
             state.tiles
                 |> Dict.toList
@@ -333,14 +406,20 @@ view (LevelEditor state) =
         [ Attr.id "editor"
         , Attr.classList
             [ ( "cameraMode", state.selectedTool == Camera )
-            , ( "crosshair", state.selectedTool == TilePainter )
+            , ( "crosshair", showTileSelection )
             ]
         ]
         [ Scene3d.cloudy
             { entities =
-                [ tileSelectionEntity
-                    |> Scene3d.placeIn (Frame3d.atPoint (Coordinates.sectorToEditorWorldPosition state.selectedSector))
-                ]
+                (if showTileSelection then
+                    [ tileSelectionEntity
+                        |> Scene3d.placeIn (Frame3d.atPoint (Coordinates.sectorToEditorWorldPosition state.selectedSector))
+                    ]
+
+                 else
+                    []
+                )
+                    ++ [ viewPlayer state ]
                     ++ tileEntities
             , camera = camera state
             , upDirection = Direction3d.z
@@ -358,6 +437,9 @@ view (LevelEditor state) =
                 , toolButton state TriggersManager "✨ _T_riggers"
                 ]
             , case state.selectedTool of
+                LevelSettings ->
+                    viewLevelSettingsTool state
+
                 TilePainter ->
                     viewTilePainterTool state
 
@@ -386,11 +468,226 @@ toolButton state tool label =
         )
 
 
+sectorCoordsToString : SectorCoordinates -> String
+sectorCoordsToString ( x, y ) =
+    "(" ++ String.fromInt x ++ ", " ++ String.fromInt y ++ ")"
+
+
+orientationToString : Orientation -> String
+orientationToString orientation =
+    case orientation of
+        Orientation.North ->
+            "↑ N"
+
+        Orientation.East ->
+            "→ E"
+
+        Orientation.South ->
+            "↓ S"
+
+        Orientation.West ->
+            "← W"
+
+
+viewLevelSettingsTool state =
+    Html.div []
+        [ Html.div []
+            [ Html.div [] [ Html.span [] [ Html.text "Player start position:" ] ]
+            , Html.div []
+                [ Html.span [ Attr.style "font-family" "monospace" ]
+                    [ Html.text
+                        (sectorCoordsToString state.playerStartPosition)
+                    ]
+                , viewOrientationSelect ChangePlayerStartingOrientation state.playerStartingOrientation
+                , Html.button [ Attr.classList [ ( "active", state.selectingPlayerPosition ) ], Html.Events.onClick TogglePlayerPositionSelection ] [ Html.text "⌖" ]
+                ]
+            ]
+        ]
+
+
+viewOrientationSelect msg value =
+    Html.select
+        [ Html.Events.onInput
+            (\val ->
+                msg
+                    (case val of
+                        "N" ->
+                            Orientation.North
+
+                        "E" ->
+                            Orientation.East
+
+                        "S" ->
+                            Orientation.South
+
+                        "W" ->
+                            Orientation.West
+
+                        _ ->
+                            value
+                    )
+            )
+        ]
+        [ Html.option [ Attr.value "N", Attr.selected (value == Orientation.North) ] [ Html.text "↑ N" ]
+        , Html.option [ Attr.value "E", Attr.selected (value == Orientation.East) ] [ Html.text "→ E" ]
+        , Html.option [ Attr.value "S", Attr.selected (value == Orientation.South) ] [ Html.text "↓ S" ]
+        , Html.option [ Attr.value "W", Attr.selected (value == Orientation.West) ] [ Html.text "← W" ]
+        ]
+
+
 viewTilePainterTool state =
     Html.div []
         [ Html.h2 [ Attr.style "font-size" "20px" ] [ Html.text "Tile to place:" ]
         , LevelTile.viewConfig state.currentTile
             |> Html.map TileConfigMsg
+        ]
+
+
+type TriggerConditionMsg
+    = ChangeConditionType String
+    | SelectSector
+    | ChangeOrientation Orientation
+    | StringUpdate String
+    | IntUpdate Int
+
+
+viewTriggerCondition : Trigger.TriggerCondition -> Html TriggerConditionMsg
+viewTriggerCondition cond =
+    Html.div []
+        (viewTriggerConditionType cond
+            :: (case cond of
+                    Trigger.InSector sector ->
+                        [ Html.button [ Html.Events.onClick SelectSector ] [ Html.text ("⌖ " ++ sectorCoordsToString sector) ] ]
+
+                    Trigger.EnteredFrom orientation ->
+                        [ viewOrientationSelect ChangeOrientation orientation ]
+
+                    Trigger.LookAngle orientation ->
+                        [ viewOrientationSelect ChangeOrientation orientation ]
+
+                    Trigger.CounterEquals counterName value ->
+                        [ Html.input [ Attr.value counterName, Html.Events.onInput StringUpdate ] []
+                        , Html.text " = "
+                        , Html.input
+                            [ Attr.type_ "number"
+                            , Attr.value (String.fromInt value)
+                            , Html.Events.onInput (String.toInt >> Maybe.withDefault 0 >> IntUpdate)
+                            ]
+                            []
+                        ]
+
+                    Trigger.SignTextLike signSector textLike ->
+                        [ Html.button [ Html.Events.onClick SelectSector ] [ Html.text ("⌖ " ++ sectorCoordsToString signSector) ]
+                        , Html.text " has text like "
+                        , Html.input [ Attr.value textLike, Html.Events.onInput StringUpdate ] []
+                        ]
+
+                    _ ->
+                        []
+               )
+        )
+
+
+viewTriggerConditionType : Trigger.TriggerCondition -> Html TriggerConditionMsg
+viewTriggerConditionType selected =
+    let
+        selectedValue =
+            triggerConditionTypeValue selected
+
+        option ( value, label ) =
+            Html.option [ Attr.value value, Attr.selected (selectedValue == value) ] [ Html.text label ]
+    in
+    Html.select
+        [ Html.Events.onInput ChangeConditionType ]
+        (List.map option
+            [ ( "InSector", "In sector" )
+            , ( "SteppedIn", "Stepped in" )
+            , ( "EnteredFrom", "Entered from" )
+            , ( "LookAngle", "Look angle" )
+            , ( "LookingAtGround", "Looking at ground" )
+            , ( "NegativeHeadshake", "Negative headshake" )
+            , ( "Nod", "Nod" )
+            , ( "InSafeTeleportingOffset", "In safe teleporting offset" )
+            , ( "CameBackToFloor", "Came back to floor (from ceiling)" )
+            , ( "CounterEquals", "Counter" )
+            , ( "WindowShake", "Window shaken" )
+            , ( "SignTextLike", "Sign at" )
+            , ( "CtrlZPressed", "Ctrl+Z pressed" )
+            ]
+        )
+
+
+triggerConditionTypeValue : Trigger.TriggerCondition -> String
+triggerConditionTypeValue cond =
+    case cond of
+        Trigger.InSector _ ->
+            "InSector"
+
+        Trigger.EnteredFrom _ ->
+            "EnteredFrom"
+
+        Trigger.LookAngle _ ->
+            "LookAngle"
+
+        Trigger.LookingAtGround ->
+            "LookingAtGround"
+
+        Trigger.NegativeHeadshake ->
+            "NegativeHeadshake"
+
+        Trigger.Nod ->
+            "Nod"
+
+        Trigger.SteppedIn ->
+            "SteppedIn"
+
+        Trigger.InSafeTeleportingOffset ->
+            "InSafeTeleportingOffset"
+
+        Trigger.CameBackToFloor ->
+            "CameBackToFloor"
+
+        Trigger.CounterEquals _ _ ->
+            "CounterEquals"
+
+        Trigger.WindowShake ->
+            "WindowShake"
+
+        Trigger.SignTextLike _ _ ->
+            "SignTextLike"
+
+        Trigger.CtrlZPressed ->
+            "CtrlZPressed"
+
+        Trigger.LevelLoaded ->
+            "LevelLoaded"
+
+
+type TriggerEffectMsg
+    = ChangeTriggerEffectType String
+
+
+
+--viewTriggerEffect : Trigger.TriggerEffect -> Html TriggerEffectMsg
+--viewTriggerEffect
+
+
+viewTriggerManagerTool state =
+    let
+        globalRows =
+            state.globalTriggers
+                |> List.indexedMap
+                    (\index { conditions, effects } ->
+                        Html.tr []
+                            [ Html.td [] (List.map (viewTriggerCondition >> Html.map (UpdateTriggerCondition Nothing index)) conditions)
+                            ]
+                    )
+
+        --localRows =
+    in
+    Html.div []
+        [ Html.table []
+            []
         ]
 
 
